@@ -192,6 +192,41 @@ test("a card that is not the question's fails: other numbers, the pair swapped, 
   assert.deepEqual(failed(judgePlaceValueTrade(item, bound)), ["the card's two numbers are the question's, in order", "the card's pair gives the question's result"]);
 });
 
+test("every pair is judged on the card's own columns: a practice of another shape, or a card too narrow for its pair, fails", () => {
+  const item = byId["PT-01"];
+  // On PT-01's card (thousands to ones), 9,486 + 2,739 = 12,225 needs a ten-thousands column: the thousands' ten
+  // has nowhere to go, so the chart can never be completed, and its answer cannot be read off it.
+  assert.deepEqual(failed(judgePlaceValueTrade(item, tradeLesson({ operation: "add", a: "3486", b: "2739", practice: [["9486", "2739"]] }))),
+    ["practice-1: the practice pair fits the card's columns", "answer-1: the typed answer after the card's task is the result of its pair"]);
+  // A pair below 1 on the same card has no ones column of its own: another shape.
+  assert.deepEqual(failed(judgePlaceValueTrade(item, tradeLesson({ operation: "add", a: "3486", b: "2739", practice: [["0.35", "0.48"]] }))),
+    ["practice-1: the practice pair fits the card's columns", "answer-1: the typed answer after the card's task is the result of its pair"]);
+  // A card drawn on thousands to ones cannot hold 68,957 + 21,068.
+  const narrow = tradeLesson({ operation: "add", language: "zh-CN", a: "68957", b: "21068", practice: [["57846", "32175"]], finished: [5] });
+  narrow.steps[0].beats[0].actions[0].content.top_place = 3;
+  assert.deepEqual(failed(judgePlaceValueTrade(byId["PT-04"], narrow)), [
+    "the card's columns are its pair's",
+    "practice-1: the practice pair fits the card's columns",
+    "answer-1: the typed answer after the card's task is the result of its pair",
+  ]);
+});
+
+test("the answer typed after a task on the card is exactly its pair's result, anchored or not", () => {
+  const item = byId["PT-01"];
+  const lesson = (extra = {}) => tradeLesson({ operation: "add", a: "3486", b: "2739", practice: [["4658", "1573"]], finished: [4], ...extra });
+  // The card's result is exact: a tolerance does not let another answer through.
+  const loose = lesson({ answers: ["6230"] });
+  loose.lesson.tasks[1].completion.tolerance = 1;
+  assert.deepEqual(failed(judgePlaceValueTrade(item, loose)), ["answer-1: the typed answer after the card's task is the result of its pair"]);
+  // Not anchored to the card: noted, and still held to the pair's result.
+  const unanchored = lesson();
+  delete unanchored.lesson.tasks[1].anchor;
+  const verdict = judgePlaceValueTrade(item, unanchored);
+  assert.deepEqual([failed(verdict), noted(verdict)], [[], ["answer-1: the typed answer after the card's task is anchored to the card"]]);
+  unanchored.lesson.tasks[1].completion.answer = "6225";
+  assert.deepEqual(failed(judgePlaceValueTrade(item, unanchored)), ["answer-1: the typed answer after the card's task is the result of its pair"]);
+});
+
 test("every task on the card has a goal the learner can reach", () => {
   const item = byId["PT-01"];
   const lesson = (practice, extra = {}) => tradeLesson({ operation: "add", a: "3486", b: "2739", practice, finished: [4], ...extra });
