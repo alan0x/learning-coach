@@ -1123,7 +1123,15 @@ export function compileAndValidateLessonPlan(value: unknown, options: CompileLes
   const schemaResult = validateAuthoringSchema(compiled.lesson);
   if (!schemaResult.valid) {
     const first = schemaResult.errors[0];
-    fail("LESSON_PLAN_OLL_SCHEMA", first?.instancePath ?? "$lesson", first?.message ?? "compiled OLL failed schema validation");
+    // Too many lesson variables: a picture whose recipe declares `binds_many_variables` (the place-value chart, two
+    // a column) is the one that can go, and the lesson is kept without it (review of #174: a Chinese pull-apart
+    // beside two other numbers was lost whole).
+    const overVariables = first?.instancePath === "/lesson/variables" && first?.keyword === "maxItems";
+    const written = new Set(compiled.lesson.steps.flatMap((step) => step.beats.flatMap((beat) => beat.actions))
+      .filter((action) => action.do === "write").map((action) => (action as { kind?: string }).kind));
+    const heavy = overVariables ? Object.entries(LESSON_PLAN_CAPABILITY_REGISTRY as Record<string, { output_kinds?: readonly string[] }>)
+      .find(([name, recipe]) => recipeDeclares(name, "binds_many_variables") && (recipe.output_kinds ?? []).some((kind) => written.has(kind)))?.[0] : undefined;
+    fail("LESSON_PLAN_OLL_SCHEMA", first?.instancePath ?? "$lesson", first?.message ?? "compiled OLL failed schema validation", heavy);
   }
   const resourceContext: ResourceContext = {
     assets: (options.image_resources ?? []).map((resource) => ({ asset_id: resource.asset_id })),

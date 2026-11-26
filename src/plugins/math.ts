@@ -198,6 +198,8 @@ export const MATH_RECIPES = {
     required_model_schema_parameters: ["given"],
     semantic_parameters: ["given"],
     output_kinds: ["place_value_chart"],
+    // Two lesson variables a column: when a lesson holds too many, the chart is the picture that goes.
+    binds_many_variables: true,
     // No control: the learner works the chart by its own taps (+, a disk, take out); the model never names one.
     student_controls: [],
     required_features: ["place_value_parts"],

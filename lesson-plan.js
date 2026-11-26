@@ -15543,6 +15543,8 @@ var MATH_RECIPES = {
     required_model_schema_parameters: ["given"],
     semantic_parameters: ["given"],
     output_kinds: ["place_value_chart"],
+    // Two lesson variables a column: when a lesson holds too many, the chart is the picture that goes.
+    binds_many_variables: true,
     // No control: the learner works the chart by its own taps (+, a disk, take out); the model never names one.
     student_controls: [],
     required_features: ["place_value_parts"],
@@ -16282,6 +16284,7 @@ var EN = {
   "\u6BCF\u4EFD\u662F {{v0}}": "Each share is {{v0}}",
   "\u753B\u9762\u7684\u4E0B\u4E00\u6B65": "the picture's next step",
   "\u5199\u51FA\u6BCF\u4E00\u90E8\u5206\u662F\u591A\u5C11\u3002": "Write what each part is worth.",
+  "\u6BCF\u4E00\u90E8\u5206\u662F\u8FD9\u4E00\u4F4D\u4E0A\u7684\u5706\u7247\u4E2A\u6570\u4E58\u8FD9\u4E00\u4F4D\u7684\u503C\u3002": "Each part is the number of disks in that place times the value of the place.",
   "y \u622A\u8DDD": "y-intercept",
   "x \u622A\u8DDD": "x-intercept",
   "\u5BF9\u79F0\u8F74": "Axis of symmetry",
@@ -21561,6 +21564,10 @@ function compilePlaceValueChart(base, content, role, placement, plan, path) {
         if (mode === "build" && words.some((each) => placeValueWordsWrite(each, practice))) {
           return { drop: `the task's words write the practice number ${placeValuePlain(practice)}, which the learner is to build from the card's ${given}`, reason: "practice_number_in_words" };
         }
+        const written = mode === "apart" ? placeValueParts(practice).find((part) => part.place !== 0 && words.some((each) => placeValueWordsWrite(each, part.value))) : void 0;
+        if (written) {
+          return { drop: `the task's words write ${placeValuePlain(written.value)}, a part the learner is to write in the row`, reason: "practice_part_in_words" };
+        }
         const values2 = { [numberVariable]: practice };
         for (const column of columns) {
           values2[variableOf(column, "count")] = mode === "apart" ? placeValueDigitAt(practice, column) : 0;
@@ -21581,6 +21588,8 @@ function compilePlaceValueChart(base, content, role, placement, plan, path) {
           task,
           then: [{
             prompt: compileText(plan, "\u5199\u51FA\u6BCF\u4E00\u90E8\u5206\u662F\u591A\u5C11\u3002"),
+            // The row's own hint, about the maths; the model's hints were for taking the places out.
+            hints: [compileText(plan, "\u6BCF\u4E00\u90E8\u5206\u662F\u8FD9\u4E00\u4F4D\u4E0A\u7684\u5706\u7247\u4E2A\u6570\u4E58\u8FD9\u4E00\u4F4D\u7684\u503C\u3002")],
             anchor: base,
             allowed_operations: [{ kind: "row_entry" }],
             completion: { kind: "numeric_row", parts: row }
@@ -22903,7 +22912,10 @@ function compileAndValidateLessonPlan(value2, options = {}) {
   const schemaResult = validateAuthoringSchema(compiled.lesson);
   if (!schemaResult.valid) {
     const first = schemaResult.errors[0];
-    fail2("LESSON_PLAN_OLL_SCHEMA", first?.instancePath ?? "$lesson", first?.message ?? "compiled OLL failed schema validation");
+    const overVariables = first?.instancePath === "/lesson/variables" && first?.keyword === "maxItems";
+    const written = new Set(compiled.lesson.steps.flatMap((step) => step.beats.flatMap((beat) => beat.actions)).filter((action) => action.do === "write").map((action) => action.kind));
+    const heavy = overVariables ? Object.entries(LESSON_PLAN_CAPABILITY_REGISTRY).find(([name, recipe]) => recipeDeclares(name, "binds_many_variables") && (recipe.output_kinds ?? []).some((kind) => written.has(kind)))?.[0] : void 0;
+    fail2("LESSON_PLAN_OLL_SCHEMA", first?.instancePath ?? "$lesson", first?.message ?? "compiled OLL failed schema validation", heavy);
   }
   const resourceContext = {
     assets: (options.image_resources ?? []).map((resource) => ({ asset_id: resource.asset_id }))

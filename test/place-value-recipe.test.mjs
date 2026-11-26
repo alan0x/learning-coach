@@ -311,3 +311,30 @@ test("the fixed sample (used for request hashes with the trial on) compiles thro
   `);
   assert.deepEqual(result, { kinds: ["place_value_chart", "focus", "animate", "animate"], tasks: 1, model: 1 });
 });
+
+test("review of #174: too many variables costs the chart, not the lesson; a pull-apart task that writes a part is dropped", () => {
+  const out = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    const { placeValuePlan } = await import(${here("./sample-plans.mjs")});
+    const out = {};
+    // A Chinese pull apart with decimals binds 15 variables; two more lesson numbers make 17.
+    const crowded = placeValuePlan({ number: 26.075, practice: 18.064, given: "numeral" });
+    for (let i = 0; i < 2; i += 1) crowded.numbers.push({ initial: 5 + i, min: 0, max: 10, label: "extra" + i });
+    try { api.compileAndValidateLessonPlan(crowded, { language: "zh-CN" }); out.crowded = { compiled: true }; }
+    catch (error) { out.crowded = { code: error.code, capability: error.capability }; }
+    // Hints that write the practice number's parts give the row away.
+    const told = api.compileAndValidateLessonPlan(placeValuePlan({ number: 347.392, practice: 215.638, given: "numeral", hints: ["215.638 = 200 + 10 + 5 + 0.6 + 0.03 + 0.008"] }), { language: "en-US" });
+    out.told = { tasks: (told.lesson.lesson.tasks ?? []).map((task) => task.completion.kind), adjustments: told.program_adjustments.map((each) => each.reason) };
+    // Honest hints keep the task; the row has its own hint, never the model's.
+    const fair = api.compileAndValidateLessonPlan(placeValuePlan({ number: 347.392, practice: 215.638, given: "numeral", hints: ["Take out each place that has disks."] }), { language: "en-US" });
+    out.fair = (fair.lesson.lesson.tasks ?? []).map((task) => [task.completion.kind, task.hints]);
+    console.log(JSON.stringify(out));
+  `);
+  assert.deepEqual(out.crowded, { code: "LESSON_PLAN_OLL_SCHEMA", capability: "place_value_chart" });
+  assert.ok(!out.told.tasks.includes("card_fact") && !out.told.tasks.includes("numeric_row"), JSON.stringify(out.told));
+  assert.ok(out.told.adjustments.includes("practice_part_in_words"), JSON.stringify(out.told));
+  assert.deepEqual(out.fair, [
+    ["card_fact", ["Take out each place that has disks."]],
+    ["numeric_row", ["Each part is the number of disks in that place times the value of the place."]],
+  ]);
+});

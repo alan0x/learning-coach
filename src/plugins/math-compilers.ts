@@ -1924,6 +1924,12 @@ function compilePlaceValueChart(
         if (mode === "build" && words.some((each) => placeValueWordsWrite(each, practice))) {
           return { drop: `the task's words write the practice number ${placeValuePlain(practice)}, which the learner is to build from the card's ${given}`, reason: "practice_number_in_words" };
         }
+        // Pulled apart, the parts are the row's answers: words that write one (a ones part is only its digit,
+        // already on the card) give the row away, so the task is dropped and recorded (review of #174).
+        const written = mode === "apart" ? placeValueParts(practice).find((part) => part.place !== 0 && words.some((each) => placeValueWordsWrite(each, part.value))) : undefined;
+        if (written) {
+          return { drop: `the task's words write ${placeValuePlain(written.value)}, a part the learner is to write in the row`, reason: "practice_part_in_words" };
+        }
         const values: Record<string, number> = { [numberVariable]: practice };
         for (const column of columns) {
           values[variableOf(column, "count")] = mode === "apart" ? placeValueDigitAt(practice, column) : 0;
@@ -1946,6 +1952,8 @@ function compilePlaceValueChart(
           task,
           then: [{
             prompt: compileText(plan, "写出每一部分是多少。"),
+            // The row's own hint, about the maths; the model's hints were for taking the places out.
+            hints: [compileText(plan, "每一部分是这一位上的圆片个数乘这一位的值。")],
             anchor: base,
             allowed_operations: [{ kind: "row_entry" }],
             completion: { kind: "numeric_row", parts: row },
