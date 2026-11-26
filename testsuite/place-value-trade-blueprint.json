@@ -1,0 +1,59 @@
+{
+ "note": "Adding and subtracting on a place-value chart, each carry or borrow a trade: blueprint for need 35P-07 of the frozen K-12 component map (Grades 3-5 place value), 2026-11-25. One row per idea, from the Common Core standards: 4.NBT.B.4 (fluently add and subtract multi-digit whole numbers using the standard algorithm; to 1,000,000 by the domain footnote) and 5.NBT.B.7 (add and subtract decimals to hundredths, using place-value strategies, relating the strategy to a written method). Each row's teacher picture says what a good teacher draws, written without reference to any card or component. Neighbours, not this need: building and pulling apart a number (35P-05); one place is ten of the next (35P-04); comparing by place (35P-06); rounding and estimating (35P-01); multiplying with partial products (35P-08); K-2 trading ones for tens with blocks (K2N-23). Cases (development and scoring) are written from these rows, worded as learners ask, in English and Chinese. Never taken from the question set.",
+ "rows": [
+  {
+   "id": "A1",
+   "idea": "Adding multi-digit whole numbers with a carry: ten of a place traded for one of the next place",
+   "standards": [
+    "4.NBT.B.4"
+   ],
+   "grades": "4",
+   "teacher_picture": "Both numbers' counters put on one place-value chart, place by place (3,486 and 2,739); the ones joined: 15 ones, ten of them traded for 1 ten, which moves to the tens column, 5 ones stay; the same in each column that reaches ten or more; the total read off the chart: 6,225. Beside it the written column sum, each small carried 1 matching one trade. In Chinese: 满十进一."
+  },
+  {
+   "id": "A2",
+   "idea": "Carries in a row: a carry makes the next place reach ten again",
+   "standards": [
+    "4.NBT.B.4"
+   ],
+   "grades": "4",
+   "teacher_picture": "5,960 + 2,047 on the chart: the tens make 10 and are traded for 1 hundred; that hundred makes the hundreds 10, traded again for 1 thousand; columns left empty read as 0: 8,007. Each trade drawn as ten counters leaving one column and one counter arriving in the next."
+  },
+  {
+   "id": "A3",
+   "idea": "Subtracting multi-digit whole numbers with a borrow: one of a place traded for ten of the next place down",
+   "standards": [
+    "4.NBT.B.4"
+   ],
+   "grades": "4",
+   "teacher_picture": "Only the first number on the chart (7,352); taking away 2,618 place by place from the ones: 2 ones cannot give 8, so 1 ten is traded for 10 ones (12 ones), then 8 taken away; each column that is short trades one from the column to its left first; what is left read off: 4,734. The written method's crossed-out digits match the trades. In Chinese: 退一作十."
+  },
+  {
+   "id": "A4",
+   "idea": "Subtracting across zeros: the borrow travels through empty places",
+   "standards": [
+    "4.NBT.B.4"
+   ],
+   "grades": "4",
+   "teacher_picture": "50,003 on the chart, thousands, hundreds and tens empty; to take away 2,476 the ones need more, but the tens are empty, so 1 ten thousand is traded for 10 thousands, 1 thousand for 10 hundreds, 1 hundred for 10 tens, 1 ten for 10 ones, each trade shown; then each column taken away: 47,527. Also: why 'subtract the smaller digit from the bigger' gives a wrong answer."
+  },
+  {
+   "id": "A5",
+   "idea": "Adding decimals to hundredths, with a carry across the decimal point",
+   "standards": [
+    "5.NBT.B.7"
+   ],
+   "grades": "5",
+   "teacher_picture": "The chart with ones, a point, tenths and hundredths; 2.75 and 1.48 put on it, points lined up; 13 hundredths: ten traded for 1 tenth; 12 tenths: ten traded for 1 one, across the point; the total read off: 4.23. The trade across the point is the same trade as any other."
+  },
+  {
+   "id": "A6",
+   "idea": "Subtracting decimals, including from a number with fewer decimal places",
+   "standards": [
+    "5.NBT.B.7"
+   ],
+   "grades": "5",
+   "teacher_picture": "5 on the chart, the tenths and hundredths empty (5 = 5.00); to take away 1.36, 1 one is traded for 10 tenths, 1 tenth for 10 hundredths, then each column taken away: 3.64. An empty decimal place is 0 of that place, not nothing to subtract from."
+  }
+ ]
+}
