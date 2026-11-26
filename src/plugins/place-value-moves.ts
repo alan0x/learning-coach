@@ -67,7 +67,11 @@ export function placeValueStartFault(values: readonly number[], given: string): 
   for (const [index, value] of [number, practice].entries()) {
     if (value === undefined) continue;
     const leak = placeValueTaskFault(value, given);
-    if (leak === "zero") return `the ${roles[index]} is 0: there is nothing to ${given === "numeral" ? "pull apart" : "build"}`;
+    if (leak === "zero") {
+      // Seen in objective check 1 (PV-10, PV-13): the model declared 0, the chart's empty start, with the number as
+      // its max. Say what to write instead, so the repair can fix it.
+      return `the ${roles[index]} is 0: there is nothing to ${given === "numeral" ? "pull apart" : "build"}. Write the number itself as its value (for example 0.309), not 0: the chart starts empty by itself${given === "numeral" ? "" : ", and the demonstration animates the number up from 0"}`;
+    }
     if (leak) {
       return `the ${roles[index]} ${placeValueDecimal(value)} has one non-zero place, so ${given === "numeral" ? "pulling it apart" : `its ${given.replace("_", " ")} form`} shows the answer itself: choose a number with two or more non-zero places${given === "numeral" ? "" : ", or give its name or place counts"}`;
     }
