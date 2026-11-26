@@ -6,11 +6,14 @@ import {
   buildSolid, describeSolid, solidHasMeasure, solidUnfolds,
   buildFractionModel, FRACTION_MODEL_LIMITS,
   buildBaseTenTrade, validateBaseTenTradeContent, BASE_TEN_TRADE_LIMITS, baseTenMat, baseTenTapReachable,
+  buildPlaceValueChart, placeValueColumnName, placeValueColumns, placeValueColumnsFor, placeValueDigitAt, placeValueNumeral,
+  placeValueParts, PLACE_VALUE_PLACE_ALIASES,
   type BuiltRecipe, type RearrangementConstruction, type Solid, type SolidMeasureKind,
 } from "octos-lesson-language/plugin-math";
 import { compileText, lessonTextLanguage } from "../lesson-text.js";
 import { type CompiledVisual } from "../compiled-visual-reuse.js";
 import { baseTenStartFault, baseTenState, baseTenTapTask } from "./base-ten-moves.js";
+import { PLACE_VALUE_GIVENS, placeValueCleared, placeValuePlain, placeValueStartFault, placeValueWordsWrite } from "./place-value-moves.js";
 import { plotCurveNumbers, plotSampleNumbers } from "./plot-bindings.js";
 import { planPlotView, type PlotView } from "../plot-view-planner.js";
 import { parseModelFormula } from "./math-formulas.js";
@@ -1793,6 +1796,166 @@ function compileBaseTenTrade(
   };
 }
 
+/** The most variables a lesson declares (OLL's schema), and so the most a chart may bind. */
+const PLACE_VALUE_MAX_VARIABLES = 16;
+
+/** The chart's own words: the labels of the variables it creates. Everything said is the model's. */
+const PLACE_VALUE_TEXT = {
+  "en-US": { number: "the number", count: (place: string) => `${place} on the chart`, pulled: (place: string) => `${place} taken out` },
+  "zh-CN": { number: "这个数", count: (place: string) => `${place}上的圆片`, pulled: (place: string) => `${place}拿出来的圆片` },
+} as const;
+
+/**
+ * The place-value chart (OLL decision 0025, need 35P-05), on the trading mat's pattern: the question's number
+ * and the practice number are lesson numbers, and `given` says what the card gives (a build form, or the
+ * numeral to pull apart). The program writes every number text on the card, fixes the columns for both
+ * numbers, plays the model's demonstration steps (the number left to do, cleared a place at a time) as the
+ * card's own changes, and turns the model's practice into the learner's task on the practice number: build
+ * it, or pull it apart and write its parts in a row.
+ */
+function compilePlaceValueChart(
+  base: string,
+  content: LessonPlanVisualContent,
+  role: string,
+  placement: ReturnType<typeof place>,
+  plan: LessonPlan,
+  path: string,
+): CompiledVisual {
+  const input = parameters(content);
+  allowParameterKeys(input, ["given"], path);
+  const given = input.given as typeof PLACE_VALUE_GIVENS[number];
+  if (!PLACE_VALUE_GIVENS.includes(given)) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.given`, `given is one of ${PLACE_VALUE_GIVENS.join(", ")}: what the card shows (numeral to pull a number apart)`, "place_value_chart");
+  }
+  const mode = given === "numeral" ? "apart" : "build";
+  const numbers = content.numbers ?? [];
+  const values = numbers.map((number, index) => numberDefinition(plan, number, `${path}.numbers[${index}]`).initial);
+  // The chart's numbers are its own: they change only by its rules, so another visual cannot also show them.
+  const sharesNumbers = (action: LessonPlan["sections"][number]["moments"][number]["actions"][number]) => action.action === "create"
+    && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability !== "place_value_chart"
+    && ((action.content as LessonPlanVisualContent).numbers ?? []).some((number) => numbers.includes(number));
+  const sharingAt = plan.sections.findIndex((section) => section.moments.some((moment) => moment.actions.some(sharesNumbers)));
+  if (sharingAt >= 0) {
+    // Named by the later of the two pictures, the one a section still being written can lose (as the mat's is).
+    const sharing = plan.sections[sharingAt]!.moments.flatMap((moment) => moment.actions).find(sharesNumbers)!;
+    const chartAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
+    const sharingCapability = (sharing.content as LessonPlanVisualContent).capability;
+    fail("LESSON_PLAN_SHARED_NUMBER", `${path}.numbers`, `the place-value chart needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the number on the chart only, or in words`,
+      sharingAt > chartAt ? sharingCapability : "place_value_chart");
+  }
+  const fault = placeValueStartFault(values, given);
+  if (fault) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault, "place_value_chart");
+  // One chart per lesson: a later chart on other numbers is refused at its own path (as the mat's is).
+  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions)
+    .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "place_value_chart");
+  if (first && (JSON.stringify((first.content as LessonPlanVisualContent).numbers ?? []) !== JSON.stringify(numbers)
+    || (first.content as LessonPlanVisualContent).parameters?.given !== given)) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a lesson has one place-value chart: use the same lesson numbers and given each time, or write another number in words", "place_value_chart");
+  }
+  const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
+  const text = PLACE_VALUE_TEXT[language];
+  // Every value on the card is exact integer thousandths (OLL 0025): 26.075 is 26075, never rounded.
+  const [number, practice] = values.map((value) => Math.round(value * 1000)) as [number, number | undefined];
+  const stem = base.replace(/[^A-Za-z0-9]+/gu, "_").toLowerCase();
+  // The columns cover both numbers, so the card never resizes when practice starts on the other one.
+  const { top_place, decimals } = placeValueColumnsFor([number, ...(practice !== undefined ? [practice] : [])], language);
+  const columns = placeValueColumns(top_place, decimals);
+  // Pulling apart binds two variables a column and the number one, and a lesson (and a task's start) holds at
+  // most 16 (OLL): seven columns at most, such as a Chinese chart to the millions, or one with decimals to 9,999.999.
+  if (mode === "apart" && 2 * columns.length + 1 > PLACE_VALUE_MAX_VARIABLES) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `pulled apart, these numbers need ${columns.length} columns and the chart holds at most ${(PLACE_VALUE_MAX_VARIABLES - 1) / 2}: choose numbers without decimals, or with decimals and a whole part under ${language === "en-US" ? "1,000" : "10,000"}`, "place_value_chart");
+  }
+  // Each column's count (and pulled count) is the chart's own variable: the demonstration animates or taps
+  // it, and a practice start sets it. The number is the chart's own variable too, in thousandths, when a
+  // practice starts on another number; with no practice number it stays as written.
+  const numberVariable = `${stem}_number`;
+  const variableOf = (place: number, field: "count" | "pulled") => `${stem}_${PLACE_VALUE_PLACE_ALIASES[place]!.replace(/-/gu, "_")}_${field}`;
+  const built = buildPlaceValueChart({
+    as: base, role, place: placement,
+    ...(language === "zh-CN" ? { language } : {}),
+    mode, given,
+    target: practice !== undefined ? { expression: numberVariable, initial: number } : number,
+    ...(practice !== undefined ? { numbers: [practice] } : {}),
+    places: columns.map((place) => ({
+      place,
+      count: { expression: variableOf(place, "count"), initial: mode === "apart" ? placeValueDigitAt(number, place) : 0 },
+      ...(mode === "apart" ? { pulled: { expression: variableOf(place, "pulled"), initial: 0 } } : {}),
+    })),
+  });
+  const variables: NonNullable<CompiledVisual["variables"]> = [
+    // From the smaller to the larger of the two numbers: OLL checks the card at both ends.
+    ...(practice !== undefined ? [{ as: numberVariable, initial: number, min: Math.min(number, practice), max: Math.max(number, practice), label: text.number }] : []),
+    ...columns.flatMap((place) => {
+      const name = placeValueColumnName(place, language);
+      return [
+        { as: variableOf(place, "count"), initial: mode === "apart" ? placeValueDigitAt(number, place) : 0, min: 0, max: 9, label: text.count(name) },
+        ...(mode === "apart" ? [{ as: variableOf(place, "pulled"), initial: 0, min: 0, max: 9, label: text.pulled(name) }] : []),
+      ];
+    }),
+  ];
+  return {
+    actions: built.actions, whole: built.whole, parts: new Map(Object.entries(built.parts)), variables,
+    mover: {
+      unbound: true,
+      numbers: [...numbers],
+      // A step clears whole places of the number left to do: building puts each cleared place's disks on the
+      // chart (its count animated from 0 to the digit, the disks appearing one at a time), pulling apart takes
+      // each one out by the card's own tap. Highest place first.
+      play(steps) {
+        const actions: AuthoringAction[] = [];
+        for (const step of steps) {
+          if (step.position !== 0) continue;
+          for (const cleared of placeValueCleared(Math.round(step.from[0]! * 1000), Math.round(step.to[0]! * 1000))) {
+            actions.push(mode === "build"
+              ? { do: "animate", variable: variableOf(cleared, "count"), value: placeValueDigitAt(number, cleared), duration_intent: "brief" } as AuthoringAction
+              : { do: "tap", target: base, tap: "take_out", at: PLACE_VALUE_PLACE_ALIASES[cleared]! } as unknown as AuthoringAction);
+          }
+        }
+        return actions;
+      },
+      // The model's practice is "the learner builds (pulls apart) the practice number": the chart starts again
+      // on that number, empty to build or whole to pull apart, and the card says when it is done. The value
+      // the model wrote is not read (these facts take none). A build task whose words write the practice
+      // number's digits gives the answer away: that task is dropped and recorded, never the lesson.
+      task(_position, _value, _end, words = []) {
+        if (practice === undefined) {
+          return { drop: "the chart has no practice number: the learner's task needs a second lesson number, different from the question's", reason: "no_practice_number" };
+        }
+        if (mode === "build" && words.some((each) => placeValueWordsWrite(each, practice))) {
+          return { drop: `the task's words write the practice number ${placeValuePlain(practice)}, which the learner is to build from the card's ${given}`, reason: "practice_number_in_words" };
+        }
+        const values: Record<string, number> = { [numberVariable]: practice };
+        for (const column of columns) {
+          values[variableOf(column, "count")] = mode === "apart" ? placeValueDigitAt(practice, column) : 0;
+          if (mode === "apart") values[variableOf(column, "pulled")] = 0;
+        }
+        const task = {
+          start: { kind: "practice", variables: Object.keys(values), values },
+          allowed_operations: [{ kind: "card_tap", node: base }, { kind: "card_submit" }],
+          completion: { kind: "card_fact", node: base, fact: mode === "build" ? "built" : "pulled_all" },
+        };
+        if (mode === "build") return { task };
+        // Pulled apart, the parts are written in one row, a blank per non-zero place, each named by its place
+        // (decision 0025 §3). The row has no start: it follows the chart the learner pulled apart.
+        const row: Array<Record<string, unknown>> = [{ text: `${placeValueNumeral(practice, language)} =` }];
+        placeValueParts(practice).forEach((part, index) => {
+          if (index) row.push({ text: "+" });
+          row.push({ blank: { as: PLACE_VALUE_PLACE_ALIASES[part.place]!, answer: placeValuePlain(part.value), label: placeValueColumnName(part.place, language) } });
+        });
+        return {
+          task,
+          then: [{
+            prompt: compileText(plan, "写出每一部分是多少。"),
+            anchor: base,
+            allowed_operations: [{ kind: "row_entry" }],
+            completion: { kind: "numeric_row", parts: row },
+          }],
+        };
+      },
+    },
+  };
+}
+
 export const MATH_COMPILERS = {
   number_line: compileNumberLine,
   number_line_compare: compileNumberLineCompare,
@@ -1813,4 +1976,5 @@ export const MATH_COMPILERS = {
   solid_3d: compileSolid3d,
   fraction_model: compileFractionModel,
   base_ten_trade: compileBaseTenTrade,
+  place_value_chart: compilePlaceValueChart,
 } satisfies Record<string, VisualCompiler>;

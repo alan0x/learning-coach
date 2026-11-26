@@ -273,7 +273,7 @@
               "properties": {
                 "kind": {"const": "card_fact"},
                 "node": {"$ref": "#/$defs/alias"},
-                "fact": {"enum": ["no_trade_left", "count"]},
+                "fact": {"enum": ["no_trade_left", "count", "built", "pulled_all"]},
                 "at": {"enum": ["ones", "tens", "hundreds"]},
                 "value": {"type": "integer", "minimum": 0}
               }
@@ -371,7 +371,7 @@
         "do": {"enum": ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate", "hide", "view", "tap"]},
         "when": {"enum": ["before_speech", "during_speech", "after_speech"]},
         "as": {"$ref": "#/$defs/alias"},
-        "kind": {"enum": ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model", "base_ten_trade"]},
+        "kind": {"enum": ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model", "base_ten_trade", "place_value_chart"]},
         "role": {"type": "string"},
         "content": {"type": "object"},
         "place": {"$ref": "#/$defs/placement"},
@@ -392,8 +392,8 @@
         "reason": {"type": "string"},
         "show": {"type": "string"},
         "preset": {"enum": ["front", "top", "side", "isometric"]},
-        "tap": {"enum": ["gather", "ungather", "make", "break"]},
-        "at": {"enum": ["ones", "tens", "hundreds"]},
+        "tap": {"enum": ["gather", "ungather", "make", "break", "add", "remove", "take_out"]},
+        "at": {"enum": ["thousandths", "hundredths", "tenths", "ones", "tens", "hundreds", "thousands", "ten-thousands", "hundred-thousands", "millions"]},
         "source": {
           "type": "object",
           "required": ["selection", "confirmed_by"],
@@ -464,6 +464,13 @@
             "properties": {"do": {"const": "write"}, "kind": {"const": "base_ten_trade"}}
           },
           "then": {"properties": {"content": {"$ref": "#/$defs/baseTenTradeContent"}}}
+        },
+        {
+          "if": {
+            "required": ["do", "kind"],
+            "properties": {"do": {"const": "write"}, "kind": {"const": "place_value_chart"}}
+          },
+          "then": {"properties": {"content": {"$ref": "#/$defs/placeValueChartContent"}}}
         },
         {
           "if": {"properties": {"do": {"const": "revise"}}},
@@ -731,6 +738,41 @@
         }
       }
     },
+    "placeValueChartContent": {
+      "type": "object",
+      "required": ["mode", "given", "top_place", "decimals", "target", "places"],
+      "additionalProperties": false,
+      "properties": {
+        "language": {"enum": ["en-US", "zh-CN"]},
+        "mode": {"enum": ["build", "apart"]},
+        "given": {"enum": ["name", "expanded", "expanded_factors", "place_counts", "numeral"]},
+        "top_place": {"type": "integer", "minimum": 0, "maximum": 6},
+        "decimals": {"type": "boolean"},
+        "target": {"type": "integer", "minimum": 1, "maximum": 9999999999},
+        "places": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 10,
+          "items": {
+            "type": "object",
+            "required": ["as", "place", "count"],
+            "additionalProperties": false,
+            "properties": {
+              "as": {"enum": ["thousandths", "hundredths", "tenths", "ones", "tens", "hundreds", "thousands", "ten-thousands", "hundred-thousands", "millions"]},
+              "place": {"type": "integer", "minimum": -3, "maximum": 6},
+              "count": {"type": "integer", "minimum": 0, "maximum": 9},
+              "pulled": {"type": "integer", "minimum": 0, "maximum": 9}
+            }
+          }
+        },
+        "bindings": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {"$ref": "#/$defs/valueBinding"}
+        }
+      }
+    },
     "scene3dContent": {
       "type": "object",
       "required": ["objects", "camera", "fallback"],
@@ -874,7 +916,7 @@
       "required": ["target", "expression"],
       "additionalProperties": false,
       "properties": {
-        "target": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*$"},
+        "target": {"type": "string", "pattern": "^(?:[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*|target)$"},
         "expression": {"type": "string", "minLength": 1, "maxLength": 256},
         "allow_zero": {"const": true},
         "hide_when_undefined": {"const": true},

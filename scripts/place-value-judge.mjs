@@ -10,8 +10,10 @@
 // - Checks (objective; owner, 2026-11-24): the lesson plays; one chart shows the question's number; the chart
 //   speaks the lesson's language; a task on the chart is the card's own (built, or every place taken out), by
 //   taps, on a practice number different from the lesson's, starting empty (build) or whole (pull apart); a
-//   build task's words do not write its number's digits; and a near miss that draws a chart FAILS (decision
-//   0025 §7: the mat's judge only noted it, so BT-31 was never flagged).
+//   build task's words do not write its number's digits (read as the compiler reads them: commas or spaces
+//   between thousands, full-width digits); a pull-apart task is followed by its row, one blank per non-zero
+//   place of the practice number, each answer that place's value; and a near miss that draws a chart FAILS
+//   (decision 0025 §7: the mat's judge only noted it, so BT-31 was never flagged).
 // - Notes (what the lesson chose to teach; the owner judges lessons): the chart's task matches the question's
 //   direction and form, the demonstration finishes (built, or every place out), the learner has a task on the
 //   chart, a typed question or row follows, and the task's words name no control.
@@ -19,7 +21,9 @@
 // Narration is not judged.
 
 import { normalizeAuthoringLesson, reduceCanonicalEvents } from "octos-lesson-language";
-import { placeValueChartState, placeValueFacts, placeValueNumeral, placeValueParse } from "octos-lesson-language/plugin-math";
+import { placeValueChartState, placeValueFacts, placeValueNumeral, placeValueParse, placeValueParts } from "octos-lesson-language/plugin-math";
+// The compiler's own reading of a task's words, so the judge and the compiler agree on what leaks the number.
+import { placeValueWordsWrite } from "../lesson-plan.js";
 
 const KIND = "place_value_chart";
 
@@ -105,10 +109,15 @@ export function judgePlaceValueChart(item, lesson) {
         : chart.practice.pulled.every((pulled) => pulled === 0) && chart.practice.columns.every((place, i) => chart.practice.counts[i] === Math.floor(chart.practice.target / 10 ** (place + 3)) % 10);
       check("the task starts empty (build) or whole (pull apart)", fresh, JSON.stringify({ counts: chart.practice.counts, pulled: chart.practice.pulled }));
       if (chart.content.mode === "build") {
-        const words = [chart.cardTask.prompt, ...(chart.cardTask.hints ?? [])].join(" ");
-        const digits = [placeValueNumeral(chart.practice.target, "en-US"), placeValueNumeral(chart.practice.target, "zh-CN")];
-        const leaked = digits.find((text) => words.includes(text));
+        const leaked = [chart.cardTask.prompt, ...(chart.cardTask.hints ?? [])].find((text) => placeValueWordsWrite(String(text ?? ""), chart.practice.target));
         check("a build task's words do not write its number", !leaked, leaked);
+      } else {
+        // The row after pulling apart: anchored on the chart, one blank per non-zero place, each worth its place.
+        const row = chart.tasks.find((task) => task.completion?.kind === "numeric_row" && task.anchor === chart.as);
+        const blanks = (row?.completion.parts ?? []).filter((part) => part.blank).map((part) => placeValueParse(String(part.blank.answer)));
+        const parts = placeValueParts(chart.practice.target).map((part) => part.value);
+        check("a pull-apart task is followed by the row of its parts", row && JSON.stringify(blanks) === JSON.stringify(parts),
+          JSON.stringify({ row: blanks, parts }));
       }
     }
     const words = [chart.cardTask.prompt, ...(chart.cardTask.hints ?? []), chart.cardTask.success_message ?? ""].join(" ");

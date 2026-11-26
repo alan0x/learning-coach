@@ -385,7 +385,7 @@ var require_codegen = __commonJS({
       AND: new code_1._Code("&&"),
       ADD: new code_1._Code("+")
     };
-    var Node = class {
+    var Node2 = class {
       optimizeNodes() {
         return this;
       }
@@ -393,7 +393,7 @@ var require_codegen = __commonJS({
         return this;
       }
     };
-    var Def = class extends Node {
+    var Def = class extends Node2 {
       constructor(varKind, name, rhs) {
         super();
         this.varKind = varKind;
@@ -416,7 +416,7 @@ var require_codegen = __commonJS({
         return this.rhs instanceof code_1._CodeOrName ? this.rhs.names : {};
       }
     };
-    var Assign = class extends Node {
+    var Assign = class extends Node2 {
       constructor(lhs, rhs, sideEffects) {
         super();
         this.lhs = lhs;
@@ -446,7 +446,7 @@ var require_codegen = __commonJS({
         return `${this.lhs} ${this.op}= ${this.rhs};` + _n;
       }
     };
-    var Label = class extends Node {
+    var Label = class extends Node2 {
       constructor(label) {
         super();
         this.label = label;
@@ -456,7 +456,7 @@ var require_codegen = __commonJS({
         return `${this.label}:` + _n;
       }
     };
-    var Break = class extends Node {
+    var Break = class extends Node2 {
       constructor(label) {
         super();
         this.label = label;
@@ -467,7 +467,7 @@ var require_codegen = __commonJS({
         return `break${label};` + _n;
       }
     };
-    var Throw = class extends Node {
+    var Throw = class extends Node2 {
       constructor(error) {
         super();
         this.error = error;
@@ -479,7 +479,7 @@ var require_codegen = __commonJS({
         return this.error.names;
       }
     };
-    var AnyCode = class extends Node {
+    var AnyCode = class extends Node2 {
       constructor(code) {
         super();
         this.code = code;
@@ -498,7 +498,7 @@ var require_codegen = __commonJS({
         return this.code instanceof code_1._CodeOrName ? this.code.names : {};
       }
     };
-    var ParentNode = class extends Node {
+    var ParentNode = class extends Node2 {
       constructor(nodes = []) {
         super();
         this.nodes = nodes;
@@ -7531,7 +7531,7 @@ var v0_1_schema_default = {
               properties: {
                 kind: { const: "card_fact" },
                 node: { $ref: "#/$defs/alias" },
-                fact: { enum: ["no_trade_left", "count"] },
+                fact: { enum: ["no_trade_left", "count", "built", "pulled_all"] },
                 at: { enum: ["ones", "tens", "hundreds"] },
                 value: { type: "integer", minimum: 0 }
               }
@@ -7633,7 +7633,7 @@ var v0_1_schema_default = {
         do: { enum: ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate", "hide", "view", "tap"] },
         when: { enum: ["before_speech", "during_speech", "after_speech"] },
         as: { $ref: "#/$defs/alias" },
-        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model", "base_ten_trade"] },
+        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model", "base_ten_trade", "place_value_chart"] },
         role: { type: "string" },
         content: { type: "object" },
         place: { $ref: "#/$defs/placement" },
@@ -7654,8 +7654,8 @@ var v0_1_schema_default = {
         reason: { type: "string" },
         show: { type: "string" },
         preset: { enum: ["front", "top", "side", "isometric"] },
-        tap: { enum: ["gather", "ungather", "make", "break"] },
-        at: { enum: ["ones", "tens", "hundreds"] },
+        tap: { enum: ["gather", "ungather", "make", "break", "add", "remove", "take_out"] },
+        at: { enum: ["thousandths", "hundredths", "tenths", "ones", "tens", "hundreds", "thousands", "ten-thousands", "hundred-thousands", "millions"] },
         source: {
           type: "object",
           required: ["selection", "confirmed_by"],
@@ -7726,6 +7726,13 @@ var v0_1_schema_default = {
             properties: { do: { const: "write" }, kind: { const: "base_ten_trade" } }
           },
           then: { properties: { content: { $ref: "#/$defs/baseTenTradeContent" } } }
+        },
+        {
+          if: {
+            required: ["do", "kind"],
+            properties: { do: { const: "write" }, kind: { const: "place_value_chart" } }
+          },
+          then: { properties: { content: { $ref: "#/$defs/placeValueChartContent" } } }
         },
         {
           if: { properties: { do: { const: "revise" } } },
@@ -7998,6 +8005,41 @@ var v0_1_schema_default = {
         }
       }
     },
+    placeValueChartContent: {
+      type: "object",
+      required: ["mode", "given", "top_place", "decimals", "target", "places"],
+      additionalProperties: false,
+      properties: {
+        language: { enum: ["en-US", "zh-CN"] },
+        mode: { enum: ["build", "apart"] },
+        given: { enum: ["name", "expanded", "expanded_factors", "place_counts", "numeral"] },
+        top_place: { type: "integer", minimum: 0, maximum: 6 },
+        decimals: { type: "boolean" },
+        target: { type: "integer", minimum: 1, maximum: 9999999999 },
+        places: {
+          type: "array",
+          minItems: 1,
+          maxItems: 10,
+          items: {
+            type: "object",
+            required: ["as", "place", "count"],
+            additionalProperties: false,
+            properties: {
+              as: { enum: ["thousandths", "hundredths", "tenths", "ones", "tens", "hundreds", "thousands", "ten-thousands", "hundred-thousands", "millions"] },
+              place: { type: "integer", minimum: -3, maximum: 6 },
+              count: { type: "integer", minimum: 0, maximum: 9 },
+              pulled: { type: "integer", minimum: 0, maximum: 9 }
+            }
+          }
+        },
+        bindings: {
+          type: "array",
+          minItems: 1,
+          maxItems: 64,
+          items: { $ref: "#/$defs/valueBinding" }
+        }
+      }
+    },
     scene3dContent: {
       type: "object",
       required: ["objects", "camera", "fallback"],
@@ -8149,7 +8191,7 @@ var v0_1_schema_default = {
       required: ["target", "expression"],
       additionalProperties: false,
       properties: {
-        target: { type: "string", pattern: "^[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*$" },
+        target: { type: "string", pattern: "^(?:[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*|target)$" },
         expression: { type: "string", minLength: 1, maxLength: 256 },
         allow_zero: { const: true },
         hide_when_undefined: { const: true },
@@ -9115,6 +9157,9 @@ function baseTenSliderReachable(mat, places) {
   }
   return found;
 }
+function baseTenLanguage(raw) {
+  return raw?.language === "zh-CN" ? "zh-CN" : "en-US";
+}
 var BASE_TEN_WORDS = {
   "en-US": {
     /** The mat's own name, for a screen reader (review of #95). */
@@ -9134,7 +9179,12 @@ var BASE_TEN_WORDS = {
       no_room: ["There is no room on the mat for ten more.", "There is no room on the mat for ten more."],
       none_loose: ["There is no loose one to use.", "There is no loose ten to use.", "There is no loose hundred to use."]
     },
-    other: "That can't be done here."
+    other: "That can't be done here.",
+    /** How to work the mat (owner, 2026-11-24: the component says how it is used, as fixed text): two columns, then three. */
+    howTo: [
+      "Tap a block to put it in the tray; tap it again to take it out. When the tray holds ten, press Make a ten. Press Break a ten to turn a ten into ten ones. Then press I'm done.",
+      "Tap a block to put it in its tray; tap it again to take it out. When a tray holds ten, press Make a ten or Make a hundred. Press Break a ten or Break a hundred to turn it into ten of the place below. Then press I'm done."
+    ]
   },
   "zh-CN": {
     matLabel: "\u6570\u4F4D\u65B9\u5757",
@@ -9152,9 +9202,17 @@ var BASE_TEN_WORDS = {
       no_room: ["\u6CA1\u6709\u5730\u65B9\u518D\u653E\u5341\u4E2A\u4E86\u3002", "\u6CA1\u6709\u5730\u65B9\u518D\u653E\u5341\u4E2A\u4E86\u3002"],
       none_loose: ["\u6CA1\u6709\u6563\u7684\u4E00\u53EF\u4EE5\u7528\u4E86\u3002", "\u6CA1\u6709\u6563\u7684\u5341\u53EF\u4EE5\u7528\u4E86\u3002", "\u6CA1\u6709\u6563\u7684\u767E\u53EF\u4EE5\u7528\u4E86\u3002"]
     },
-    other: "\u8FD9\u91CC\u4E0D\u80FD\u8FD9\u6837\u505A\u3002"
+    other: "\u8FD9\u91CC\u4E0D\u80FD\u8FD9\u6837\u505A\u3002",
+    howTo: [
+      "\u70B9\u4E00\u4E2A\u65B9\u5757\uFF0C\u628A\u5B83\u653E\u8FDB\u6258\u76D8\uFF1B\u518D\u70B9\u4E00\u4E0B\u5C31\u62FF\u51FA\u6765\u3002\u6258\u76D8\u91CC\u6709\u5341\u4E2A\u65F6\uFF0C\u6309\u300C\u6362\u6210\u4E00\u4E2A\u5341\u300D\u3002\u6309\u300C\u62C6\u5F00\u4E00\u4E2A\u5341\u300D\uFF0C\u628A\u4E00\u4E2A\u5341\u62C6\u6210\u5341\u4E2A\u4E00\u3002\u505A\u597D\u540E\u6309\u300C\u6211\u505A\u5B8C\u4E86\u300D\u3002",
+      "\u70B9\u4E00\u4E2A\u65B9\u5757\uFF0C\u628A\u5B83\u653E\u8FDB\u6258\u76D8\uFF1B\u518D\u70B9\u4E00\u4E0B\u5C31\u62FF\u51FA\u6765\u3002\u6258\u76D8\u91CC\u6709\u5341\u4E2A\u65F6\uFF0C\u6309\u300C\u6362\u6210\u4E00\u4E2A\u5341\u300D\u6216\u300C\u6362\u6210\u4E00\u4E2A\u767E\u300D\u3002\u6309\u300C\u62C6\u5F00\u4E00\u4E2A\u5341\u300D\u6216\u300C\u62C6\u5F00\u4E00\u4E2A\u767E\u300D\uFF0C\u628A\u5B83\u62C6\u6210\u5341\u4E2A\u4F4E\u4E00\u4F4D\u7684\u65B9\u5757\u3002\u505A\u597D\u540E\u6309\u300C\u6211\u505A\u5B8C\u4E86\u300D\u3002"
+    ]
   }
 };
+function baseTenHowTo(raw) {
+  const words = BASE_TEN_WORDS[baseTenLanguage(raw)];
+  return words.howTo[raw?.columns === 3 ? 1 : 0];
+}
 function baseTenRefusalText(reason, place5, language = "en-US") {
   const words = BASE_TEN_WORDS[language] ?? BASE_TEN_WORDS["en-US"];
   const sentences = words.refusal[reason];
@@ -9171,6 +9229,584 @@ function baseTenChanges(before, after) {
       changes.push({ place: p, field: "tray", before: before.trays[p], after: after.trays[p] });
   }
   return changes;
+}
+function baseTenFacts(mat) {
+  const value2 = valueOf(mat.counts);
+  const noTradeLeft = mat.counts.slice(0, mat.columns - 1).every((count) => count < 10);
+  let digits = 1;
+  while (digits < mat.columns && value2 >= 10 ** digits)
+    digits += 1;
+  const places = Array.from({ length: digits }, (_, i) => digits - 1 - i);
+  const parts = places.map((p) => mat.counts[p] * 10 ** p);
+  return { value: value2, no_trade_left: noTradeLeft, digits, counts: places.map((p) => mat.counts[p]), parts, equation: `${value2} = ${parts.join(" + ")}` };
+}
+
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/place-value-chart.js
+var PLACE_VALUE_CHART_KIND = "place_value_chart";
+var PLACE_VALUE_CHART_FEATURE = "plugin:math/place-value-chart@1";
+var PLACE_VALUE_CHART_PLUGIN_VERSION = "0.8.0";
+var PLACE_VALUE_CHART_LANGUAGES = ["en-US", "zh-CN"];
+var PLACE_VALUE_CHART_BINDINGS = {
+  places: ["count", "pulled"]
+};
+var PLACE_VALUE_CHART_CARD_BINDINGS = ["target"];
+var PLACE_VALUE_CHART_PART_FIELDS = ["places"];
+var PLACE_VALUE_MIN_PLACE = -3;
+var PLACE_VALUE_MAX_PLACE = 6;
+var PLACE_VALUE_MAX_PER_PLACE = 9;
+var PLACE_VALUE_MAX_VALUE = 10 ** (PLACE_VALUE_MAX_PLACE + 1) * 1e3 - 1;
+var PLACE_VALUE_CHART_MODES = ["build", "apart"];
+var PLACE_VALUE_BUILD_GIVENS = ["name", "expanded", "expanded_factors", "place_counts"];
+var PLACE_VALUE_PLACE_ALIASES = {
+  6: "millions",
+  5: "hundred-thousands",
+  4: "ten-thousands",
+  3: "thousands",
+  2: "hundreds",
+  1: "tens",
+  0: "ones",
+  [-1]: "tenths",
+  [-2]: "hundredths",
+  [-3]: "thousandths"
+};
+var PLACE_VALUE_TAP_PLACES = Object.freeze(Array.from({ length: PLACE_VALUE_MAX_PLACE - PLACE_VALUE_MIN_PLACE + 1 }, (_, i) => PLACE_VALUE_PLACE_ALIASES[i + PLACE_VALUE_MIN_PLACE]));
+var placeValueTapIndex = (place5) => place5 - PLACE_VALUE_MIN_PLACE;
+var placeValueTapPlace = (index) => index + PLACE_VALUE_MIN_PLACE;
+var SHORT = { "en-US": "en", "zh-CN": "zh" };
+var short = (language) => SHORT[language ?? "en-US"] ?? "en";
+function placeValueDigitAt(value2, place5) {
+  return Math.floor(value2 / 10 ** (place5 + 3)) % 10;
+}
+function placeValueTopPlace(value2) {
+  for (let place5 = PLACE_VALUE_MAX_PLACE; place5 >= PLACE_VALUE_MIN_PLACE; place5 -= 1)
+    if (placeValueDigitAt(value2, place5))
+      return place5;
+  return 0;
+}
+function placeValueHasFraction(value2) {
+  return value2 % 1e3 !== 0;
+}
+var groupThousands = (whole2) => String(whole2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+function placeValueNumeral(value2, language = "en-US") {
+  const whole2 = Math.floor(value2 / 1e3);
+  const frac = value2 % 1e3;
+  const wholeText = short(language) === "en" ? groupThousands(whole2) : String(whole2);
+  if (!frac)
+    return wholeText;
+  return `${wholeText}.${String(frac).padStart(3, "0").replace(/0+$/u, "")}`;
+}
+var EN_PLACE = { 6: "Millions", 5: "Hundred thousands", 4: "Ten thousands", 3: "Thousands", 2: "Hundreds", 1: "Tens", 0: "Ones", [-1]: "Tenths", [-2]: "Hundredths", [-3]: "Thousandths" };
+var ZH_PLACE = { 6: "\u767E\u4E07\u4F4D", 5: "\u5341\u4E07\u4F4D", 4: "\u4E07\u4F4D", 3: "\u5343\u4F4D", 2: "\u767E\u4F4D", 1: "\u5341\u4F4D", 0: "\u4E2A\u4F4D", [-1]: "\u5341\u5206\u4F4D", [-2]: "\u767E\u5206\u4F4D", [-3]: "\u5343\u5206\u4F4D" };
+function placeValueColumnName(place5, language = "en-US") {
+  return (short(language) === "en" ? EN_PLACE : ZH_PLACE)[place5];
+}
+var periodSize = (language) => short(language) === "en" ? 3 : 4;
+function placeValuePeriodTop(place5, language = "en-US") {
+  const size = periodSize(language);
+  return Math.min(PLACE_VALUE_MAX_PLACE, (Math.floor(Math.max(place5, 0) / size) + 1) * size - 1);
+}
+function placeValueColumns(topPlace, decimals) {
+  const columns = [];
+  for (let place5 = topPlace; place5 >= 0; place5 -= 1)
+    columns.push(place5);
+  if (decimals)
+    columns.push(-1, -2, -3);
+  return columns;
+}
+function placeValueColumnsFor(values, language = "en-US") {
+  const top = Math.max(0, ...values.map((value2) => placeValueTopPlace(value2)));
+  return { top_place: placeValuePeriodTop(top, language), decimals: values.some((value2) => placeValueHasFraction(value2)) };
+}
+function placeValueParts(value2) {
+  const list2 = [];
+  for (let place5 = PLACE_VALUE_MAX_PLACE; place5 >= PLACE_VALUE_MIN_PLACE; place5 -= 1) {
+    const digit = placeValueDigitAt(value2, place5);
+    if (digit)
+      list2.push({ place: place5, digit, value: digit * 10 ** (place5 + 3) });
+  }
+  return list2;
+}
+function placeValueTaskFault(value2, given) {
+  if (!value2)
+    return "zero";
+  const parts = placeValueParts(value2);
+  if ((given === "expanded" || given === "numeral") && parts.length < 2)
+    return "one_place";
+  if (given === "expanded_factors" && parts.length === 1 && parts[0].digit === 1)
+    return "one_place";
+  return void 0;
+}
+function placeValueAddDisk(chart, place5) {
+  if (!(place5 in chart))
+    return { ok: false, reason: "no_place" };
+  if (chart[place5] >= PLACE_VALUE_MAX_PER_PLACE)
+    return { ok: false, reason: "full" };
+  return { ok: true, chart: { ...chart, [place5]: chart[place5] + 1 } };
+}
+function placeValueRemoveDisk(chart, place5) {
+  if (!(place5 in chart) || chart[place5] === 0)
+    return { ok: false, reason: "empty" };
+  return { ok: true, chart: { ...chart, [place5]: chart[place5] - 1 } };
+}
+function placeValueChartValue(chart) {
+  return Object.entries(chart).reduce((sum, [place5, count]) => sum + count * 10 ** (Number(place5) + 3), 0);
+}
+function placeValueBuiltRight(chart, target) {
+  return placeValueChartValue(chart) === target;
+}
+function record4(value2, path, fail4) {
+  if (!value2 || typeof value2 !== "object" || Array.isArray(value2))
+    fail4(path, "Expected an object");
+  return value2;
+}
+function only4(value2, allowed, path, fail4) {
+  for (const key of Object.keys(value2))
+    if (!allowed.includes(key))
+      fail4(`${path}/${key}`, `Unknown place-value chart field '${key}'`);
+}
+function wholeNumber3(raw, path, low, high, fail4, what) {
+  if (typeof raw !== "number" || !Number.isInteger(raw) || raw < low || raw > high)
+    fail4(path, `${what} is a whole number from ${low} to ${high}`);
+  return raw;
+}
+function placeValueLanguage(raw) {
+  return raw?.language === "zh-CN" ? "zh-CN" : "en-US";
+}
+function placeValuePeriodTops(language = "en-US") {
+  return [...new Set(Array.from({ length: PLACE_VALUE_MAX_PLACE + 1 }, (_, place5) => placeValuePeriodTop(place5, language)))];
+}
+function validatePlaceValueChartContent(raw, path, fail4, options = {}) {
+  const content = record4(raw, path, fail4);
+  only4(content, ["language", "mode", "given", "top_place", "decimals", "target", "places", "bindings"], path, fail4);
+  if (content.language !== void 0 && !PLACE_VALUE_CHART_LANGUAGES.includes(content.language)) {
+    fail4(`${path}/language`, `A chart speaks ${PLACE_VALUE_CHART_LANGUAGES.join(" or ")}`);
+  }
+  const language = placeValueLanguage(content);
+  const mode = content.mode;
+  if (!PLACE_VALUE_CHART_MODES.includes(mode))
+    fail4(`${path}/mode`, "A chart's mode is 'build' or 'apart'");
+  const given = content.given;
+  if (mode === "build" && !PLACE_VALUE_BUILD_GIVENS.includes(given)) {
+    fail4(`${path}/given`, `A build task gives ${PLACE_VALUE_BUILD_GIVENS.join(", ")}`);
+  }
+  if (mode === "apart" && given !== "numeral")
+    fail4(`${path}/given`, "A pull-apart task gives the numeral");
+  const tops = placeValuePeriodTops(language);
+  const top = wholeNumber3(content.top_place, `${path}/top_place`, 0, PLACE_VALUE_MAX_PLACE, fail4, "The top place");
+  if (!tops.includes(top))
+    fail4(`${path}/top_place`, `A ${language} chart shows whole periods: its top place is ${tops.join(", ")}`);
+  if (typeof content.decimals !== "boolean")
+    fail4(`${path}/decimals`, "decimals is true or false");
+  const columns = placeValueColumns(top, content.decimals);
+  const target = wholeNumber3(content.target, `${path}/target`, 1, PLACE_VALUE_MAX_VALUE, fail4, "The target (in thousandths)");
+  if (placeValueTopPlace(target) > top)
+    fail4(`${path}/target`, `The target ${placeValueNumeral(target)} has a place above the chart's columns`);
+  if (placeValueHasFraction(target) && !content.decimals)
+    fail4(`${path}/target`, `The target ${placeValueNumeral(target)} has a fraction part: the chart needs decimals`);
+  if (!Array.isArray(content.places) || content.places.length !== columns.length) {
+    fail4(`${path}/places`, `A chart of these columns lists ${columns.length} places, highest first`);
+  }
+  for (const [i, item] of content.places.entries()) {
+    const at2 = `${path}/places/${i}`;
+    const place5 = record4(item, at2, fail4);
+    only4(place5, ["as", "place", "count", "pulled"], at2, fail4);
+    const expected = columns[i];
+    if (place5.place !== expected)
+      fail4(`${at2}/place`, `Place ${i + 1} is ${expected} (${placeValueColumnName(expected)}): places are listed highest first`);
+    if (place5.as !== PLACE_VALUE_PLACE_ALIASES[expected])
+      fail4(`${at2}/as`, `Place ${expected} is '${PLACE_VALUE_PLACE_ALIASES[expected]}'`);
+    const name = placeValueColumnName(expected).toLowerCase();
+    const count = wholeNumber3(place5.count, `${at2}/count`, 0, PLACE_VALUE_MAX_PER_PLACE, fail4, `The count of ${name}`);
+    if (mode === "build") {
+      if (place5.pulled !== void 0)
+        fail4(`${at2}/pulled`, "A build task pulls nothing apart");
+      continue;
+    }
+    if (place5.pulled === void 0)
+      fail4(`${at2}/pulled`, "A pull-apart task states how many of each place are pulled out");
+    const pulled = wholeNumber3(place5.pulled, `${at2}/pulled`, 0, PLACE_VALUE_MAX_PER_PLACE, fail4, `The pulled ${name}`);
+    if (!options.boundValues && count + pulled !== placeValueDigitAt(target, expected)) {
+      fail4(`${at2}`, `The ${name} on the chart and pulled out make ${count + pulled}, not the target's digit ${placeValueDigitAt(target, expected)}`);
+    }
+  }
+  if (options.boundValues)
+    return;
+  if (placeValueTaskFault(target, given) === "one_place") {
+    fail4(`${path}/target`, `${placeValueNumeral(target)} has one non-zero place: given as ${given === "numeral" ? "a numeral to pull apart" : "an expanded form"}, it shows its own answer`);
+  }
+  if (mode === "build" && content.places.reduce((sum, item) => sum + item.count * 10 ** (item.place + 3), 0) === target) {
+    fail4(`${path}/places`, `The chart already holds ${placeValueNumeral(target)}: a build task starts before the number is built`);
+  }
+}
+function placeValueDrawnCount(count) {
+  if (typeof count !== "number" || !Number.isFinite(count))
+    return 0;
+  return Math.min(PLACE_VALUE_MAX_PER_PLACE, Math.max(0, Math.floor(count + 1e-9)));
+}
+function placeValueChartState(raw) {
+  const content = raw ?? {};
+  const top = typeof content.top_place === "number" && Number.isInteger(content.top_place) ? Math.min(PLACE_VALUE_MAX_PLACE, Math.max(0, content.top_place)) : 0;
+  const columns = placeValueColumns(top, content.decimals === true);
+  const places = Array.isArray(content.places) ? content.places : [];
+  const find = (place5) => places.find((item) => item?.place === place5);
+  const target = typeof content.target === "number" && Number.isFinite(content.target) ? Math.max(0, Math.round(content.target)) : 0;
+  return {
+    mode: content.mode === "apart" ? "apart" : "build",
+    columns,
+    counts: columns.map((place5) => placeValueDrawnCount(find(place5)?.count)),
+    pulled: columns.map((place5) => placeValueDrawnCount(find(place5)?.pulled)),
+    target
+  };
+}
+var disksOf = (state) => Object.fromEntries(state.columns.map((place5, i) => [place5, state.counts[i]]));
+function applyPlaceValueTap(state, tap) {
+  const index = state.columns.indexOf(tap.place);
+  if (index < 0)
+    return { ok: false, reason: "no_place" };
+  if (tap.tap === "take_out") {
+    if (state.mode !== "apart")
+      return { ok: false, reason: "wrong_mode" };
+    if (state.counts[index] === 0)
+      return { ok: false, reason: "empty" };
+    return {
+      ok: true,
+      state: { ...state, counts: state.counts.map((count, i) => i === index ? 0 : count), pulled: state.pulled.map((pulled, i) => i === index ? pulled + state.counts[index] : pulled) }
+    };
+  }
+  if (tap.tap !== "add" && tap.tap !== "remove")
+    return { ok: false, reason: "wrong_mode" };
+  if (state.mode !== "build")
+    return { ok: false, reason: "wrong_mode" };
+  const result = tap.tap === "add" ? placeValueAddDisk(disksOf(state), tap.place) : placeValueRemoveDisk(disksOf(state), tap.place);
+  if (!result.ok)
+    return { ok: false, reason: result.reason };
+  return { ok: true, state: { ...state, counts: state.columns.map((place5) => result.chart[place5]) } };
+}
+function placeValueChanges(before, after) {
+  const changes = [];
+  after.columns.forEach((place5, index) => {
+    if (after.counts[index] !== before.counts[index])
+      changes.push({ index, place: place5, field: "count", before: before.counts[index], after: after.counts[index] });
+    if (after.pulled[index] !== before.pulled[index])
+      changes.push({ index, place: place5, field: "pulled", before: before.pulled[index], after: after.pulled[index] });
+  });
+  return changes;
+}
+function placeValueFacts(state) {
+  const value2 = placeValueChartValue(disksOf(state));
+  return {
+    value: value2,
+    built: state.mode === "build" && placeValueBuiltRight(disksOf(state), state.target),
+    pulled_all: state.mode === "apart" && state.counts.every((count) => count === 0)
+  };
+}
+var PLACE_VALUE_WORDS = {
+  "en-US": {
+    chartLabel: "A place-value chart",
+    point: "Decimal point",
+    add: "+",
+    takeOut: "Take out",
+    addLabel: (name) => `Put a disk in the ${name.toLowerCase()}`,
+    removeLabel: (name) => `Take a disk from the ${name.toLowerCase()}`,
+    takeOutLabel: (name) => `Take out the ${name.toLowerCase()}`,
+    refusal: {
+      full: "This place holds nine at most. Ten of them make one of the next place.",
+      empty: "There is no disk in this place."
+    },
+    other: "That can't be done here.",
+    /** How to work the chart, per task (fixed text the host shows with a task on the card). */
+    howTo: {
+      build: "Tap + under a place to put a disk there. Tap a disk to take it away. Tap \u201CI'm done\u201D when the chart shows the number.",
+      apart: "Tap \u201CTake out\u201D under a place to pull its disks out. When every place is out, write what each part is worth."
+    }
+  },
+  "zh-CN": {
+    chartLabel: "\u6570\u4F4D\u8868",
+    point: "\u5C0F\u6570\u70B9",
+    add: "+",
+    takeOut: "\u62FF\u51FA\u6765",
+    addLabel: (name) => `\u5728${name}\u4E0A\u653E\u4E00\u4E2A`,
+    removeLabel: (name) => `\u4ECE${name}\u4E0A\u62FF\u8D70\u4E00\u4E2A`,
+    takeOutLabel: (name) => `\u628A${name}\u7684\u90FD\u62FF\u51FA\u6765`,
+    refusal: {
+      full: "\u8FD9\u4E00\u4F4D\u6700\u591A\u653E\u4E5D\u4E2A\u3002\u5341\u4E2A\u5C31\u662F\u5DE6\u8FB9\u4E00\u4F4D\u7684\u4E00\u4E2A\u3002",
+      empty: "\u8FD9\u4E00\u4F4D\u6CA1\u6709\u5706\u7247\u3002"
+    },
+    other: "\u8FD9\u91CC\u4E0D\u80FD\u8FD9\u6837\u505A\u3002",
+    howTo: {
+      build: "\u70B9\u6570\u4F4D\u4E0B\u9762\u7684\u201C+\u201D\uFF0C\u5728\u8FD9\u4E00\u4F4D\u653E\u4E00\u4E2A\uFF1B\u70B9\u4E00\u4E2A\u5C31\u62FF\u8D70\u5B83\u3002\u6446\u597D\u4E86\u70B9\u201C\u6211\u505A\u5B8C\u4E86\u201D\u3002",
+      apart: "\u70B9\u6570\u4F4D\u4E0B\u9762\u7684\u201C\u62FF\u51FA\u6765\u201D\uFF0C\u628A\u8FD9\u4E00\u4F4D\u7684\u90FD\u62FF\u51FA\u6765\u3002\u6BCF\u4E00\u4F4D\u90FD\u62FF\u51FA\u6765\u4EE5\u540E\uFF0C\u5199\u51FA\u6BCF\u4E00\u90E8\u5206\u662F\u591A\u5C11\u3002"
+    }
+  }
+};
+function placeValueHowTo(raw) {
+  const words = PLACE_VALUE_WORDS[placeValueLanguage(raw)];
+  return words.howTo[raw?.mode === "apart" ? "apart" : "build"];
+}
+function placeValueRefusalText(reason, language = "en-US") {
+  const words = PLACE_VALUE_WORDS[language] ?? PLACE_VALUE_WORDS["en-US"];
+  return words.refusal[reason] ?? words.other;
+}
+var DISK = 30;
+var GAP = 4;
+var PAD = 5;
+var COLUMN = 2 * DISK + GAP + 2 * PAD;
+var ROWS = Math.ceil(PLACE_VALUE_MAX_PER_PLACE / 2);
+var BOX = 2 * PAD + ROWS * DISK + (ROWS - 1) * GAP;
+
+// node_modules/octos-lesson-language/dist/packages/core/src/cards.js
+var placeName = (content, place5) => {
+  const places = content?.places;
+  const item = Array.isArray(places) ? places[place5] : void 0;
+  return item?.id ?? item?.as;
+};
+var boundTargets = (content) => new Map((content.bindings ?? []).map((binding) => [binding.target, binding.expression.trim()]));
+var BASE_TEN_TRADE_CARD = Object.freeze({
+  kind: BASE_TEN_TRADE_KIND,
+  taps: ["gather", "ungather", "make", "break"],
+  places: BASE_TEN_TRADE_PLACES,
+  validateContent: (raw, path, fail4) => validateBaseTenTradeContent(raw, path, fail4),
+  state: baseTenMat,
+  apply: (mat, tap) => {
+    const result = applyBaseTenTap(mat, tap);
+    return result.ok ? { ok: true, state: result.mat } : result;
+  },
+  refusalText: (reason, place5, language) => baseTenRefusalText(reason, place5, language),
+  language: baseTenLanguage,
+  changes: baseTenChanges,
+  tapFields(content) {
+    const columns = content?.columns === 3 ? 3 : 2;
+    const fields = [];
+    for (let p = 0; p < columns; p += 1) {
+      fields.push({ place: p, field: "count", min: 0, max: columns === 2 && p === 1 ? 9 : BASE_TEN_TRADE_LIMITS.drawn[p] });
+      if (hasTray(columns, p))
+        fields.push({ place: p, field: "tray", min: 0, max: BASE_TEN_TRADE_LIMITS.tray });
+    }
+    return fields;
+  },
+  fieldTarget: (content, place5, field) => `${placeName(content, place5)}.${field}`,
+  contentAt(content, value2) {
+    const at2 = structuredClone(content);
+    delete at2.bindings;
+    for (const [p, place5] of (Array.isArray(at2.places) ? at2.places : []).entries()) {
+      for (const field of ["count", "tray"]) {
+        const v = value2(`${placeName(content, p)}.${field}`);
+        if (v !== void 0)
+          place5[field] = v;
+      }
+    }
+    return at2;
+  },
+  facts: Object.freeze({
+    /** Every place below the highest is under ten. */
+    no_trade_left: {
+      keys: [],
+      read: (_completion, mat) => {
+        const actual = baseTenFacts(mat).no_trade_left ? 1 : 0;
+        return { actual, target: 1, succeeded: actual === 1 };
+      },
+      /** Trading never changes the value: the practice pile's digits, each tray empty. */
+      donePile({ content, startValue }) {
+        const places = Array.isArray(content.places) ? content.places : [];
+        const bound = boundTargets(content);
+        const columns = places.length;
+        const value2 = places.reduce((sum, place5, p) => sum + startValue(bound.get(`${place5.id}.count`)) * 10 ** p, 0);
+        const result = {};
+        places.forEach((place5, p) => {
+          const count = bound.get(`${place5.id}.count`);
+          if (count)
+            result[count] = p === columns - 1 ? Math.floor(value2 / 10 ** p) : Math.floor(value2 / 10 ** p) % 10;
+          const tray = bound.get(`${place5.id}.tray`);
+          if (tray)
+            result[tray] = 0;
+        });
+        return result;
+      }
+    },
+    /** The place `at` holds exactly `value`, its tray included (amendment 5). */
+    count: {
+      keys: ["at", "value"],
+      /**
+       * A count the learner makes by tapping: a place the card has, a whole number, not met by the practice
+       * pile, and reached by an exact search over the card's tap rules from that pile.
+       */
+      validate(completion, pile, fail4) {
+        const place5 = BASE_TEN_TRADE_PLACES.indexOf(completion.at);
+        if (place5 < 0 || place5 >= pile.columns) {
+          fail4("at", `A count is of a place the card has: ${BASE_TEN_TRADE_PLACES.slice(0, pile.columns).join(", ")}`);
+        }
+        const value2 = completion.value;
+        if (typeof value2 !== "number" || !Number.isInteger(value2) || value2 < 0) {
+          fail4("value", "A count is a whole number");
+        }
+        if (pile.counts[place5] === value2) {
+          fail4("value", `The practice pile already has ${value2} ${completion.at}`);
+        }
+        const reached = [...new Set(baseTenTapReachable(pile).map((mat) => mat.counts[place5]))].sort((a, b) => a - b);
+        if (!reached.includes(value2)) {
+          fail4("value", `Tapping this pile makes ${reached.join(" or ")} ${completion.at}, never ${value2}`);
+        }
+      },
+      read: (completion, mat) => {
+        const actual = mat.counts[BASE_TEN_TRADE_PLACES.indexOf(completion.at)] ?? 0;
+        const target = completion.value;
+        return { actual, target, succeeded: actual === target };
+      },
+      /**
+       * The learner's own pile, as logged when they said done, laid tidy (each tray's units loose in their
+       * place, so no count changes). Without a usable logged pile: the pile with that count and every tray
+       * empty nearest the practice pile.
+       */
+      donePile({ content, completion, startValue, submitted }) {
+        const places = Array.isArray(content.places) ? content.places : [];
+        const bound = boundTargets(content);
+        const countAlias = bound.get(`${places[BASE_TEN_TRADE_PLACES.indexOf(completion.at)]?.id}.count`);
+        const usable = submitted && countAlias && submitted[countAlias] === completion.value && [...bound.values()].every((alias) => submitted[alias] !== void 0);
+        if (usable && submitted) {
+          const own = {};
+          for (const place5 of places) {
+            const count = bound.get(`${place5.id}.count`);
+            if (count)
+              own[count] = submitted[count];
+            const tray = bound.get(`${place5.id}.tray`);
+            if (tray)
+              own[tray] = 0;
+          }
+          return own;
+        }
+        const start = baseTenMat({ ...content, places: places.map((place5) => ({ ...place5, count: startValue(bound.get(`${place5.id}.count`)), tray: startValue(bound.get(`${place5.id}.tray`)) })) });
+        const p = BASE_TEN_TRADE_PLACES.indexOf(completion.at);
+        const distance = (mat) => mat.counts.reduce((sum, count, q) => sum + Math.abs(count - start.counts[q]), 0);
+        const made = baseTenTapReachable(start).filter((mat) => mat.counts[p] === completion.value && mat.trays.every((tray) => tray === 0)).sort((a, b) => distance(a) - distance(b))[0];
+        if (!made)
+          return void 0;
+        const result = {};
+        places.forEach((place5, q) => {
+          const count = bound.get(`${place5.id}.count`);
+          if (count)
+            result[count] = made.counts[q];
+          const tray = bound.get(`${place5.id}.tray`);
+          if (tray)
+            result[tray] = 0;
+        });
+        return result;
+      }
+    }
+  })
+});
+var chartPlace = (content, place5) => {
+  const places = content?.places;
+  return (Array.isArray(places) ? places : []).find((item) => item?.place === place5);
+};
+var chartFieldTarget = (content, index, field) => {
+  const place5 = placeValueTapPlace(index);
+  const item = chartPlace(content, place5);
+  return `${item?.id ?? item?.as ?? PLACE_VALUE_PLACE_ALIASES[place5]}.${field}`;
+};
+var chartContentAtPile = (content, bound, pile) => PLACE_VALUE_CHART_CARD.contentAt(content, (target) => {
+  const alias = bound.get(target);
+  return alias === void 0 ? void 0 : pile[alias];
+});
+function chartDonePile(fact) {
+  return ({ content, startValue, submitted }) => {
+    const bound = boundTargets(content);
+    const aliases = [...bound.values()];
+    if (submitted && aliases.every((alias) => submitted[alias] !== void 0) && placeValueFacts(placeValueChartState(chartContentAtPile(content, bound, submitted)))[fact]) {
+      return Object.fromEntries(aliases.map((alias) => [alias, submitted[alias]]));
+    }
+    const targetAlias = bound.get("target");
+    const target = targetAlias ? startValue(targetAlias) : Number(content.target);
+    const result = {};
+    if (targetAlias)
+      result[targetAlias] = target;
+    for (const item of Array.isArray(content.places) ? content.places : []) {
+      const name = item.id ?? item.as;
+      const digit = placeValueDigitAt(target, item.place);
+      const count = bound.get(`${name}.count`);
+      if (count)
+        result[count] = fact === "built" ? digit : 0;
+      const pulled = bound.get(`${name}.pulled`);
+      if (pulled)
+        result[pulled] = fact === "built" ? 0 : digit;
+    }
+    return result;
+  };
+}
+var chartFact = (fact, mode) => ({
+  keys: [],
+  validate(_completion, state, fail4) {
+    if (state.mode !== mode)
+      fail4("fact", `'${fact}' is read on a chart whose mode is '${mode}'; this chart's is '${state.mode}'`);
+  },
+  read: (_completion, state) => {
+    const actual = placeValueFacts(state)[fact] ? 1 : 0;
+    return { actual, target: 1, succeeded: actual === 1 };
+  },
+  donePile: chartDonePile(fact)
+});
+var PLACE_VALUE_CHART_CARD = Object.freeze({
+  kind: PLACE_VALUE_CHART_KIND,
+  taps: ["add", "remove", "take_out"],
+  places: PLACE_VALUE_TAP_PLACES,
+  cardFields: ["target"],
+  validateContent: (raw, path, fail4) => validatePlaceValueChartContent(raw, path, fail4),
+  state: placeValueChartState,
+  apply: (state, tap) => applyPlaceValueTap(state, { tap: tap.kind, place: placeValueTapPlace(tap.place) }),
+  refusalText: (reason, _place, language) => placeValueRefusalText(reason, language === "zh-CN" ? "zh-CN" : "en-US"),
+  language: placeValueLanguage,
+  changes: (before, after) => placeValueChanges(before, after).map(({ place: place5, field, before: from, after: to }) => ({ place: placeValueTapIndex(place5), field, before: from, after: to })),
+  tapFields(content) {
+    const state = placeValueChartState(content);
+    return state.columns.flatMap((place5) => [
+      { place: placeValueTapIndex(place5), field: "count", min: 0, max: 9 },
+      ...state.mode === "apart" ? [{ place: placeValueTapIndex(place5), field: "pulled", min: 0, max: 9 }] : []
+    ]);
+  },
+  fieldTarget: chartFieldTarget,
+  contentAt(content, value2) {
+    const at2 = structuredClone(content);
+    delete at2.bindings;
+    for (const item of Array.isArray(at2.places) ? at2.places : []) {
+      for (const field of at2.mode === "apart" ? ["count", "pulled"] : ["count"]) {
+        const v = value2(`${item.id ?? item.as}.${field}`);
+        if (v !== void 0)
+          item[field] = v;
+      }
+    }
+    const target = value2("target");
+    if (target !== void 0)
+      at2.target = target;
+    return at2;
+  },
+  /** A chart to build starts empty; one to pull apart starts whole, nothing pulled out. */
+  validateStart(state, fail4) {
+    state.columns.forEach((place5, i) => {
+      const digit = placeValueDigitAt(state.target, place5);
+      if (state.mode === "build" && state.counts[i] !== 0)
+        fail4(`A chart to build starts empty; it has ${state.counts[i]} in place ${place5}`);
+      if (state.mode === "apart" && (state.counts[i] !== digit || state.pulled[i] !== 0)) {
+        fail4(`A chart to pull apart starts whole, nothing pulled out; place ${place5} has ${state.counts[i]} on the chart and ${state.pulled[i]} pulled out, of ${digit}`);
+      }
+    });
+  },
+  facts: Object.freeze({
+    /** Build: the chart holds exactly the number (each place under ten, so its digits). */
+    built: chartFact("built", "build"),
+    /** Pull apart: every place has been taken out. */
+    pulled_all: chartFact("pulled_all", "apart")
+  })
+});
+var TAP_CARD_KINDS = Object.freeze({
+  [BASE_TEN_TRADE_KIND]: BASE_TEN_TRADE_CARD,
+  [PLACE_VALUE_CHART_KIND]: PLACE_VALUE_CHART_CARD
+});
+function tapCardKind(kind) {
+  return typeof kind === "string" && Object.hasOwn(TAP_CARD_KINDS, kind) ? TAP_CARD_KINDS[kind] : void 0;
+}
+var TAP_CARD_KIND_NAMES = Object.freeze(Object.keys(TAP_CARD_KINDS));
+function tapCardKindList(conjunction = "or") {
+  const names = TAP_CARD_KIND_NAMES;
+  return names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} ${conjunction} ${names.at(-1)}`;
 }
 
 // node_modules/octos-lesson-language/dist/packages/core/src/capabilities.js
@@ -9219,8 +9855,16 @@ var OLL_BINDING_CAPABILITIES = {
   },
   number_line: NUMBER_LINE_BINDINGS,
   fraction_model: FRACTION_MODEL_BINDINGS,
-  base_ten_trade: BASE_TEN_TRADE_BINDINGS
+  base_ten_trade: BASE_TEN_TRADE_BINDINGS,
+  place_value_chart: PLACE_VALUE_CHART_BINDINGS
 };
+var OLL_CARD_BINDING_CAPABILITIES = Object.freeze({
+  place_value_chart: PLACE_VALUE_CHART_CARD_BINDINGS
+});
+function cardBindingCapabilitiesForNodeKind(kind) {
+  return Object.hasOwn(OLL_CARD_BINDING_CAPABILITIES, kind) ? OLL_CARD_BINDING_CAPABILITIES[kind] : [];
+}
+var OLL_CANONICAL_CARD_BINDING_CAPABILITIES = Object.freeze([...new Set(Object.values(OLL_CARD_BINDING_CAPABILITIES).flat())]);
 var EMPTY_BINDING_COLLECTIONS = Object.freeze({});
 function bindingCapabilitiesForNodeKind(kind) {
   if (Object.hasOwn(OLL_BINDING_CAPABILITIES, kind)) {
@@ -9299,7 +9943,8 @@ var MATH_PLUGIN_MANIFEST = {
   // piece of each part; the program writes a fraction's other form beside its label (0021 amendment 2).
   // 0.5.0: trading tens and ones, the `base_ten_trade` card (decision 0023). 0.6.0: the mat speaks Chinese
   // (0023 amendment 3). 0.7.0: a slider on a place's count, each stop one trade (0023 amendment 4).
-  version: "0.7.0",
+  // 0.8.0: the place-value chart, the `place_value_chart` card (decision 0025).
+  version: "0.8.0",
   // Every subject plugin depends on the shared tools (decision 0012).
   depends: { shared: "0.1.0" },
   ollCore: ">=0.10.0"
@@ -9334,6 +9979,11 @@ var OLL_EXECUTION_FEATURES = Object.freeze({
   "student-tasks:card_fact": "0.14.0",
   // Decision 0023 amendment 5: a count the learner taps the card to; an older player knows only no_trade_left.
   "student-tasks:card_fact:count": "0.15.0",
+  // Decision 0025: a place-value chart is built, or pulled apart; an older player knows only the mat's facts.
+  "student-tasks:card_fact:built": "0.16.0",
+  "student-tasks:card_fact:pulled_all": "0.16.0",
+  // Decision 0025: a card-level field bound by its bare name (the chart's number); an older player cannot place it.
+  "value-bindings:card-field": "0.16.0",
   // Decision 0023 amendment 1: a row of blanks answered in one go; an older player has no such question.
   "student-tasks:numeric_row": "0.14.0",
   // The lesson taps a card by the card's rules (a demonstration); an older player does not know the action.
@@ -9372,7 +10022,7 @@ var looksLikeNumberLine = (content) => typeof content.range === "object" && cont
 var FIRST_PARTY_EXTENSIONS = Object.freeze([
   {
     plugin: { id: MATH_PLUGIN_MANIFEST.id, version: MATH_PLUGIN_MANIFEST.version },
-    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION, [FRACTION_MODEL_FEATURE]: FRACTION_MODEL_PLUGIN_VERSION, [BASE_TEN_TRADE_FEATURE]: BASE_TEN_TRADE_PLUGIN_VERSION, [BASE_TEN_TRADE_LANGUAGE_FEATURE]: BASE_TEN_TRADE_LANGUAGE_VERSION, [BASE_TEN_TRADE_SLIDER_FEATURE]: BASE_TEN_TRADE_SLIDER_VERSION },
+    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION, [FRACTION_MODEL_FEATURE]: FRACTION_MODEL_PLUGIN_VERSION, [BASE_TEN_TRADE_FEATURE]: BASE_TEN_TRADE_PLUGIN_VERSION, [BASE_TEN_TRADE_LANGUAGE_FEATURE]: BASE_TEN_TRADE_LANGUAGE_VERSION, [BASE_TEN_TRADE_SLIDER_FEATURE]: BASE_TEN_TRADE_SLIDER_VERSION, [PLACE_VALUE_CHART_FEATURE]: PLACE_VALUE_CHART_PLUGIN_VERSION },
     detect(content, kind, use, lesson) {
       if (kind === NUMBER_LINE_KIND || kind === void 0 && looksLikeNumberLine(content)) {
         use(NUMBER_LINE_FEATURE);
@@ -9388,11 +10038,13 @@ var FIRST_PARTY_EXTENSIONS = Object.freeze([
         if (lesson?.variables.some((variable) => variable.control?.kind === "slider" && baseTenSliderPlace(content, variable.as) !== void 0))
           use(BASE_TEN_TRADE_SLIDER_FEATURE);
       }
+      if (kind === PLACE_VALUE_CHART_KIND)
+        use(PLACE_VALUE_CHART_FEATURE);
     }
   }
 ]);
 var FIRST_PARTY_FEATURES = Object.freeze(Object.assign({}, ...FIRST_PARTY_EXTENSIONS.map((extension) => extension.features)));
-var PLUGIN_NODE_FEATURES = Object.freeze({ [NUMBER_LINE_KIND]: NUMBER_LINE_FEATURE, [FRACTION_MODEL_KIND]: FRACTION_MODEL_FEATURE, [BASE_TEN_TRADE_KIND]: BASE_TEN_TRADE_FEATURE });
+var PLUGIN_NODE_FEATURES = Object.freeze({ [NUMBER_LINE_KIND]: NUMBER_LINE_FEATURE, [FRACTION_MODEL_KIND]: FRACTION_MODEL_FEATURE, [BASE_TEN_TRADE_KIND]: BASE_TEN_TRADE_FEATURE, [PLACE_VALUE_CHART_KIND]: PLACE_VALUE_CHART_FEATURE });
 
 // node_modules/octos-lesson-language/dist/packages/core/src/opening.js
 function applyLessonOpeningPolicy(source, policy = { kind: "preserve" }) {
@@ -9692,7 +10344,9 @@ function validateAnswerStudentTask(task, path, registry, feedback = true) {
     validateTaskFeedback(task, path);
 }
 function baseTenTapVariables(content, declarations, path, writer = "Tapping a card") {
-  const columns = content.columns === 3 ? 3 : 2;
+  return cardTapVariables(BASE_TEN_TRADE_CARD, content, declarations, path, writer);
+}
+function cardTapVariables(kind, content, declarations, path, writer = "Tapping a card") {
   const bindings = /* @__PURE__ */ new Map();
   for (const binding of Array.isArray(content.bindings) ? content.bindings : []) {
     if (typeof binding.target === "string" && typeof binding.expression === "string")
@@ -9700,62 +10354,66 @@ function baseTenTapVariables(content, declarations, path, writer = "Tapping a ca
   }
   const result = /* @__PURE__ */ new Map();
   const used = /* @__PURE__ */ new Set();
-  for (let p = 0; p < columns; p += 1) {
-    const place5 = BASE_TEN_TRADE_PLACES[p];
-    const fields = [["count", columns === 2 && p === 1 ? 9 : BASE_TEN_TRADE_LIMITS.drawn[p]]];
-    if (hasTray(columns, p))
-      fields.push(["tray", BASE_TEN_TRADE_LIMITS.tray]);
-    for (const [field, most] of fields) {
-      const target = `${place5}.${field}`;
-      const alias = bindings.get(target);
-      const declaration = declarations.find((variable) => variable.as === alias);
-      if (!alias || !declaration) {
-        fail("OLL_INVALID_STUDENT_TASK", path, `${writer} needs '${target}' bound to its own lesson variable`);
-      }
-      if (used.has(alias))
-        fail("OLL_INVALID_STUDENT_TASK", path, `Variable '${alias}' is bound to two fields a tap changes`);
-      used.add(alias);
-      if (declaration.min !== 0 || declaration.max !== most || declaration.wrap) {
-        fail("OLL_INVALID_STUDENT_TASK", path, `Variable '${alias}' (${target}) must run from 0 to ${most}, the most a trade can make`);
-      }
-      result.set(target, alias);
+  for (const { place: place5, field, min, max } of kind.tapFields(content)) {
+    const target = kind.fieldTarget(content, place5, field);
+    const alias = bindings.get(target);
+    const declaration = declarations.find((variable) => variable.as === alias);
+    if (!alias || !declaration) {
+      fail("OLL_INVALID_STUDENT_TASK", path, `${writer} needs '${target}' bound to its own lesson variable`);
     }
+    if (used.has(alias))
+      fail("OLL_INVALID_STUDENT_TASK", path, `Variable '${alias}' is bound to two fields a tap changes`);
+    used.add(alias);
+    if (declaration.min !== min || declaration.max !== max || declaration.wrap) {
+      fail("OLL_INVALID_STUDENT_TASK", path, `Variable '${alias}' (${target}) must run from ${min} to ${max}, ${kind.kind === BASE_TEN_TRADE_KIND ? "the most a trade can make" : "the most its taps can make"}`);
+    }
+    result.set(target, alias);
+  }
+  for (const field of kind.cardFields ?? []) {
+    const alias = bindings.get(field);
+    if (alias === void 0)
+      continue;
+    if (!declarations.some((variable) => variable.as === alias))
+      fail("OLL_INVALID_STUDENT_TASK", path, `The card's '${field}' is bound to a lesson variable of its own, not '${alias}'`);
+    if (used.has(alias))
+      fail("OLL_INVALID_STUDENT_TASK", path, `Variable '${alias}' is bound to two fields of the card`);
+    used.add(alias);
+    result.set(field, alias);
   }
   return result;
 }
-function baseTenContentAt(content, variables, values) {
-  const at2 = structuredClone(content);
-  delete at2.bindings;
-  for (const place5 of Array.isArray(at2.places) ? at2.places : []) {
-    for (const field of ["count", "tray"]) {
-      const alias = variables.get(`${place5.as}.${field}`);
-      if (alias !== void 0 && values[alias] !== void 0)
-        place5[field] = values[alias];
-    }
-  }
-  return at2;
+function cardContentAt(kind, content, variables, values) {
+  return kind.contentAt(content, (target) => {
+    const alias = variables.get(target);
+    return alias !== void 0 && values[alias] !== void 0 ? values[alias] : void 0;
+  });
+}
+function matCardContents(cards) {
+  return new Map([...cards].filter(([, card]) => card.kind.kind === BASE_TEN_TRADE_KIND).map(([alias, card]) => [alias, card.content]));
 }
 function validateCardStudentTask(task, path, registry, cards, declarations, startValues, availableControls, cardSliders) {
   const completion = task.completion;
   resolveLocal(registry, completion.node, `${path}/completion/node`, ["node"]);
-  const content = cards.get(completion.node);
-  if (!content)
-    fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/node`, "A card_fact task reads a base_ten_trade card");
-  if (completion.fact !== "no_trade_left" && completion.fact !== "count")
+  const card = cards.get(completion.node);
+  if (!card)
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/node`, `A card_fact task reads a ${tapCardKindList()} card`);
+  const { kind, content } = card;
+  const fact = typeof completion.fact === "string" && Object.hasOwn(kind.facts, completion.fact) ? kind.facts[completion.fact] : void 0;
+  if (!fact)
     fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/fact`, `Unsupported card fact '${String(completion.fact)}'`);
   for (const key of Object.keys(completion)) {
-    if (!["kind", "node", "fact", ...completion.fact === "count" ? ["at", "value"] : []].includes(key)) {
+    if (!["kind", "node", "fact", ...fact.keys].includes(key)) {
       fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/${key}`, `Unknown field '${key}' of a ${completion.fact} card fact`);
     }
   }
   requireArray(task.allowed_operations, `${path}/allowed_operations`);
   const operations = task.allowed_operations;
-  const count = (kind) => operations.filter((operation) => operation?.kind === kind).length;
+  const count = (kind2) => operations.filter((operation) => operation?.kind === kind2).length;
   const sliders = operations.filter((operation) => operation?.kind === "variable_change");
   if (count("card_tap") !== 1 || count("card_submit") !== 1 || count("card_tap") + count("card_submit") + sliders.length !== operations.length || operations.some((operation) => operation.kind === "card_tap" && operation.node !== completion.node) || sliders.some((operation) => cardSliders.get(String(operation.variable))?.card !== completion.node || !Array.isArray(operation.controls) || operation.controls.length !== 1 || operation.controls[0] !== "slider") || new Set(sliders.map((operation) => operation.variable)).size !== sliders.length) {
     fail("OLL_INVALID_STUDENT_TASK", `${path}/allowed_operations`, 'A card task allows tapping its card (card_tap) and saying done (card_submit), and may allow a slider on its counts (variable_change with controls ["slider"]), nothing else');
   }
-  const variables = baseTenTapVariables(content, declarations, `${path}/completion/node`);
+  const variables = cardTapVariables(kind, content, declarations, `${path}/completion/node`);
   for (const alias of variables.values()) {
     if ((declarations.find((variable) => variable.as === alias)?.control || availableControls.get(alias)?.size) && cardSliders.get(alias)?.card !== completion.node) {
       fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/node`, `Variable '${alias}' is changed only by tapping the card; it cannot have its own control`);
@@ -9765,34 +10423,25 @@ function validateCardStudentTask(task, path, registry, cards, declarations, star
     fail("OLL_INVALID_PHASE_START", `${path}/start`, "A card task gives the learner's practice pile in start");
   const initial = Object.fromEntries(declarations.map((variable) => [variable.as, variable.initial]));
   const failAt = (message, where) => (failPath, detail) => fail("OLL_INVALID_STUDENT_TASK", where, `${message}: ${detail} (${failPath.replace(/^\$\//, "")})`);
-  validateBaseTenTradeContent(baseTenContentAt(content, variables, initial), "$", failAt("The lesson's pile is not a starting pile", `${path}/completion/node`));
+  kind.validateContent(cardContentAt(kind, content, variables, initial), "$", failAt("The lesson's pile is not a starting pile", `${path}/completion/node`));
   if (task.start) {
     const selected = new Set(task.start.variables ?? []);
     const missing = [...variables.values()].filter((alias) => !selected.has(alias));
     if (missing.length)
-      fail("OLL_INVALID_PHASE_START", `${path}/start/variables`, `A card task's practice pile sets every count and tray; missing ${missing.join(", ")}`);
-    validateBaseTenTradeContent(baseTenContentAt(content, variables, { ...initial, ...startValues }), "$", failAt("The practice pile is not a starting pile", `${path}/start/values`));
+      fail("OLL_INVALID_PHASE_START", `${path}/start/variables`, `A card task's practice pile sets every ${kind.kind === BASE_TEN_TRADE_KIND ? "count and tray" : "field the card binds"}; missing ${missing.join(", ")}`);
+    const practice = cardContentAt(kind, content, variables, { ...initial, ...startValues });
+    kind.validateContent(practice, "$", failAt("The practice pile is not a starting pile", `${path}/start/values`));
+    kind.validateStart?.(kind.state(practice), (message) => fail("OLL_INVALID_PHASE_START", `${path}/start/values`, `The practice pile is not a starting pile: ${message}`));
+    for (const field of kind.cardFields ?? []) {
+      const alias = variables.get(field);
+      if (alias === void 0)
+        fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/node`, `A card task starts on its own ${field}: bind the card's '${field}' to a lesson variable the task's start sets`);
+      if (startValues[alias] === initial[alias])
+        fail("OLL_INVALID_PHASE_START", `${path}/start/values`, `The task's ${field} (${alias} = ${startValues[alias]}) is the lesson's own; a practice task starts on another`);
+    }
   }
-  if (completion.fact === "count")
-    validateCardCountTarget(completion, path, baseTenMat(baseTenContentAt(content, variables, { ...initial, ...startValues })));
+  fact.validate?.(completion, kind.state(cardContentAt(kind, content, variables, { ...initial, ...startValues })), (field, message) => fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/${field}`, message));
   validateTaskFeedback(task, path);
-}
-function validateCardCountTarget(completion, path, pile) {
-  const place5 = BASE_TEN_TRADE_PLACES.indexOf(completion.at);
-  if (place5 < 0 || place5 >= pile.columns) {
-    fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/at`, `A count is of a place the card has: ${BASE_TEN_TRADE_PLACES.slice(0, pile.columns).join(", ")}`);
-  }
-  const value2 = completion.value;
-  if (typeof value2 !== "number" || !Number.isInteger(value2) || value2 < 0) {
-    fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/value`, "A count is a whole number");
-  }
-  if (pile.counts[place5] === value2) {
-    fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/value`, `The practice pile already has ${value2} ${completion.at}`);
-  }
-  const reached = [...new Set(baseTenTapReachable(pile).map((mat) => mat.counts[place5]))].sort((a, b) => a - b);
-  if (!reached.includes(value2)) {
-    fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/value`, `Tapping this pile makes ${reached.join(" or ")} ${completion.at}, never ${value2}`);
-  }
 }
 function validateRowStudentTask(task, path, registry) {
   resolveLocal(registry, task.anchor, `${path}/anchor`, ["node"]);
@@ -9954,7 +10603,7 @@ function cardSliderTask(task, path, allowedVariables, cardSliders, contents, dec
   if (missing.length)
     fail("OLL_INVALID_PHASE_START", `${path}/start/variables`, `A card task's practice pile sets every count and tray; missing ${missing.join(", ")}`);
   const values = { ...Object.fromEntries(declarations.map((variable) => [variable.as, variable.initial])), ...startValues };
-  const pile = baseTenContentAt(content, variables, values);
+  const pile = cardContentAt(BASE_TEN_TRADE_CARD, content, variables, values);
   validateBaseTenTradeContent(pile, "$", (failPath, detail) => fail("OLL_INVALID_STUDENT_TASK", `${path}/start/values`, `The task's starting pile is not a starting pile: ${detail} (${failPath.replace(/^\$\//, "")})`));
   const places = [...allowedVariables].map((alias) => cardSliders.get(alias).place);
   const piles = baseTenSliderReachable(baseTenMat(pile), places).map((mat) => Object.fromEntries([...variables].map(([target, alias]) => {
@@ -9964,7 +10613,8 @@ function cardSliderTask(task, path, allowedVariables, cardSliders, contents, dec
   })));
   return { piles };
 }
-function validateStudentTasks(document2, variables, availableControls, scene3dCameras, registry, numberLineGrids = /* @__PURE__ */ new Map(), baseTenTradeContents = /* @__PURE__ */ new Map(), cardSliders = /* @__PURE__ */ new Map()) {
+function validateStudentTasks(document2, variables, availableControls, scene3dCameras, registry, numberLineGrids = /* @__PURE__ */ new Map(), tapCards = /* @__PURE__ */ new Map(), cardSliders = /* @__PURE__ */ new Map()) {
+  const matContents = matCardContents(tapCards);
   const taskAliases = /* @__PURE__ */ new Set();
   for (const [index, task] of (document2.lesson.tasks ?? []).entries()) {
     const path = `/lesson/tasks/${index}`;
@@ -9998,7 +10648,7 @@ function validateStudentTasks(document2, variables, availableControls, scene3dCa
       continue;
     }
     if (task.completion.kind === "card_fact") {
-      validateCardStudentTask(task, path, registry, baseTenTradeContents, document2.lesson.variables ?? [], startValues, availableControls, cardSliders);
+      validateCardStudentTask(task, path, registry, tapCards, document2.lesson.variables ?? [], startValues, availableControls, cardSliders);
       continue;
     }
     const expressionTask = task;
@@ -10033,7 +10683,7 @@ function validateStudentTasks(document2, variables, availableControls, scene3dCa
         controls.add(control);
       });
     });
-    const card = [...allowedVariables].some((alias) => cardSliders.has(alias)) ? cardSliderTask(expressionTask, path, allowedVariables, cardSliders, baseTenTradeContents, document2.lesson.variables ?? [], startValues) : void 0;
+    const card = [...allowedVariables].some((alias) => cardSliders.has(alias)) ? cardSliderTask(expressionTask, path, allowedVariables, cardSliders, matContents, document2.lesson.variables ?? [], startValues) : void 0;
     const target = requireFiniteNumber(expressionTask.completion.value, `${path}/completion/value`);
     const tolerance = requireFiniteNumber(expressionTask.completion.tolerance, `${path}/completion/tolerance`);
     if (tolerance <= 0)
@@ -10141,11 +10791,12 @@ function bindableTargets(action) {
   }
   return targets;
 }
+var BINDABLE_NODE_KINDS = ["geometry", "plot", "scene3d", NUMBER_LINE_KIND, FRACTION_MODEL_KIND, ...TAP_CARD_KIND_NAMES];
 function validateValueBindings(action, path, variables) {
   if (action.content.bindings === void 0)
     return;
-  if (action.kind !== "geometry" && action.kind !== "plot" && action.kind !== "scene3d" && action.kind !== NUMBER_LINE_KIND && action.kind !== FRACTION_MODEL_KIND && action.kind !== BASE_TEN_TRADE_KIND) {
-    fail("OLL_INVALID_BINDING", `${path}/content/bindings`, "Bindings are only supported on geometry, plot, scene3d, number_line, fraction_model and base_ten_trade nodes");
+  if (!BINDABLE_NODE_KINDS.includes(action.kind)) {
+    fail("OLL_INVALID_BINDING", `${path}/content/bindings`, `Bindings are only supported on ${BINDABLE_NODE_KINDS.slice(0, -1).join(", ")} and ${BINDABLE_NODE_KINDS.at(-1)} nodes`);
   }
   requireArray(action.content.bindings, `${path}/content/bindings`);
   const targets = bindableTargets(action);
@@ -10158,8 +10809,12 @@ function validateValueBindings(action, path, variables) {
       if (!["target", "expression", "label", "allow_zero", "hide_when_undefined"].includes(field))
         fail("OLL_INVALID_BINDING", `${bindingPath}/${field}`, `Unknown binding field '${field}'`);
     }
-    const { alias, property } = splitBindingTarget(binding.target, `${bindingPath}/target`);
-    if (!targets.get(alias)?.has(property)) {
+    const cardField = typeof binding.target === "string" && !binding.target.includes(".");
+    if (cardField && !cardBindingCapabilitiesForNodeKind(action.kind).includes(binding.target)) {
+      fail("OLL_REFERENCE_NOT_FOUND", `${bindingPath}/target`, `Binding target '${String(binding.target)}' is not a field of a ${action.kind} card`);
+    }
+    const { alias, property } = cardField ? { alias: "", property: binding.target } : splitBindingTarget(binding.target, `${bindingPath}/target`);
+    if (!cardField && !targets.get(alias)?.has(property)) {
       fail("OLL_REFERENCE_NOT_FOUND", `${bindingPath}/target`, `Binding target '${binding.target}' is not a supported numeric field`);
     }
     const hideable = action.kind === "geometry" ? ["x", "y"] : action.kind === "plot" ? ["x", "y", "value", "from", "to"] : [];
@@ -10280,12 +10935,21 @@ function checkFractionModelBoundValues(content, path, declarations) {
 function checkBaseTenTradeBoundValues(content, path, declarations) {
   const validate = (evaluated, failAt) => validateBaseTenTradeContent(evaluated, path, failAt, { boundValues: true });
   checkPluginBoundValues(content, path, declarations, BASE_TEN_TRADE_PART_FIELDS, validate);
+  checkEachBoundVariable(content, path, declarations, BASE_TEN_TRADE_PART_FIELDS, validate);
+}
+function checkPlaceValueChartBoundValues(content, path, declarations) {
+  const validate = (evaluated, failAt) => validatePlaceValueChartContent(evaluated, path, failAt, { boundValues: true });
+  checkPluginBoundValues(content, path, declarations, PLACE_VALUE_CHART_PART_FIELDS, validate);
+  checkEachBoundVariable(content, path, declarations, PLACE_VALUE_CHART_PART_FIELDS, validate);
+}
+function checkEachBoundVariable(content, path, declarations, fields, validate) {
   const bindings = Array.isArray(content.bindings) ? content.bindings : [];
   const known = new Set(declarations.map((declaration) => declaration.as));
   const referenced = new Set(bindings.flatMap((binding) => referencedMathVariables(String(binding.expression), known)));
   const withIds = structuredClone(content);
-  if (Array.isArray(withIds.places))
-    withIds.places = withIds.places.map((item) => ({ ...item, id: item.as }));
+  for (const field of fields)
+    if (Array.isArray(withIds[field]))
+      withIds[field] = withIds[field].map((item) => ({ ...item, id: item.as }));
   const initials = Object.fromEntries(declarations.map((declaration) => [declaration.as, declaration.initial]));
   for (const declaration of declarations.filter((each) => referenced.has(each.as))) {
     for (const value2 of /* @__PURE__ */ new Set([declaration.min, declaration.max])) {
@@ -10296,11 +10960,20 @@ function checkBaseTenTradeBoundValues(content, path, declarations) {
       } catch (error) {
         fail("OLL_INVALID_BINDING", `${path}/bindings`, `${where}: ${error.message}`);
       }
-      if (Array.isArray(evaluated.places))
-        evaluated.places = evaluated.places.map(({ id: _id, ...item }) => item);
+      for (const field of fields)
+        if (Array.isArray(evaluated[field]))
+          evaluated[field] = evaluated[field].map(({ id: _id, ...item }) => item);
       validate(evaluated, (failPath, message) => fail("OLL_INVALID_BINDING", failPath, `${where}: ${message}`));
     }
   }
+}
+function bareBindings(content) {
+  const result = /* @__PURE__ */ new Map();
+  for (const binding of Array.isArray(content.bindings) ? content.bindings : []) {
+    if (typeof binding.target === "string" && typeof binding.expression === "string" && VARIABLE_PATTERN.test(binding.expression.trim()))
+      result.set(binding.target, binding.expression.trim());
+  }
+  return result;
 }
 function checkPluginBoundValues(content, path, declarations, fields, validate) {
   const bindings = Array.isArray(content.bindings) ? content.bindings : [];
@@ -10998,9 +11671,9 @@ function validateActionPayload(action, path) {
     requireString(action.expression, `${path}/expression`);
   } else if (action.do === "tap") {
     requireString(action.target, `${path}/target`);
-    if (!["gather", "ungather", "make", "break"].includes(action.tap))
+    if (!Object.values(TAP_CARD_KINDS).some((card) => card.taps.includes(action.tap)))
       fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/tap`, `Unknown tap '${String(action.tap)}'`);
-    if (!BASE_TEN_TRADE_PLACES.includes(action.at))
+    if (!Object.values(TAP_CARD_KINDS).some((card) => card.places.includes(action.at)))
       fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/at`, `Unknown place '${String(action.at)}'`);
   } else if (action.do === "animate") {
     requireVariableAlias(action.variable, `${path}/variable`);
@@ -11064,8 +11737,7 @@ function validateAuthoringLesson(document2, resourceContext = null) {
   const inkNodes = /* @__PURE__ */ new Map();
   const numberLineNodes = /* @__PURE__ */ new Set();
   const fractionModelNodes = /* @__PURE__ */ new Set();
-  const baseTenTradeNodes = /* @__PURE__ */ new Set();
-  const baseTenTradeContents = /* @__PURE__ */ new Map();
+  const tapCards = /* @__PURE__ */ new Map();
   const tappedCards = /* @__PURE__ */ new Set();
   const playedValues = Object.fromEntries((document2.lesson.variables ?? []).map((variable) => [variable.as, variable.initial]));
   const scene3dHighlights = /* @__PURE__ */ new Map();
@@ -11240,10 +11912,10 @@ function validateAuthoringLesson(document2, resourceContext = null) {
             fractionModelNodes.add(action.as);
             validateFractionModelContent(action.content, `${actionPath}/content`, (failPath, message) => fail("OLL_INVALID_OPERATION_PAYLOAD", failPath, message));
           }
-          if (action.kind === BASE_TEN_TRADE_KIND) {
-            baseTenTradeNodes.add(action.as);
-            baseTenTradeContents.set(action.as, action.content);
-            validateBaseTenTradeContent(action.content, `${actionPath}/content`, (failPath, message) => fail("OLL_INVALID_OPERATION_PAYLOAD", failPath, message));
+          const tapCard = tapCardKind(action.kind);
+          if (tapCard) {
+            tapCards.set(action.as, { kind: tapCard, content: action.content });
+            tapCard.validateContent(action.content, `${actionPath}/content`, (failPath, message) => fail("OLL_INVALID_OPERATION_PAYLOAD", failPath, message));
           }
           if (action.kind === "scene3d") {
             scene3dHighlights.set(action.as, new Set((action.content.highlights ?? []).map((highlight) => highlight.as)));
@@ -11271,16 +11943,26 @@ function validateAuthoringLesson(document2, resourceContext = null) {
             checkFractionModelBoundValues(action.content, `${actionPath}/content`, document2.lesson.variables ?? []);
           if (action.kind === BASE_TEN_TRADE_KIND)
             checkBaseTenTradeBoundValues(action.content, `${actionPath}/content`, document2.lesson.variables ?? []);
+          if (action.kind === PLACE_VALUE_CHART_KIND)
+            checkPlaceValueChartBoundValues(action.content, `${actionPath}/content`, document2.lesson.variables ?? []);
+          if (tapCard?.validateStart && Array.isArray(action.content.bindings)) {
+            const initials = Object.fromEntries((document2.lesson.variables ?? []).map((variable) => [variable.as, variable.initial]));
+            tapCard.validateContent(cardContentAt(tapCard, action.content, bareBindings(action.content), initials), `${actionPath}/content`, (failPath, message) => fail("OLL_INVALID_OPERATION_PAYLOAD", failPath, `As its variables start it: ${message}`));
+          }
           register(registry, action.as, "node", `${actionPath}/as`, fragments);
           return;
         }
         if (action.do === "tap") {
           const target = resolveLocal(registry, action.target, `${actionPath}/target`, ["node"]);
-          const content = baseTenTradeContents.get(target.alias);
-          if (!content || target.fragment)
-            fail("OLL_INVALID_REFERENCE", `${actionPath}/target`, "A tap acts on a whole base_ten_trade card of this lesson");
+          const card = tapCards.get(target.alias);
+          if (!card || target.fragment)
+            fail("OLL_INVALID_REFERENCE", `${actionPath}/target`, `A tap acts on a whole ${tapCardKindList()} card of this lesson`);
           requireVisible(action.target, `${actionPath}/target`);
-          baseTenTapVariables(content, document2.lesson.variables ?? [], `${actionPath}/target`);
+          if (!card.kind.taps.includes(action.tap))
+            fail("OLL_INVALID_OPERATION_PAYLOAD", `${actionPath}/tap`, `Unknown tap '${String(action.tap)}'`);
+          if (!card.kind.places.includes(action.at))
+            fail("OLL_INVALID_OPERATION_PAYLOAD", `${actionPath}/at`, `Unknown place '${String(action.at)}'`);
+          cardTapVariables(card.kind, card.content, document2.lesson.variables ?? [], `${actionPath}/target`);
           tappedCards.add(target.alias);
           return;
         }
@@ -11342,11 +12024,12 @@ function validateAuthoringLesson(document2, resourceContext = null) {
           if (fractionModelNodes.has(resolved.alias)) {
             validateFractionModelContent(action.content, `${actionPath}/content`, (failPath, message) => fail("OLL_INVALID_OPERATION_PAYLOAD", failPath, message));
           }
-          if (baseTenTradeNodes.has(resolved.alias)) {
-            if (Array.isArray(baseTenTradeContents.get(resolved.alias)?.bindings)) {
-              fail("OLL_INVALID_OPERATION_PAYLOAD", `${actionPath}/target`, "A trading card bound to lesson variables is not revised: its counts change by taps");
+          const revisedCard = tapCards.get(resolved.alias);
+          if (revisedCard) {
+            if (Array.isArray(revisedCard.content.bindings)) {
+              fail("OLL_INVALID_OPERATION_PAYLOAD", `${actionPath}/target`, revisedCard.kind.kind === BASE_TEN_TRADE_KIND ? "A trading card bound to lesson variables is not revised: its counts change by taps" : `A ${revisedCard.kind.kind} card bound to lesson variables is not revised: its fields change by taps and task starts`);
             }
-            validateBaseTenTradeContent(action.content, `${actionPath}/content`, (failPath, message) => fail("OLL_INVALID_OPERATION_PAYLOAD", failPath, message));
+            revisedCard.kind.validateContent(action.content, `${actionPath}/content`, (failPath, message) => fail("OLL_INVALID_OPERATION_PAYLOAD", failPath, message));
           }
           const revisedFragments = collectAddressableContent(action.content, `${actionPath}/content`);
           if (revisedFragments.length) {
@@ -11396,16 +12079,16 @@ function validateAuthoringLesson(document2, resourceContext = null) {
             playedValues[action.variable] = action.value;
           if (action.do !== "tap")
             return;
-          const content = baseTenTradeContents.get(splitTarget(action.target, `${beatPath}/actions/${actionIndex}/target`).alias);
-          const variables = baseTenTapVariables(content, document2.lesson.variables ?? [], `${beatPath}/actions/${actionIndex}/target`);
-          const place5 = BASE_TEN_TRADE_PLACES.indexOf(action.at);
-          const mat = baseTenMat(baseTenContentAt(content, variables, playedValues));
-          const result = applyBaseTenTap(mat, { kind: action.tap, place: place5 });
+          const { kind, content } = tapCards.get(splitTarget(action.target, `${beatPath}/actions/${actionIndex}/target`).alias);
+          const variables = cardTapVariables(kind, content, document2.lesson.variables ?? [], `${beatPath}/actions/${actionIndex}/target`);
+          const place5 = kind.places.indexOf(action.at);
+          const state = kind.state(cardContentAt(kind, content, variables, playedValues));
+          const result = kind.apply(state, { kind: action.tap, place: place5 });
           if (!result.ok) {
-            fail("OLL_INVALID_OPERATION_PAYLOAD", `${beatPath}/actions/${actionIndex}`, `The card refuses this tap here: ${baseTenRefusalText(result.reason, place5)}`);
+            fail("OLL_INVALID_OPERATION_PAYLOAD", `${beatPath}/actions/${actionIndex}`, `The card refuses this tap here: ${kind.refusalText(result.reason, place5)}`);
           }
-          for (const change of baseTenChanges(mat, result.mat)) {
-            const alias = variables.get(`${BASE_TEN_TRADE_PLACES[change.place]}.${change.field}`);
+          for (const change of kind.changes(state, result.state)) {
+            const alias = variables.get(kind.fieldTarget(content, change.place, change.field));
             const declaration = (document2.lesson.variables ?? []).find((variable) => variable.as === alias);
             if (change.after < declaration.min || change.after > declaration.max) {
               fail("OLL_INVALID_OPERATION_PAYLOAD", `${beatPath}/actions/${actionIndex}`, `This tap would make ${alias} ${change.after}, outside ${declaration.min} to ${declaration.max}`);
@@ -11416,9 +12099,10 @@ function validateAuthoringLesson(document2, resourceContext = null) {
       }
     });
   });
-  const cardSliders = cardSliderVariables(document2, baseTenTradeContents, availableStudentControls);
+  const cardSliders = cardSliderVariables(document2, matCardContents(tapCards), availableStudentControls);
   for (const alias of tappedCards) {
-    for (const variable of baseTenTapVariables(baseTenTradeContents.get(alias), document2.lesson.variables ?? [], `/content`).values()) {
+    const card = tapCards.get(alias);
+    for (const variable of cardTapVariables(card.kind, card.content, document2.lesson.variables ?? [], `/content`).values()) {
       if (cardSliders.get(variable)?.card === alias)
         continue;
       if ((document2.lesson.variables ?? []).find((declaration) => declaration.as === variable)?.control || availableStudentControls.get(variable)?.size) {
@@ -11426,7 +12110,7 @@ function validateAuthoringLesson(document2, resourceContext = null) {
       }
     }
   }
-  validateStudentTasks(document2, lessonVariables, availableStudentControls, scene3dCameras, registry, numberLineGrids, baseTenTradeContents, cardSliders);
+  validateStudentTasks(document2, lessonVariables, availableStudentControls, scene3dCameras, registry, numberLineGrids, tapCards, cardSliders);
   validateReflections(document2, registry);
   if (document2.close?.focus) {
     for (let index = 0; index < document2.close.focus.length; index += 1) {
@@ -11486,9 +12170,10 @@ function normalizeAddressableContent(_host, nodeId, content) {
   }
   if (Array.isArray(clone.bindings)) {
     clone.bindings = clone.bindings.map((binding) => {
-      const { alias, property } = splitBindingTarget(binding.target, "content.bindings.target");
+      const cardField = typeof binding.target === "string" && !binding.target.includes(".");
+      const { alias, property } = cardField ? { alias: "", property: binding.target } : splitBindingTarget(binding.target, "content.bindings.target");
       return {
-        target: `${nodeId}:fragment:${alias}.${property}`,
+        target: cardField ? property : `${nodeId}:fragment:${alias}.${property}`,
         expression: binding.expression,
         ...binding.label !== void 0 ? { label: structuredClone(binding.label) } : {},
         ...binding.allow_zero === true ? { allow_zero: true } : {},
@@ -11569,7 +12254,7 @@ function normalizePlacement(registry, place5) {
   return result;
 }
 function normalizeAction(action, context) {
-  const { host, registry, sequence, beatIndex, actionIndex } = context;
+  const { host, registry, tapCards, sequence, beatIndex, actionIndex } = context;
   const actionId = `${host.lessonId}:action:${sequence}:${beatIndex + 1}:${actionIndex + 1}`;
   if (action.do === "write") {
     const nodeId = requireRegistryId(registry, action.as);
@@ -11657,7 +12342,7 @@ function normalizeAction(action, context) {
       action_id: actionId,
       op: "card.tap",
       target: canonicalTarget(registry, action.target),
-      tap: { kind: action.tap, place: BASE_TEN_TRADE_PLACES.indexOf(action.at) }
+      tap: { kind: action.tap, place: tapCards.get(splitTarget(action.target, "target").alias)?.places.indexOf(action.at) ?? -1 }
     };
   }
   if (action.do === "view") {
@@ -11698,6 +12383,18 @@ function normalizeAuthoringLesson(document2, host) {
     }
   }
   const registry = buildCanonicalRegistry(document2, host);
+  const tapCards = /* @__PURE__ */ new Map();
+  for (const step of document2.steps) {
+    for (const beat of step.beats) {
+      for (const action of beat.actions) {
+        if (action.do !== "write")
+          continue;
+        const card = tapCardKind(action.kind);
+        if (card)
+          tapCards.set(action.as, card);
+      }
+    }
+  }
   const canonicalLesson = structuredClone(document2.lesson);
   for (const reflection of canonicalLesson.reflections ?? []) {
     reflection.anchor = requireRegistryId(registry, reflection.anchor);
@@ -11760,7 +12457,7 @@ function normalizeAuthoringLesson(document2, host) {
           const stage = { before_speech: [], during_speech: [], after_speech: [] };
           beat.actions.forEach((action, actionIndex) => {
             const phase = action.when ?? "during_speech";
-            stage[phase].push(normalizeAction(action, { host, registry, sequence, beatIndex, actionIndex }));
+            stage[phase].push(normalizeAction(action, { host, registry, tapCards, sequence, beatIndex, actionIndex }));
           });
           if (beat.start?.kind === "replay") {
             stage.before_speech.unshift({
@@ -11837,16 +12534,18 @@ function bindingValues(state) {
   return Object.fromEntries(Object.entries(state.variables ?? {}).map(([alias, variable]) => [alias, variable.value]));
 }
 function bindingTarget(content, target) {
+  if (!target.includes(".") && OLL_CANONICAL_CARD_BINDING_CAPABILITIES.includes(target))
+    return { record: content, property: target };
   const separator = target.lastIndexOf(".");
   if (separator <= 0)
     fail("OLL_INVALID_BINDING", "content.bindings.target", `Invalid canonical binding target '${target}'`);
   const fragmentId = target.slice(0, separator);
   const property = target.slice(separator + 1);
   for (const [field, properties] of Object.entries(OLL_CANONICAL_BINDING_CAPABILITIES)) {
-    const record5 = (Array.isArray(content[field]) ? content[field] : []).find((item) => item.id === fragmentId);
-    if (record5 && properties.includes(property))
-      return { record: record5, property };
-    if (record5)
+    const record6 = (Array.isArray(content[field]) ? content[field] : []).find((item) => item.id === fragmentId);
+    if (record6 && properties.includes(property))
+      return { record: record6, property };
+    if (record6)
       fail("OLL_INVALID_BINDING", "content.bindings.target", `Property '${property}' cannot be bound on '${field}'`);
   }
   fail("OLL_REFERENCE_NOT_FOUND", "content.bindings.target", `Canonical binding target '${target}' was not found`);
@@ -11865,7 +12564,7 @@ function evaluateContentBindings(content, variables) {
       delete bindingTarget(evaluated, binding.target).record.binding_undefined;
   }
   for (const binding of Array.isArray(evaluated.bindings) ? evaluated.bindings : []) {
-    const { record: record5, property } = bindingTarget(evaluated, binding.target);
+    const { record: record6, property } = bindingTarget(evaluated, binding.target);
     if (binding.hide_when_undefined === true) {
       let value2;
       try {
@@ -11874,22 +12573,22 @@ function evaluateContentBindings(content, variables) {
         value2 = void 0;
       }
       if (value2 === void 0 || !Number.isFinite(value2)) {
-        record5.binding_undefined = true;
+        record6.binding_undefined = true;
         continue;
       }
     }
     try {
-      record5[property] = evaluateMathExpression(binding.expression, variables);
-      if (property === "radius" && (record5[property] < 0 || record5[property] === 0 && binding.allow_zero !== true)) {
+      record6[property] = evaluateMathExpression(binding.expression, variables);
+      if (property === "radius" && (record6[property] < 0 || record6[property] === 0 && binding.allow_zero !== true)) {
         throw new Error("Bound radius must be positive unless explicitly allowed to degenerate to zero");
       }
       if (property === "unfold")
-        record5[property] = Math.min(1, Math.max(0, record5[property]));
-      if (property === "sides" && (record5[property] < 3 || record5[property] > 384)) {
+        record6[property] = Math.min(1, Math.max(0, record6[property]));
+      if (property === "sides" && (record6[property] < 3 || record6[property] > 384)) {
         throw new Error("Bound polygon sides must be in 3..384");
       }
       if (binding.label)
-        record5.label = formatBoundNumericLabel(record5[property], binding.label);
+        record6.label = formatBoundNumericLabel(record6[property], binding.label);
     } catch (error) {
       const message = error instanceof Error ? error.message : "binding evaluation failed";
       fail("OLL_BINDING_EVALUATION_FAILED", "content.bindings.expression", message);
@@ -11995,16 +12694,16 @@ function applyCanonicalAction(state, action) {
     Object.assign(state, setLessonVariables(state, action.transition.values));
   } else if (action.op === "card.tap") {
     const node = action.target?.node_id ? state.nodes[action.target.node_id] : void 0;
-    if (!node || node.kind !== BASE_TEN_TRADE_KIND || !action.tap)
-      fail("OLL_REFERENCE_NOT_FOUND", "action.target", "A tap acts on a base-ten trade card");
-    const before = baseTenMat(node.content);
-    const result = applyBaseTenTap(before, action.tap);
+    const card = tapCardKind(node?.kind);
+    if (!node || !card || !action.tap)
+      fail("OLL_REFERENCE_NOT_FOUND", "action.target", `A tap acts on a ${tapCardKindList()} card`);
+    const before = card.state(node.content);
+    const result = card.apply(before, action.tap);
     if (!result.ok)
-      fail("OLL_INVALID_EVENT", "action.tap", `The card refuses this tap: ${baseTenRefusalText(result.reason, action.tap.place)}`);
-    const places = Array.isArray(node.content.places) ? node.content.places : [];
+      fail("OLL_INVALID_EVENT", "action.tap", `The card refuses this tap: ${card.refusalText(result.reason, action.tap.place)}`);
     const bound = new Map((node.content.bindings ?? []).map((binding) => [binding.target, String(binding.expression).trim()]));
-    const values = Object.fromEntries(baseTenChanges(before, result.mat).map((change) => {
-      const alias = bound.get(`${places[change.place]?.id}.${change.field}`);
+    const values = Object.fromEntries(card.changes(before, result.state).map((change) => {
+      const alias = bound.get(card.fieldTarget(node.content, change.place, change.field));
       if (!alias)
         fail("OLL_INVALID_EVENT", "action.target", `The card has no variable for ${change.field} of place ${change.place}`);
       return [alias, change.after];
@@ -13766,6 +14465,47 @@ function buildBaseTenTrade(input) {
   };
 }
 
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/place-value-chart-builder.js
+var driven4 = (value2) => typeof value2 === "object" && value2 !== null && typeof value2.expression === "string";
+function buildPlaceValueChart(input) {
+  const bindings = [];
+  const value2 = (raw, target2) => {
+    if (!driven4(raw))
+      return raw;
+    bindings.push({ target: target2, expression: raw.expression });
+    return raw.initial;
+  };
+  const target = value2(input.target, "target");
+  const { top_place, decimals } = placeValueColumnsFor([target, ...input.numbers ?? []], input.language);
+  const given = new Map((input.places ?? []).map((item) => [item.place, item]));
+  const places = placeValueColumns(top_place, decimals).map((place5) => {
+    const as = PLACE_VALUE_PLACE_ALIASES[place5];
+    const item = given.get(place5);
+    const count = value2(item?.count ?? (input.mode === "apart" ? placeValueDigitAt(target, place5) : 0), `${as}.count`);
+    if (input.mode !== "apart")
+      return { as, place: place5, count };
+    return { as, place: place5, count, pulled: value2(item?.pulled ?? 0, `${as}.pulled`) };
+  });
+  const content = {
+    ...input.language !== void 0 ? { language: input.language } : {},
+    mode: input.mode,
+    given: input.given,
+    top_place,
+    decimals,
+    target,
+    places,
+    ...bindings.length ? { bindings } : {}
+  };
+  const parts = { whole: input.as };
+  for (const place5 of places)
+    parts[place5.as] = `${input.as}#${place5.as}`;
+  return {
+    actions: [{ do: "write", as: input.as, kind: PLACE_VALUE_CHART_KIND, role: input.role, content, place: input.place }],
+    whole: input.as,
+    parts
+  };
+}
+
 // node_modules/octos-lesson-language/dist/packages/plugin-math/src/number-line-form.js
 var NUMBER_LINE_FORM_LIMITS = { span: 40, subdivisions: NUMBER_LINE_LIMITS.subdivisions, moves: 3 };
 
@@ -14417,6 +15157,12 @@ function signOf([lo, hi]) {
   return lo > 0 ? "positive" : hi < 0 ? "negative" : "unknown";
 }
 
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/card-how-to.js
+var HOW_TO = Object.freeze({
+  [BASE_TEN_TRADE_KIND]: baseTenHowTo,
+  [PLACE_VALUE_CHART_KIND]: placeValueHowTo
+});
+
 // node_modules/octos-lesson-language/dist/packages/plugin-math/src/index.js
 var MATH_SUBJECT_DESCRIPTION = {
   "zh-CN": "\u6570\u5B66\uFF1A\u6570\u4E0E\u8FD0\u7B97\u3001\u4EE3\u6570\u3001\u51FD\u6570\u4E0E\u56FE\u50CF\u3001\u51E0\u4F55\u3001\u7EDF\u8BA1\u4E0E\u6982\u7387",
@@ -14508,9 +15254,9 @@ function buildUnitCircle(input) {
 }
 function buildCirclePolygons(input) {
   const { radius } = input;
-  const driven4 = typeof input.sides === "number" ? void 0 : input.sides;
+  const driven5 = typeof input.sides === "number" ? void 0 : input.sides;
   const sides = typeof input.sides === "number" ? input.sides : input.sides.initial;
-  const extent = input.circumscribed ? radius / Math.cos(Math.PI / (driven4?.min ?? sides)) * 1.18 : radius * 1.3;
+  const extent = input.circumscribed ? radius / Math.cos(Math.PI / (driven5?.min ?? sides)) * 1.18 : radius * 1.3;
   const polygon = (as, label) => ({
     as,
     center: "center",
@@ -14531,9 +15277,9 @@ function buildCirclePolygons(input) {
       ...input.circumscribed ? [polygon("circumscribed", input.text.circumscribed_label)] : []
     ],
     ...input.text.caption !== void 0 ? { caption: input.text.caption } : {},
-    ...driven4 ? { bindings: [
-      { target: "inscribed.sides", expression: driven4.expression },
-      ...input.circumscribed ? [{ target: "circumscribed.sides", expression: driven4.expression }] : []
+    ...driven5 ? { bindings: [
+      { target: "inscribed.sides", expression: driven5.expression },
+      ...input.circumscribed ? [{ target: "circumscribed.sides", expression: driven5.expression }] : []
     ] } : {}
   };
   return {
@@ -14770,6 +15516,24 @@ var MATH_RECIPES = {
     required_features: ["trade_ten_for_one"],
     model_guidance: "\u65B9\u5757\u6362\u4E00\u6362\uFF1A\u5341\u4E2A\u4E00\u6362\u4E00\u4E2A\u5341\uFF0C\u5341\u4E2A\u5341\u6362\u4E00\u4E2A\u767E\u3002\u6570\u503C\u4F9D\u6B21\u662F\u6563\u7684\u4E00\u3001\u5341\u7684\u4E2A\u6570\uFF0C\u9898\u76EE\u6709\u767E\u6216\u4E00\u5171\u6EE1100\u65F6\u518D\u52A0\u767E\u7684\u4E2A\u6570\uFF08\u6CA1\u6709\u767E\u51990\uFF09\uFF0C\u7167\u9898\u76EE\u5199\u3002\u4E00\u5171\u6EE1100\u65F6\u753B\u677F\u6709\u767E\u4F4D\uFF1A\u5341\u6EE1\u5341\u4E5F\u8981\u6362\u6210\u4E00\u4E2A\u767E\uFF0C\u901A\u5E38\u8BB2\u5230\u6BCF\u4E00\u4F4D\u90FD\u4E0D\u5230\u5341\u4E3A\u6B62\u3002\u8BB2\u5230\u4EA4\u6362\u7684\u90A3\u4E00\u523B\u628A\u201C\u4E00\u201D\u7684\u6570\u503C\u52A8\u753B\u5230\u6362\u5B8C\u7684\u4E2A\u6570\uFF08\u4E00\u6B21\u5C11\u6574\u5341\uFF0C\u598226\u52306\uFF09\uFF0C\u5341\u81EA\u5DF1\u8DDF\u7740\u591A\uFF1B\u6362\u767E\u5C31\u628A\u201C\u5341\u201D\u52A8\u753B\u5230\u6362\u5B8C\u7684\u4E2A\u6570\uFF08\u598211\u52301\uFF09\uFF0C\u767E\u81EA\u5DF1\u8DDF\u7740\u591A\u3002\u65B9\u5757\u7684\u603B\u6570\u6C38\u8FDC\u4E0D\u53D8\uFF0C\u53EA\u80FD\u4EA4\u6362\uFF1A\u628A\u4E00\u5806\u53D8\u6210\u53E6\u4E00\u4E2A\u6570\uFF08\u5982508\u52A03\u4E2A\u5341\u53D8\u6210538\uFF09\u4E0D\u80FD\u5728\u65B9\u5757\u4E0A\u7EC3\uFF0C\u7528\u586B\u6570\u9898\u95EE\u3002\u8BFE\u540E\u7EC3\u4E60\u65F6\u65B9\u5757\u56DE\u5230\u8BFE\u7A0B\u5F00\u5934\u90A3\u4E00\u5806\uFF0C\u5B69\u5B50\u81EA\u5DF1\u6362\uFF1B\u90A3\u4E00\u5806\u5DF2\u7ECF\u662F\u76EE\u6807\u65F6\uFF0C\u4ECE\u8BFE\u7A0B\u7ED3\u675F\u65F6\u90A3\u4E00\u5806\u5F00\u59CB\uFF0C\u6240\u4EE5\u201C\u6362\u56DE\u201D\u5F00\u5934\u7684\u4E2A\u6570\u4E5F\u53EF\u4EE5\u3002\u7EC3\u4E60\u7684\u76EE\u6807\u662F\u4EA4\u6362\u8DEF\u4E0A\u201C\u4E00\u201D\u6216\u201C\u5341\u201D\u7684\u67D0\u4E2A\u4E2A\u6570\uFF08\u6446\u9762\u753B\u597D\u4EE5\u540E\uFF0Cvisuals_for_section \u7ED9\u51FA loose_ones_as_traded\u3001tens_as_traded\uFF09\uFF0C\u8BF4\u6210\u201C\u6362\u6210\u51E0\u4E2A\u201D\uFF0C\u4E0D\u8BF4\u201C\u8C03\u5230\u201D\uFF1B\u65B9\u5757\u4E0A\u7684\u7EC3\u4E60\u8981\u7EC3\u672C\u8BFE goals \u91CC\u7684\u4EA4\u6362\u3002\u63D0\u793A\u8BB2\u6570\u5B66\uFF08\u5982\u5341\u4E2A\u4E00\u6362\u4E00\u4E2A\u5341\uFF09\uFF0C\u4E0D\u8BB2\u600E\u4E48\u64CD\u4F5C\u3002\u586B\u6570\u9898\u53E6\u51FA\u65B0\u9898\u65F6\u7528\u6587\u5B57\u8BF4\u4E00\u5806\u65B0\u7684\u65B9\u5757\uFF0C\u9898\u76EE\u53EA\u5199\u56DE\u7B54\u8981\u7528\u7684\u8BDD\uFF0C\u4E0D\u52A0\u548C\u8FD9\u9053\u9898\u65E0\u5173\u7684\u4E8B\u5B9E\u3002\u8BF4\u65B9\u5757\u53EA\u7528\u6570\u4F4D\u7684\u540D\u5B57\uFF1A\u4E00\u3001\u5341\u3001\u767E\uFF08\u5982\u201C10\u4E2A\u5341\u6362\u62101\u4E2A\u767E\u201D\uFF09\uFF0C\u4E0D\u53E6\u8D77\u540D\u5B57\uFF08\u5982\u201C\u5341\u6761\u201D\u201C\u767E\u677F\u201D\uFF09"
   },
+  // OLL decision 0025 (a trial, off by default): the place-value chart on lesson numbers, on the trading mat's
+  // pattern. The model writes the question's number and a different practice number, what the card gives, the
+  // demonstration as targets on the number (what is still to do, cleared a place at a time) and the practice;
+  // the program writes every number text on the card, plays the steps and makes the learner's task.
+  place_value_chart: {
+    parts: ["whole"],
+    number_inputs: ["number", "practice"],
+    number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }],
+    parameter_names: ["given"],
+    model_parameter_names: ["given"],
+    required_model_schema_parameters: ["given"],
+    semantic_parameters: ["given"],
+    output_kinds: ["place_value_chart"],
+    // No control: the learner works the chart by its own taps (+, a disk, take out); the model never names one.
+    student_controls: [],
+    required_features: ["place_value_parts"],
+    model_guidance: "\u6570\u4F4D\u8868\uFF1A\u7167\u8BFB\u6CD5\u3001\u5C55\u5F00\u5F0F\u6216\u6BCF\u4E00\u4F4D\u6709\u51E0\u4E2A\u6446\u51FA\u4E00\u4E2A\u6570\uFF0C\u6216\u628A\u4E00\u4E2A\u6570\u6309\u6570\u4F4D\u4E00\u4F4D\u4E00\u4F4D\u62C6\u5F00\uFF08\u5230\u767E\u4E07\u4F4D\u548C\u5343\u5206\u4F4D\uFF09\u3002\u4E0D\u7528\u4E8E\u6BD4\u8F83\u4E24\u4E2A\u6570\u3001\u5341\u4E2A\u8FD9\u4E00\u4F4D\u662F\u5DE6\u8FB9\u4E00\u4F4D\u7684\u4E00\u4E2A\u3001\u5728\u8868\u4E0A\u52A0\u51CF\u3001\u51D1\u6574\uFF0C\u4E5F\u4E0D\u7528\u4E8E\u4F4E\u5E74\u7EA7\u7684\u5341\u4E2A\u4E00\u6362\u4E00\u4E2A\u5341\uFF08\u7528\u65B9\u5757\uFF09\u3002\u6570\u503C\u4F9D\u6B21\u662F\u9898\u76EE\u7684\u6570\u548C\u7EC3\u4E60\u7684\u6570\uFF08\u53E6\u4E00\u4E2A\u6570\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u514D\u5F97\u5B69\u5B50\u7167\u6284\u6F14\u793A\uFF09\uFF0C\u5199\u5B9E\u9645\u5927\u5C0F\uFF0826.075\uFF09\uFF0C\u6700\u591A\u4E09\u4F4D\u5C0F\u6570\u3002given \u662F\u5361\u7247\u4E0A\u7ED9\u51FA\u7684\uFF1A\u6446\u6570\u5199 name\uFF08\u8BFB\u6CD5\uFF09\u3001expanded\uFF08\u503C\u7684\u548C\uFF0C\u5982 4,000 + 50\uFF09\u3001expanded_factors\uFF08\u5982 4 \xD7 1,000 + 5 \xD7 10\uFF09\u6216 place_counts\uFF08\u5982 8\u4E2A\u5343\u30016\u4E2A\u5341\u548C3\u4E2A\u4E00\uFF09\uFF1B\u62C6\u6570\u5199 numeral\uFF0C\u62C6\u7684\u6570\u6709\u5C0F\u6570\u65F6\u6574\u6570\u90E8\u5206\u82F1\u6587\u8BFE\u4E0D\u8D85\u8FC7\u4E09\u4F4D\u3001\u4E2D\u6587\u8BFE\u4E0D\u8D85\u8FC7\u56DB\u4F4D\u3002\u53EA\u6709\u4E00\u4F4D\u4E0D\u662F\u96F6\u7684\u6570\uFF084000\u30010.05\uFF09\u4E0D\u7528 expanded\uFF0C\u4E5F\u4E0D\u62C6\u3002\u5E26\u4E58\u53F7\u7684\u5C0F\u6570\u5199\u6CD5\uFF083 \xD7 (1/10)\uFF09\u53EA\u7528\u4E8E\u82F1\u6587\u4E94\u5E74\u7EA7\u7684\u5C0F\u6570\u9898\u6216\u9898\u76EE\u81EA\u5DF1\u8FD9\u6837\u5199\uFF1B\u4E2D\u6587\u8BFE\u7528 place_counts\uFF083\u4E2A0.1\u30019\u4E2A0.01\u548C2\u4E2A0.001\uFF09\u6216\u503C\u7684\u548C\uFF080.3 + 0.09 + 0.002\uFF09\u3002\u5361\u7247\u4E0A\u7684\u8BFB\u6CD5\u3001\u5C55\u5F00\u5F0F\u548C\u6570\u5B57\u90FD\u7531\u7A0B\u5E8F\u5199\u3002\u6F14\u793A\uFF1A\u628A\u9898\u76EE\u7684\u6570\u52A8\u753B\u5230\u8FD8\u6CA1\u505A\u5B8C\u7684\u90E8\u5206\uFF08\u6446\u6570\u662F\u8FD8\u6CA1\u6446\u4E0A\u7684\uFF0C\u62C6\u6570\u662F\u8FD8\u5728\u8868\u4E0A\u7684\uFF09\uFF0C\u6BCF\u4E00\u6B65\u53BB\u6389\u4E00\u4F4D\u6216\u51E0\u4F4D\uFF0C\u901A\u5E38\u4ECE\u6700\u9AD8\u4F4D\u8D77\uFF0C\u5982 60408 \u5148\u5230 408\uFF0C\u518D\u5230 8\uFF0C\u6700\u540E\u5230 0\u3002\u7EC3\u4E60\uFF1A\u5BF9\u9898\u76EE\u7684\u6570\u5199\u4E00\u4E2A\u6570\u503C\u76EE\u6807\u9898\uFF08\u6570\u503C\u5199\u7EC3\u4E60\u7684\u6570\uFF09\uFF0C\u5B69\u5B50\u5728\u8868\u4E0A\u6446\u51FA\u6216\u62C6\u5F00\u7EC3\u4E60\u7684\u6570\uFF1B\u6446\u6570\u9898\u7684\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u6570\uFF08\u5361\u7247\u4E0A\u5DF2\u7ECF\u7ED9\u51FA\u5B83\u7684\u8BFB\u6CD5\u6216\u5C55\u5F00\u5F0F\uFF09\uFF1B\u62C6\u5B8C\u4EE5\u540E\u7A0B\u5E8F\u51FA\u4E00\u884C\u7A7A\uFF0C\u5199\u6BCF\u4E00\u90E8\u5206\u662F\u591A\u5C11\u3002\u8BF4\u6570\u4F4D\u7528\u540D\u5B57\uFF08\u5343\u4F4D\u3001\u5341\u5206\u4F4D\u3001hundreds\uFF09\uFF0C\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
+  },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
     number_inputs: ["columns_or_length", "rows_or_width"],
@@ -14943,6 +15707,8 @@ var MATH_SCHEMA_PROPERTIES = {
     // (probe 2).
     split_each_part: { enum: ["2", "3", "4", "5", "6"] }
   },
+  // What the place-value chart gives (OLL 0025): a build form, or the numeral to pull apart. The program writes the text.
+  place_value_chart: { given: { enum: ["name", "expanded", "expanded_factors", "place_counts", "numeral"] } },
   solid_3d: {
     // The compiler checks the fields (each solid's shape and sizes), so the schema carries no strictness keywords.
     solids: { type: "array", minItems: 1, maxItems: 2, items: { type: "object", properties: {
@@ -15072,7 +15838,7 @@ function buildConstantSpeedMotion(input) {
   const distance = time.initial * speed.initial;
   const t = quantityValue(time);
   const v = quantityValue(speed);
-  const driven4 = Boolean(time.expression || speed.expression);
+  const driven5 = Boolean(time.expression || speed.expression);
   const lane = Number((0.08 * length2).toPrecision(12));
   const trackContent = {
     title: text5.title,
@@ -15080,13 +15846,13 @@ function buildConstantSpeedMotion(input) {
     points: [
       { as: "start", x: 0, y: lane, label: text5.start },
       { as: "finish", x: length2, y: lane, visible: false },
-      { as: "object", x: distance, y: lane, label: driven4 ? `${text5.distance_readout}${distance}${text5.distance_unit ? ` ${text5.distance_unit}` : ""}` : text5.object }
+      { as: "object", x: distance, y: lane, label: driven5 ? `${text5.distance_readout}${distance}${text5.distance_unit ? ` ${text5.distance_unit}` : ""}` : text5.object }
     ],
     segments: [
       { as: "track", from: "start", to: "finish", style: "dashed" },
       { as: "travelled", from: "start", to: "object", style: "solid" }
     ],
-    ...driven4 ? {
+    ...driven5 ? {
       bindings: [{
         target: "object.x",
         expression: `${v}*${t}`,
@@ -15099,7 +15865,7 @@ function buildConstantSpeedMotion(input) {
     axes: { x: { min: 0, max: time.max, label: text5.time_axis }, y: { min: 0, max: length2, label: text5.distance_axis } },
     curves: [{ as: "primary-curve", expression: `${v}*x`, label: text5.curve_label }],
     points: [{ as: "moving-point", x: time.initial, y: distance, label: text5.current_state }],
-    ...driven4 ? {
+    ...driven5 ? {
       bindings: [
         { target: "moving-point.x", expression: t },
         { target: "moving-point.y", expression: `${v}*${t}` }
@@ -15354,7 +16120,7 @@ var RECIPE_CATALOG_ORDER = [
   "base_ten_trade"
 ];
 var RETIRED_RECIPES = ["cube_with_section"];
-var TRIAL_RECIPES = ["constant_speed_motion", "fraction_model"];
+var TRIAL_RECIPES = ["constant_speed_motion", "fraction_model", "place_value_chart"];
 function enabledTrialRecipes(list2) {
   const named = new Set((list2 ?? "").split(",").map((name) => name.trim()).filter(Boolean));
   return TRIAL_RECIPES.filter((name) => named.has(name));
@@ -15412,7 +16178,9 @@ var SCHEMA_PROPERTY_ORDER = [
   "fractions",
   "fraction_shape",
   "fraction_view",
-  "split_each_part"
+  "split_each_part",
+  // The place-value chart trial recipe (decision 0025); last, so requests without it keep their order.
+  "given"
 ];
 function promptSlot(slot, core = "", plugins = INSTALLED_PLUGINS) {
   const text5 = core + plugins.map((plugin) => plugin.prompt_rules[slot] ?? "").join("");
@@ -15499,6 +16267,7 @@ var EN = {
   "\u5206\u6570": "Fractions",
   "\u6BCF\u4EFD\u662F {{v0}}": "Each share is {{v0}}",
   "\u753B\u9762\u7684\u4E0B\u4E00\u6B65": "the picture's next step",
+  "\u5199\u51FA\u6BCF\u4E00\u90E8\u5206\u662F\u591A\u5C11\u3002": "Write what each part is worth.",
   "y \u622A\u8DDD": "y-intercept",
   "x \u622A\u8DDD": "x-intercept",
   "\u5BF9\u79F0\u8F74": "Axis of symmetry",
@@ -16859,7 +17628,7 @@ function baseTenTapTask(state, position, value2, end, reach) {
   if (found) return { start: found };
   return { drop: `the ${names[position]} are already ${value2}, and no pile a trade away can be traded back to it` };
 }
-function baseTenFacts(start, now) {
+function baseTenFacts2(start, now) {
   const state = baseTenState(start);
   const names = ["loose_ones", "tens", "hundreds"];
   const pile = (values) => Object.fromEntries(values.map((count, place5) => [names[place5], count]));
@@ -16883,6 +17652,92 @@ function baseTenFacts(start, now) {
     fully_traded: pile(baseTenTraded(state)),
     ...nowPile && nowPile.some((count, place5) => count !== state[place5]) ? { pile_now: pile(nowPile) } : {}
   };
+}
+
+// src/plugins/place-value-moves.ts
+var PLACE_VALUE_ROW_PARTS = 6;
+var PLACE_VALUE_GIVENS = ["name", "expanded", "expanded_factors", "place_counts", "numeral"];
+var THOUSANDTHS_SLACK = 1e-4;
+function placeValueThousandths(value2) {
+  if (!Number.isFinite(value2) || value2 < 0) return void 0;
+  const thousandths = Math.round(value2 * 1e3);
+  if (Math.abs(value2 * 1e3 - thousandths) > THOUSANDTHS_SLACK) return void 0;
+  return thousandths <= PLACE_VALUE_MAX_VALUE ? thousandths : void 0;
+}
+function placeValueDecimal(thousandths) {
+  return Number((thousandths / 1e3).toFixed(3));
+}
+function placeValuePlain(thousandths) {
+  return String(placeValueDecimal(thousandths));
+}
+function numberFault(value2, role) {
+  if (!Number.isFinite(value2) || value2 < 0) return `the ${role} is a number from 0 to 9,999,999.999`;
+  if (Math.abs(value2 * 1e3 - Math.round(value2 * 1e3)) > THOUSANDTHS_SLACK) return `the ${role} has at most three decimal places (thousandths): the chart's last column is the thousandths`;
+  if (Math.round(value2 * 1e3) > PLACE_VALUE_MAX_VALUE) return `the ${role} is at most 9,999,999.999: the chart's highest column is the millions`;
+  return void 0;
+}
+function placeValueStartFault(values, given) {
+  if (values.length < 1 || values.length > 2) return "the chart takes two lesson numbers: the question's number, then a different practice number for the learner";
+  const roles = ["question's number", "practice number"];
+  for (const [index, value2] of values.entries()) {
+    const fault = numberFault(value2, roles[index]);
+    if (fault) return fault;
+  }
+  const [number, practice] = values.map((value2) => Math.round(value2 * 1e3));
+  for (const [index, value2] of [number, practice].entries()) {
+    if (value2 === void 0) continue;
+    const leak = placeValueTaskFault(value2, given);
+    if (leak === "zero") return `the ${roles[index]} is 0: there is nothing to ${given === "numeral" ? "pull apart" : "build"}`;
+    if (leak) {
+      return `the ${roles[index]} ${placeValueDecimal(value2)} has one non-zero place, so ${given === "numeral" ? "pulling it apart" : `its ${given.replace("_", " ")} form`} shows the answer itself: choose a number with two or more non-zero places${given === "numeral" ? "" : ", or give its name or place counts"}`;
+    }
+  }
+  if (practice !== void 0 && practice === number) return "the practice number is the learner's own: a different number from the question's, so the learner does not copy the demonstration";
+  if (given === "numeral" && practice !== void 0 && placeValueParts(practice).length > PLACE_VALUE_ROW_PARTS) {
+    return `a practice number to pull apart has at most ${PLACE_VALUE_ROW_PARTS} non-zero places: its parts are written in one row of at most ${PLACE_VALUE_ROW_PARTS} blanks`;
+  }
+  return void 0;
+}
+function placeValueCleared(from, to) {
+  const places = [];
+  for (let place5 = PLACE_VALUE_MAX_PLACE; place5 >= PLACE_VALUE_MIN_PLACE; place5 -= 1) {
+    if (placeValueDigitAt(from, place5) && !placeValueDigitAt(to, place5)) places.push(place5);
+  }
+  return places;
+}
+function placeValueMove(state, position, to) {
+  if (position !== 0) return "the practice number is the learner's: it does not move in the lesson. Animate the question's number to show the demonstration";
+  const from = Math.round(state[0] * 1e3);
+  const target = placeValueThousandths(to);
+  if (target === void 0) return "the chart's number is a number from 0 to 9,999,999.999 with at most three decimal places";
+  if (target === from) return [...state];
+  const keeps = Array.from({ length: PLACE_VALUE_MAX_PLACE - PLACE_VALUE_MIN_PLACE + 1 }, (_, i) => i + PLACE_VALUE_MIN_PLACE).every((place5) => placeValueDigitAt(target, place5) === 0 || placeValueDigitAt(target, place5) === placeValueDigitAt(from, place5));
+  if (!keeps || target > from) {
+    const parts = placeValueParts(from);
+    const left = parts.map((_, k) => parts.slice(k + 1).reduce((sum, part) => sum + part.value, 0));
+    return `the chart's number is what is still to do (not yet placed when building, still on the chart when pulling apart): it starts at the number and each step clears whole places, highest first, so from ${placeValueDecimal(from)} it can be ${left.map(placeValueDecimal).join(", ")}`;
+  }
+  const next = [...state];
+  next[0] = placeValueDecimal(target);
+  return next;
+}
+function placeValueMoves(state, moves) {
+  const steps = [];
+  let current = [...state];
+  for (const move of moves) {
+    const result = placeValueMove(current, move.position, move.to);
+    if (typeof result === "string") return { refused: { position: move.position, reason: result } };
+    steps.push({ position: move.position, from: current, to: result });
+    current = result;
+  }
+  return { steps };
+}
+var FULL_WIDTH2 = /[０-９．，]/gu;
+var halfWidth = (text5) => text5.replace(FULL_WIDTH2, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
+function placeValueWordsWrite(words, thousandths) {
+  const text5 = halfWidth(String(words));
+  const numerals = text5.match(/\d{1,3}(?:[,   ]\d{3})+(?:\.\d+)?|\d*\.\d+|\d+/gu) ?? [];
+  return numerals.some((numeral) => placeValueThousandths(Number(numeral.replace(/[,   ]/gu, ""))) === thousandths);
 }
 
 // src/plugins/math-hooks.ts
@@ -17012,6 +17867,24 @@ var MATH_HOOKS = {
     },
     number_moves: { state: baseTenState, moves: baseTenMoves }
   },
+  place_value_chart: {
+    // The chart's numbers have no control: the learner works the chart by its own taps (OLL 0025; owner,
+    // 2026-11-24: the model never names a control). The question's number runs from 0 (all done) to itself,
+    // the demonstration's targets; the practice number stays as written. The compiler checks both.
+    fit_numbers(content, plan) {
+      const numbers = content.numbers ?? [];
+      const definitions = numbers.map((number) => plan.numbers?.[number - 1]);
+      if (!definitions.length || definitions.some((definition) => !definition)) return /* @__PURE__ */ new Map();
+      definitions.forEach((definition) => {
+        definition.min = Math.min(0, definition.initial);
+        definition.max = Math.max(0, definition.initial);
+        delete definition.student_control;
+        delete definition.unit;
+      });
+      return /* @__PURE__ */ new Map();
+    },
+    number_moves: { state: (start) => [...start], moves: placeValueMoves }
+  },
   number_line: { fit_numbers: fitNumberLineNumbers },
   number_line_compare: { fit_numbers: fitComparedNumbers },
   number_line_solution: { fit_numbers: fitSolutionNumbers },
@@ -17096,7 +17969,7 @@ var MATH_HOOKS = {
       delete parameters3.curve_label;
       return { no_numbers: true };
     },
-    validate_parameters(parameters3, { path, numberCount, fail: fail4, record: record5, array: array2, validateMathExpression: validateMathExpression2 }) {
+    validate_parameters(parameters3, { path, numberCount, fail: fail4, record: record6, array: array2, validateMathExpression: validateMathExpression2 }) {
       if (parameters3 === void 0) {
         fail4(
           "LESSON_PLAN_EXPRESSION",
@@ -17104,7 +17977,7 @@ var MATH_HOOKS = {
           "a function plot requires an explicit mathematical expression"
         );
       }
-      const visualParameters = record5(parameters3, `${path}.parameters`);
+      const visualParameters = record6(parameters3, `${path}.parameters`);
       const expressionFields = ["expression", "expressions", "expression_tokens"].filter((field) => visualParameters[field] !== void 0);
       if (expressionFields.length !== 1) {
         fail4(
@@ -17436,7 +18309,7 @@ var teacherExpressions = /* @__PURE__ */ new Set(["neutral", "encouraging", "car
 function fail3(code, path, message) {
   throw new LessonPlanError(code, path, message);
 }
-function record4(value2, path) {
+function record5(value2, path) {
   if (!value2 || typeof value2 !== "object" || Array.isArray(value2)) {
     fail3("LESSON_PLAN_TYPE", path, "expected an object");
   }
@@ -17484,7 +18357,7 @@ function validateParameters(value2, path) {
     value2.forEach((item, index) => validateParameters(item, `${path}[${index}]`));
     return;
   }
-  const object2 = record4(value2, path);
+  const object2 = record5(value2, path);
   for (const [key, item] of Object.entries(object2)) {
     if (FORBIDDEN_PARAMETER_KEYS.has(key) || key.endsWith("_id")) {
       fail3("LESSON_PLAN_MODEL_ID", `${path}.${key}`, "business identity fields are not allowed in model-authored parameters");
@@ -17493,7 +18366,7 @@ function validateParameters(value2, path) {
   }
 }
 function recipeValidationContext(path, numberCount) {
-  return { path, numberCount, fail: fail3, record: record4, array, validateMathExpression };
+  return { path, numberCount, fail: fail3, record: record5, array, validateMathExpression };
 }
 function validateMathExpression(value2, path, numberCount, allowInput = false) {
   const tokens = array(value2, path);
@@ -17502,7 +18375,7 @@ function validateMathExpression(value2, path, numberCount, allowInput = false) {
   const numbers = /* @__PURE__ */ new Set();
   tokens.forEach((entry, index) => {
     const tokenPath = `${path}[${index}]`;
-    const token = record4(entry, tokenPath);
+    const token = record5(entry, tokenPath);
     const kind = token.kind;
     if (kind === "input") {
       allowedKeys(token, ["kind"], tokenPath);
@@ -17548,7 +18421,7 @@ function capability(value2, path) {
   return value2;
 }
 function validatePart(value2, path) {
-  const part = record4(value2, path);
+  const part = record5(value2, path);
   const kind = part.kind;
   if (kind === "capability") {
     allowedKeys(part, ["kind", "role"], path);
@@ -17561,7 +18434,7 @@ function validatePart(value2, path) {
   fail3("LESSON_PLAN_PART", `${path}.kind`, "unsupported part reference");
 }
 function validateReference(value2, path) {
-  const ref = record4(value2, path);
+  const ref = record5(value2, path);
   const part = ref.part === void 0 ? void 0 : validatePart(ref.part, `${path}.part`);
   if (ref.source === "local_board_item" || ref.source === "local_connection" || ref.source === "local_group") {
     allowedKeys(ref, ["source", "moment", "item", "part"], path);
@@ -17592,7 +18465,7 @@ function validateReference(value2, path) {
   fail3("LESSON_PLAN_REFERENCE", `${path}.source`, "unsupported reference source");
 }
 function validatePlacement2(value2, path) {
-  const placement = record4(value2, path);
+  const placement = record5(value2, path);
   allowedKeys(placement, ["relation", "reference", "align", "gap"], path);
   const relation = placement.relation;
   const relations = /* @__PURE__ */ new Set(["new_region", "below", "above", "left_of", "right_of", "near", "inside", "overlay"]);
@@ -17605,7 +18478,7 @@ function validatePlacement2(value2, path) {
   return placement;
 }
 function validateBoardContent(kind, value2, path, numberCount, resourceCount) {
-  const content = record4(value2, path);
+  const content = record5(value2, path);
   if (kind === "text" || kind === "shape") {
     allowedKeys(content, ["text"], path);
     nonEmptyString(content.text, `${path}.text`);
@@ -17681,7 +18554,7 @@ function validateLessonPlanNumbers(value2, path) {
   if (numbers.length > 16) fail3("LESSON_PLAN_NUMBERS", path, "expected at most 16 numeric states");
   numbers.forEach((entry, index) => {
     const numberPath = `${path}[${index}]`;
-    const number = record4(entry, numberPath);
+    const number = record5(entry, numberPath);
     allowedKeys(number, ["initial", "min", "max", "label", "unit", "student_control"], numberPath);
     const initial = finiteNumber(number.initial, `${numberPath}.initial`);
     const min = finiteNumber(number.min, `${numberPath}.min`);
@@ -17693,7 +18566,7 @@ function validateLessonPlanNumbers(value2, path) {
     optionalString(number.unit, `${numberPath}.unit`, 32);
     if (number.student_control === void 0) return;
     const controlPath = `${numberPath}.student_control`;
-    const control = record4(number.student_control, controlPath);
+    const control = record5(number.student_control, controlPath);
     allowedKeys(control, ["kind", "step"], controlPath);
     if (control.kind !== "slider") fail3("LESSON_PLAN_CONTROL", `${controlPath}.kind`, "only slider is supported");
     if (control.step === void 0) return;
@@ -17712,7 +18585,7 @@ function validateLessonPlanNumbers(value2, path) {
   return numbers;
 }
 function resolveLessonPlan(value2, options = {}) {
-  const root2 = record4(value2, "$lessonPlan");
+  const root2 = record5(value2, "$lessonPlan");
   allowedKeys(root2, ["version", "title", "goals", "teaching_strategies", "numbers", "sections", "close"], "$lessonPlan");
   if (root2.version !== LESSON_PLAN_VERSION) fail3("LESSON_PLAN_VERSION", "$lessonPlan.version", `expected '${LESSON_PLAN_VERSION}'`);
   nonEmptyString(root2.title, "$lessonPlan.title", 160);
@@ -17787,14 +18660,14 @@ function resolveLessonPlan(value2, options = {}) {
   rawSections.forEach((rawSection, sectionOffset) => {
     const sectionIndex = sectionOffset + 1;
     const path = `$lessonPlan.sections[${sectionOffset}]`;
-    const section = record4(rawSection, path);
+    const section = record5(rawSection, path);
     allowedKeys(section, ["purpose", "reusable_items", "moments", "student_activities"], path);
     nonEmptyString(section.purpose, `${path}.purpose`, 480);
     const reusableDeclarations = section.reusable_items === void 0 ? [] : array(section.reusable_items, `${path}.reusable_items`);
     if (reusableDeclarations.length > 32) fail3("LESSON_PLAN_REUSABLE", `${path}.reusable_items`, "expected at most 32 reusable items");
     const declarations = reusableDeclarations.map((entry, declarationOffset) => {
       const declarationPath = `${path}.reusable_items[${declarationOffset}]`;
-      const declaration = record4(entry, declarationPath);
+      const declaration = record5(entry, declarationPath);
       allowedKeys(declaration, ["kind", "board_kind", "capability"], declarationPath);
       if (!["board_item", "connection", "group"].includes(String(declaration.kind))) fail3("LESSON_PLAN_REUSABLE", `${declarationPath}.kind`, "unsupported reusable item kind");
       if (declaration.kind === "board_item") {
@@ -17826,7 +18699,7 @@ function resolveLessonPlan(value2, options = {}) {
     rawMoments.forEach((rawMoment, momentOffset) => {
       const momentIndex = momentOffset + 1;
       const momentPath = `${path}.moments[${momentOffset}]`;
-      const moment = record4(rawMoment, momentPath);
+      const moment = record5(rawMoment, momentPath);
       allowedKeys(moment, ["narration", "delivery", "actions", "restart_numbers"], momentPath);
       if (moment.restart_numbers !== void 0) {
         const restarts = array(moment.restart_numbers, `${momentPath}.restart_numbers`);
@@ -17848,7 +18721,7 @@ function resolveLessonPlan(value2, options = {}) {
       let groupIndex = 0;
       actions.forEach((entry, actionOffset) => {
         const itemPath = `${momentPath}.actions[${actionOffset}]`;
-        const action = record4(entry, itemPath);
+        const action = record5(entry, itemPath);
         const actionKind = action.action;
         if (actionKind === "create") {
           allowedKeys(action, ["action", "kind", "role", "content", "timing", "placement", "reusable_item", "distinct_visual"], itemPath);
@@ -17940,7 +18813,7 @@ function resolveLessonPlan(value2, options = {}) {
           requiredVisualNumberUses.push({ number, path: `${itemPath}.number` });
           if (number > rawNumbers.length) fail3("LESSON_PLAN_NUMBER_REFERENCE", `${itemPath}.number`, "number reference is unavailable");
           const end = finiteNumber(action.end_value, `${itemPath}.end_value`);
-          const definition = record4(rawNumbers[number - 1], `$lessonPlan.numbers[${number - 1}]`);
+          const definition = record5(rawNumbers[number - 1], `$lessonPlan.numbers[${number - 1}]`);
           if (!cardMovedNumbers2.has(number) && (end < Number(definition.min) || end > Number(definition.max))) fail3("LESSON_PLAN_ANIMATION", `${itemPath}.end_value`, "animation end is outside the number range");
           if (action.easing !== void 0 && !["linear", "ease_in_out"].includes(String(action.easing))) fail3("LESSON_PLAN_ANIMATION", `${itemPath}.easing`, "unsupported easing");
           if (action.duration_intent !== void 0 && !["brief", "normal", "extended"].includes(String(action.duration_intent))) fail3("LESSON_PLAN_ANIMATION", `${itemPath}.duration_intent`, "unsupported duration intent");
@@ -17967,7 +18840,7 @@ function resolveLessonPlan(value2, options = {}) {
     const activities = section.student_activities === void 0 ? [] : array(section.student_activities, `${path}.student_activities`);
     activities.forEach((entry, index) => {
       const activityPath = `${path}.student_activities[${index}]`;
-      const activity = record4(entry, activityPath);
+      const activity = record5(entry, activityPath);
       if (activity.kind === "reflection") {
         allowedKeys(activity, ["kind", "prompt", "answer", "reference"], activityPath);
         nonEmptyString(activity.prompt, `${activityPath}.prompt`, 480);
@@ -17993,7 +18866,7 @@ function resolveLessonPlan(value2, options = {}) {
         const seenNumbers = /* @__PURE__ */ new Set();
         numberControls.forEach((entry2, controlIndex) => {
           const controlPath = `${activityPath}.number_controls[${controlIndex}]`;
-          const control = record4(entry2, controlPath);
+          const control = record5(entry2, controlPath);
           allowedKeys(control, ["number", "controls"], controlPath);
           const number = positiveIndex(control.number, `${controlPath}.number`);
           requiredVisualNumberUses.push({ number, path: `${controlPath}.number` });
@@ -18070,7 +18943,7 @@ function resolveLessonPlan(value2, options = {}) {
       reusable_items: resolvedReusable
     });
   });
-  const close = record4(root2.close, "$lessonPlan.close");
+  const close = record5(root2.close, "$lessonPlan.close");
   allowedKeys(close, ["summary", "focus"], "$lessonPlan.close");
   nonEmptyString(close.summary, "$lessonPlan.close.summary", 1200);
   const closeFocus = array(close.focus, "$lessonPlan.close.focus");
@@ -18220,7 +19093,7 @@ function validateLessonPlan(value2, options = {}) {
   return resolveLessonPlan(value2, options).plan;
 }
 function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
-  const outline = record4(value2, "$lessonPlanOutline");
+  const outline = record5(value2, "$lessonPlanOutline");
   allowedKeys(outline, ["version", "title", "goals", "teaching_strategies", "numbers", "request_coverage", "course_visuals", "sections", "close"], "$lessonPlanOutline");
   if (expectedRequestParts > 0 && outline.course_visuals === void 0) {
     fail3(
@@ -18247,7 +19120,7 @@ function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
   const declarationsBySection = [];
   sections.forEach((entry, index) => {
     const path = `$lessonPlanOutline.sections[${index}]`;
-    const section = record4(entry, path);
+    const section = record5(entry, path);
     allowedKeys(section, ["purpose", "allowed_capabilities", "reusable_items"], path);
     nonEmptyString(section.purpose, `${path}.purpose`, 480);
     const allowedCapabilities = array(section.allowed_capabilities, `${path}.allowed_capabilities`);
@@ -18261,7 +19134,7 @@ function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
     if (declarations.length > 32) fail3("LESSON_PLAN_REUSABLE", `${path}.reusable_items`, "expected at most 32 reusable items");
     declarationsBySection.push(declarations.map((declarationValue, declarationIndex) => {
       const declarationPath = `${path}.reusable_items[${declarationIndex}]`;
-      const declaration = record4(declarationValue, declarationPath);
+      const declaration = record5(declarationValue, declarationPath);
       allowedKeys(declaration, ["kind", "board_kind", "capability"], declarationPath);
       if (!["board_item", "connection", "group"].includes(String(declaration.kind))) fail3("LESSON_PLAN_REUSABLE", `${declarationPath}.kind`, "unsupported reusable item kind");
       if (declaration.kind === "board_item") {
@@ -18285,7 +19158,7 @@ function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
   const firstVisualByCapability = /* @__PURE__ */ new Map();
   courseVisuals.forEach((entry, index) => {
     const path = `$lessonPlanOutline.course_visuals[${index}]`;
-    const visual = record4(entry, path);
+    const visual = record5(entry, path);
     allowedKeys(visual, ["capability", "create_section", "use_sections", "relation", "related_visual", "reusable_item"], path);
     const visualCapability = capability(visual.capability, `${path}.capability`);
     const createSection = positiveIndex(visual.create_section, `${path}.create_section`);
@@ -18335,7 +19208,7 @@ function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
     const seen = /* @__PURE__ */ new Set();
     coverage.forEach((entry, index) => {
       const path = `$lessonPlanOutline.request_coverage[${index}]`;
-      const item = record4(entry, path);
+      const item = record5(entry, path);
       allowedKeys(item, ["request_part", "treatment", "sections", "reason"], path);
       const requestPart = positiveIndex(item.request_part, `${path}.request_part`);
       if (expectedRequestParts > 0 && requestPart > expectedRequestParts) fail3("LESSON_PLAN_REQUEST_COVERAGE", `${path}.request_part`, "request part is unavailable");
@@ -18364,7 +19237,7 @@ function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
       }
     }
   }
-  const close = record4(outline.close, "$lessonPlanOutline.close");
+  const close = record5(outline.close, "$lessonPlanOutline.close");
   allowedKeys(close, ["summary", "focus"], "$lessonPlanOutline.close");
   nonEmptyString(close.summary, "$lessonPlanOutline.close.summary", 1200);
   const closeFocus = array(close.focus, "$lessonPlanOutline.close.focus");
@@ -18391,7 +19264,7 @@ function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
   return structuredClone(value2);
 }
 function assembleLessonPlan(outlineValue, draftValues, options = {}) {
-  const outline = record4(validateLessonPlanOutline(outlineValue), "$lessonPlanOutline");
+  const outline = record5(validateLessonPlanOutline(outlineValue), "$lessonPlanOutline");
   allowedKeys(outline, ["version", "title", "goals", "teaching_strategies", "numbers", "request_coverage", "course_visuals", "sections", "close"], "$lessonPlanOutline");
   if (outline.version !== LESSON_PLAN_VERSION) {
     fail3("LESSON_PLAN_VERSION", "$lessonPlanOutline.version", `expected '${LESSON_PLAN_VERSION}'`);
@@ -18404,7 +19277,7 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
   }
   sections.forEach((entry, index) => {
     const path = `$lessonPlanOutline.sections[${index}]`;
-    const section = record4(entry, path);
+    const section = record5(entry, path);
     allowedKeys(section, ["purpose", "allowed_capabilities", "reusable_items"], path);
     nonEmptyString(section.purpose, `${path}.purpose`, 480);
     const allowedCapabilities = array(section.allowed_capabilities, `${path}.allowed_capabilities`);
@@ -18416,7 +19289,7 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
     });
     if (section.reusable_items !== void 0) {
       array(section.reusable_items, `${path}.reusable_items`).forEach((entry2, reusableIndex) => {
-        const declaration = record4(entry2, `${path}.reusable_items[${reusableIndex}]`);
+        const declaration = record5(entry2, `${path}.reusable_items[${reusableIndex}]`);
         if (declaration.capability !== void 0) {
           const value2 = capability(declaration.capability, `${path}.reusable_items[${reusableIndex}].capability`);
           if (!seenCapabilities.has(value2)) fail3("LESSON_PLAN_CAPABILITY", `${path}.reusable_items[${reusableIndex}].capability`, "reusable capability is not allowed for this section");
@@ -18424,7 +19297,7 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
       });
     }
   });
-  const close = record4(outline.close, "$lessonPlanOutline.close");
+  const close = record5(outline.close, "$lessonPlanOutline.close");
   allowedKeys(close, ["summary", "focus"], "$lessonPlanOutline.close");
   nonEmptyString(close.summary, "$lessonPlanOutline.close.summary", 1200);
   const outlineFocus = array(close.focus, "$lessonPlanOutline.close.focus");
@@ -18446,7 +19319,7 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
   const bySection = /* @__PURE__ */ new Map();
   drafts.forEach((entry, index) => {
     const path = `$lessonPlanSectionDrafts[${index}]`;
-    const draft = record4(entry, path);
+    const draft = record5(entry, path);
     allowedKeys(draft, ["version", "section", "moments", "student_activities"], path);
     if (draft.version !== LESSON_PLAN_VERSION) fail3("LESSON_PLAN_VERSION", `${path}.version`, `expected '${LESSON_PLAN_VERSION}'`);
     const section = positiveIndex(draft.section, `${path}.section`);
@@ -18457,11 +19330,11 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
     const outlineSection = sections[section - 1];
     const allowedCapabilities = new Set(array(outlineSection.allowed_capabilities, `$lessonPlanOutline.sections[${section - 1}].allowed_capabilities`));
     array(draft.moments, `${path}.moments`).forEach((momentValue, momentIndex) => {
-      const moment = record4(momentValue, `${path}.moments[${momentIndex}]`);
+      const moment = record5(momentValue, `${path}.moments[${momentIndex}]`);
       array(moment.actions, `${path}.moments[${momentIndex}].actions`).forEach((actionValue, actionIndex) => {
-        const action = record4(actionValue, `${path}.moments[${momentIndex}].actions[${actionIndex}]`);
+        const action = record5(actionValue, `${path}.moments[${momentIndex}].actions[${actionIndex}]`);
         if (action.action !== "create" || action.kind !== "visual") return;
-        const content = record4(action.content, `${path}.moments[${momentIndex}].actions[${actionIndex}].content`);
+        const content = record5(action.content, `${path}.moments[${momentIndex}].actions[${actionIndex}].content`);
         if (!allowedCapabilities.has(content.capability)) {
           fail3("LESSON_PLAN_CAPABILITY", `${path}.moments[${momentIndex}].actions[${actionIndex}].content.capability`, "visual capability is not allowed by the course outline");
         }
@@ -18500,9 +19373,9 @@ function cardIdentity(kind, content) {
       return;
     }
     if (!value2 || typeof value2 !== "object") return;
-    const record5 = value2;
-    if (typeof record5.as === "string" && !fragments.has(record5.as)) fragments.set(record5.as, `part-${fragments.size}`);
-    Object.values(record5).forEach(collect);
+    const record6 = value2;
+    if (typeof record6.as === "string" && !fragments.has(record6.as)) fragments.set(record6.as, `part-${fragments.size}`);
+    Object.values(record6).forEach(collect);
   };
   collect(content);
   const localReference = (value2) => {
@@ -18921,8 +19794,8 @@ function planPlotView(input) {
     const structural = features.filter((feature) => feature.kind !== "intercept");
     let region = hull((structural.length ? structural : features).map((feature) => feature.x));
     if (item.quadratic) {
-      const halfWidth = quadraticHalfWidth(item.quadratic.a);
-      region = union(region, { min: item.quadratic.vertex - halfWidth, max: item.quadratic.vertex + halfWidth });
+      const halfWidth2 = quadraticHalfWidth(item.quadratic.a);
+      region = union(region, { min: item.quadratic.vertex - halfWidth2, max: item.quadratic.vertex + halfWidth2 });
     }
     return region;
   };
@@ -18962,9 +19835,9 @@ function planPlotView(input) {
     const lower = leftEdge.length ? Math.max(...leftEdge) : -Infinity;
     const upper = rightEdge.length ? Math.min(...rightEdge) : Infinity;
     const turning = new Set(selected.flat().filter((feature) => feature.kind === "extremum").map((feature) => feature.x.toFixed(3))).size >= 2;
-    const short = !range || !turning && span(range) < MIN_SPAN;
-    const wanted = short ? MIN_SPAN : span(range);
-    if (short) {
+    const short2 = !range || !turning && span(range) < MIN_SPAN;
+    const wanted = short2 ? MIN_SPAN : span(range);
+    if (short2) {
       const middle = range ? (range.min + range.max) / 2 : focus;
       const center = Math.abs(middle) < MIN_SPAN / 4 ? 0 : middle;
       range = union(range, { min: center - MIN_SPAN / 2, max: center + MIN_SPAN / 2 });
@@ -18988,8 +19861,8 @@ function planPlotView(input) {
     for (const item of items) {
       const features = item.features.filter((feature) => keptSet.has(feature) || inCluster(feature)).filter((feature) => feature.x >= window.min && feature.x <= window.max);
       if (item.quadratic) {
-        const halfWidth = quadraticHalfWidth(item.quadratic.a);
-        const own = { min: Math.max(window.min, item.quadratic.vertex - halfWidth), max: Math.min(window.max, item.quadratic.vertex + halfWidth) };
+        const halfWidth2 = quadraticHalfWidth(item.quadratic.a);
+        const own = { min: Math.max(window.min, item.quadratic.vertex - halfWidth2), max: Math.min(window.max, item.quadratic.vertex + halfWidth2) };
         sampled(item, span(own) > 0 ? own : window);
       } else if (item.period === void 0 && features.some((feature) => feature.kind === "extremum") && !(undefinedBeyond([item], window.min, -1) && undefinedBeyond([item], window.max, 1))) {
         const levels = hull(features.filter((feature) => feature.y !== void 0 && feature.kind !== "intercept").map((feature) => feature.y));
@@ -20174,17 +21047,17 @@ var REGULAR_SIDES = { min: 3, max: 8 };
 var SOLID_MEASURES = ["volume", "surface_area", "counts"];
 function modelSolid(value2, path, adjustments) {
   if (!value2 || typeof value2 !== "object" || Array.isArray(value2)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", path, "expected a solid: its shape and sizes");
-  const record5 = value2;
-  if (!SOLID_SHAPES.includes(record5.shape)) {
+  const record6 = value2;
+  if (!SOLID_SHAPES.includes(record6.shape)) {
     fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.shape`, `expected one of ${SOLID_SHAPES.join(", ")}`);
   }
-  const solid = { shape: record5.shape };
+  const solid = { shape: record6.shape };
   const used = SHAPE_SIZES[solid.shape];
   for (const key of SOLID_SIZES) {
-    const size = record5[key];
+    const size = record6[key];
     if (size === void 0 || size === null) continue;
     const round = solid.shape === "cylinder" || solid.shape === "cone" || solid.shape === "sphere" || solid.shape === "hemisphere";
-    if (!used.includes(key) && (size === 0 || key === "sides" && round || key === "top_radius" && solid.shape === "cylinder" && size === record5.radius)) {
+    if (!used.includes(key) && (size === 0 || key === "sides" && round || key === "top_radius" && solid.shape === "cylinder" && size === record6.radius)) {
       adjustments.push({ reason: "solid_unused_size", detail: `${path}.${key}: ${String(size)} on a ${solid.shape}, not used` });
       continue;
     }
@@ -20363,8 +21236,8 @@ function compileFractionModel(base, content, role, placement, plan, path) {
   if (!Array.isArray(written) || written.length !== count) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions`, `${view} shows ${count === 2 ? "two fractions" : "one fraction"}`);
   const fractions = written.map((item, index) => {
     const at2 = `${path}.fractions[${index}]`;
-    const record5 = item && typeof item === "object" && !Array.isArray(item) ? item : fail2("LESSON_PLAN_CAPABILITY_PARAMETER", at2, "expected {numerator, denominator}");
-    const numerator = record5.numerator, denominator = record5.denominator;
+    const record6 = item && typeof item === "object" && !Array.isArray(item) ? item : fail2("LESSON_PLAN_CAPABILITY_PARAMETER", at2, "expected {numerator, denominator}");
+    const numerator = record6.numerator, denominator = record6.denominator;
     if (typeof numerator !== "number" || !Number.isInteger(numerator) || numerator < 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${at2}.numerator`, "the numerator is a whole number of parts, 0 or more");
     if (typeof denominator !== "number" || !Number.isInteger(denominator) || denominator < 1) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${at2}.denominator`, "the denominator is a whole number of equal parts, 1 or more");
     return { numerator, denominator };
@@ -20571,6 +21444,138 @@ function compileBaseTenTrade(base, content, role, placement, plan, path) {
     }
   };
 }
+var PLACE_VALUE_MAX_VARIABLES = 16;
+var PLACE_VALUE_TEXT = {
+  "en-US": { number: "the number", count: (place5) => `${place5} on the chart`, pulled: (place5) => `${place5} taken out` },
+  "zh-CN": { number: "\u8FD9\u4E2A\u6570", count: (place5) => `${place5}\u4E0A\u7684\u5706\u7247`, pulled: (place5) => `${place5}\u62FF\u51FA\u6765\u7684\u5706\u7247` }
+};
+function compilePlaceValueChart(base, content, role, placement, plan, path) {
+  const input = parameters(content);
+  allowParameterKeys(input, ["given"], path);
+  const given = input.given;
+  if (!PLACE_VALUE_GIVENS.includes(given)) {
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.given`, `given is one of ${PLACE_VALUE_GIVENS.join(", ")}: what the card shows (numeral to pull a number apart)`, "place_value_chart");
+  }
+  const mode = given === "numeral" ? "apart" : "build";
+  const numbers = content.numbers ?? [];
+  const values = numbers.map((number2, index) => numberDefinition(plan, number2, `${path}.numbers[${index}]`).initial);
+  const sharesNumbers = (action) => action.action === "create" && action.kind === "visual" && action.content.capability !== "place_value_chart" && (action.content.numbers ?? []).some((number2) => numbers.includes(number2));
+  const sharingAt = plan.sections.findIndex((section) => section.moments.some((moment) => moment.actions.some(sharesNumbers)));
+  if (sharingAt >= 0) {
+    const sharing = plan.sections[sharingAt].moments.flatMap((moment) => moment.actions).find(sharesNumbers);
+    const chartAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
+    const sharingCapability = sharing.content.capability;
+    fail2(
+      "LESSON_PLAN_SHARED_NUMBER",
+      `${path}.numbers`,
+      `the place-value chart needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the number on the chart only, or in words`,
+      sharingAt > chartAt ? sharingCapability : "place_value_chart"
+    );
+  }
+  const fault = placeValueStartFault(values, given);
+  if (fault) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault, "place_value_chart");
+  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "place_value_chart");
+  if (first && (JSON.stringify(first.content.numbers ?? []) !== JSON.stringify(numbers) || first.content.parameters?.given !== given)) {
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a lesson has one place-value chart: use the same lesson numbers and given each time, or write another number in words", "place_value_chart");
+  }
+  const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
+  const text5 = PLACE_VALUE_TEXT[language];
+  const [number, practice] = values.map((value2) => Math.round(value2 * 1e3));
+  const stem = base.replace(/[^A-Za-z0-9]+/gu, "_").toLowerCase();
+  const { top_place, decimals } = placeValueColumnsFor([number, ...practice !== void 0 ? [practice] : []], language);
+  const columns = placeValueColumns(top_place, decimals);
+  if (mode === "apart" && 2 * columns.length + 1 > PLACE_VALUE_MAX_VARIABLES) {
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `pulled apart, these numbers need ${columns.length} columns and the chart holds at most ${(PLACE_VALUE_MAX_VARIABLES - 1) / 2}: choose numbers without decimals, or with decimals and a whole part under ${language === "en-US" ? "1,000" : "10,000"}`, "place_value_chart");
+  }
+  const numberVariable = `${stem}_number`;
+  const variableOf = (place5, field) => `${stem}_${PLACE_VALUE_PLACE_ALIASES[place5].replace(/-/gu, "_")}_${field}`;
+  const built = buildPlaceValueChart({
+    as: base,
+    role,
+    place: placement,
+    ...language === "zh-CN" ? { language } : {},
+    mode,
+    given,
+    target: practice !== void 0 ? { expression: numberVariable, initial: number } : number,
+    ...practice !== void 0 ? { numbers: [practice] } : {},
+    places: columns.map((place5) => ({
+      place: place5,
+      count: { expression: variableOf(place5, "count"), initial: mode === "apart" ? placeValueDigitAt(number, place5) : 0 },
+      ...mode === "apart" ? { pulled: { expression: variableOf(place5, "pulled"), initial: 0 } } : {}
+    }))
+  });
+  const variables = [
+    // From the smaller to the larger of the two numbers: OLL checks the card at both ends.
+    ...practice !== void 0 ? [{ as: numberVariable, initial: number, min: Math.min(number, practice), max: Math.max(number, practice), label: text5.number }] : [],
+    ...columns.flatMap((place5) => {
+      const name = placeValueColumnName(place5, language);
+      return [
+        { as: variableOf(place5, "count"), initial: mode === "apart" ? placeValueDigitAt(number, place5) : 0, min: 0, max: 9, label: text5.count(name) },
+        ...mode === "apart" ? [{ as: variableOf(place5, "pulled"), initial: 0, min: 0, max: 9, label: text5.pulled(name) }] : []
+      ];
+    })
+  ];
+  return {
+    actions: built.actions,
+    whole: built.whole,
+    parts: new Map(Object.entries(built.parts)),
+    variables,
+    mover: {
+      unbound: true,
+      numbers: [...numbers],
+      // A step clears whole places of the number left to do: building puts each cleared place's disks on the
+      // chart (its count animated from 0 to the digit, the disks appearing one at a time), pulling apart takes
+      // each one out by the card's own tap. Highest place first.
+      play(steps) {
+        const actions = [];
+        for (const step of steps) {
+          if (step.position !== 0) continue;
+          for (const cleared of placeValueCleared(Math.round(step.from[0] * 1e3), Math.round(step.to[0] * 1e3))) {
+            actions.push(mode === "build" ? { do: "animate", variable: variableOf(cleared, "count"), value: placeValueDigitAt(number, cleared), duration_intent: "brief" } : { do: "tap", target: base, tap: "take_out", at: PLACE_VALUE_PLACE_ALIASES[cleared] });
+          }
+        }
+        return actions;
+      },
+      // The model's practice is "the learner builds (pulls apart) the practice number": the chart starts again
+      // on that number, empty to build or whole to pull apart, and the card says when it is done. The value
+      // the model wrote is not read (these facts take none). A build task whose words write the practice
+      // number's digits gives the answer away: that task is dropped and recorded, never the lesson.
+      task(_position, _value, _end, words = []) {
+        if (practice === void 0) {
+          return { drop: "the chart has no practice number: the learner's task needs a second lesson number, different from the question's", reason: "no_practice_number" };
+        }
+        if (mode === "build" && words.some((each) => placeValueWordsWrite(each, practice))) {
+          return { drop: `the task's words write the practice number ${placeValuePlain(practice)}, which the learner is to build from the card's ${given}`, reason: "practice_number_in_words" };
+        }
+        const values2 = { [numberVariable]: practice };
+        for (const column of columns) {
+          values2[variableOf(column, "count")] = mode === "apart" ? placeValueDigitAt(practice, column) : 0;
+          if (mode === "apart") values2[variableOf(column, "pulled")] = 0;
+        }
+        const task = {
+          start: { kind: "practice", variables: Object.keys(values2), values: values2 },
+          allowed_operations: [{ kind: "card_tap", node: base }, { kind: "card_submit" }],
+          completion: { kind: "card_fact", node: base, fact: mode === "build" ? "built" : "pulled_all" }
+        };
+        if (mode === "build") return { task };
+        const row = [{ text: `${placeValueNumeral(practice, language)} =` }];
+        placeValueParts(practice).forEach((part, index) => {
+          if (index) row.push({ text: "+" });
+          row.push({ blank: { as: PLACE_VALUE_PLACE_ALIASES[part.place], answer: placeValuePlain(part.value), label: placeValueColumnName(part.place, language) } });
+        });
+        return {
+          task,
+          then: [{
+            prompt: compileText(plan, "\u5199\u51FA\u6BCF\u4E00\u90E8\u5206\u662F\u591A\u5C11\u3002"),
+            anchor: base,
+            allowed_operations: [{ kind: "row_entry" }],
+            completion: { kind: "numeric_row", parts: row }
+          }]
+        };
+      }
+    }
+  };
+}
 var MATH_COMPILERS = {
   number_line: compileNumberLine,
   number_line_compare: compileNumberLineCompare,
@@ -20590,7 +21595,8 @@ var MATH_COMPILERS = {
   circle_area_rearrangement: compileCircleArea,
   solid_3d: compileSolid3d,
   fraction_model: compileFractionModel,
-  base_ten_trade: compileBaseTenTrade
+  base_ten_trade: compileBaseTenTrade,
+  place_value_chart: compilePlaceValueChart
 };
 
 // src/plugins/physics-compilers.ts
@@ -21362,6 +22368,7 @@ function compileLessonPlan(value2, options = {}) {
   const programAdjustments = [];
   const movers = /* @__PURE__ */ new Map();
   const moverStates = /* @__PURE__ */ new Map();
+  const unboundNumbers = /* @__PURE__ */ new Set();
   const cardNumbers = new Set(plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).flatMap((action) => action.action === "create" && action.kind === "visual" && RECIPE_HOOKS[action.content.capability]?.number_moves ? action.content.numbers ?? [] : []));
   let renderedVisuals;
   const reuseCompiledVisual = (visual) => {
@@ -21403,7 +22410,10 @@ function compileLessonPlan(value2, options = {}) {
         const state = mover && moverStates.get(mover.visual);
         if (!mover || !state) continue;
         state.now = [...state.start];
-        for (const other of mover.visual.mover.numbers) replayed.add(variableAlias(other));
+        for (const other of mover.visual.mover.numbers) {
+          if (mover.visual.mover.unbound) replayed.delete(variableAlias(other));
+          else replayed.add(variableAlias(other));
+        }
         for (const variable of mover.visual.variables ?? []) replayed.add(variable.as);
       }
       const moved = /* @__PURE__ */ new Set();
@@ -21464,6 +22474,7 @@ function compileLessonPlan(value2, options = {}) {
                 const state = RECIPE_HOOKS[visualContent.capability].number_moves.state(start);
                 moverStates.set(visual, { start: state, now: [...state] });
                 visual.mover.numbers.forEach((number, position) => movers.set(number, { visual, capability: visualContent.capability, position }));
+                if (visual.mover.unbound) for (const number of visual.mover.numbers) unboundNumbers.add(number);
               }
             }
             wholeTargets.set(alias, visual.whole);
@@ -21648,13 +22659,20 @@ function compileLessonPlan(value2, options = {}) {
         const mover = movers.get(firstNumber);
         if (mover) {
           const end = moverStates.get(mover.visual)?.now ?? [];
-          const own = mover.visual.mover.task(mover.position, activity.value, end);
+          const own = mover.visual.mover.task(mover.position, activity.value, end, [activity.prompt, ...activity.hints]);
           if ("refuse" in own) fail2("LESSON_PLAN_ACTIVITY", `${activityPath}.value`, own.refuse);
           if ("drop" in own) {
             programAdjustments.push({ section: sectionOffset + 1, kind: "activity_removed", reason: own.reason ?? "nothing_to_do_on_card", task: taskAlias, detail: `${taskAlias} (${activityPath}): ${own.drop}` });
             return;
           }
           addTask({ ...common, ...own.task }, droppedPraise);
+          own.then?.forEach((extra, index) => addTask({
+            as: `${taskAlias}-${index + 2}`,
+            availability: { kind: "after_lesson" },
+            hints: [...common.hints],
+            ...common.hint_after_attempts ? { hint_after_attempts: common.hint_after_attempts } : {},
+            ...extra
+          }));
           return;
         }
         addTask({
@@ -21746,20 +22764,20 @@ function compileLessonPlan(value2, options = {}) {
         }
       } : {},
       ...plan.numbers?.length || visualVariables.size ? {
-        variables: [...(plan.numbers ?? []).map((number, index) => ({
+        variables: [...(plan.numbers ?? []).flatMap((number, index) => (unboundNumbers.has(index + 1) ? [] : [number]).map((number2) => ({
           as: variableAlias(index + 1),
-          initial: number.initial,
-          min: number.min,
-          max: number.max,
-          ...number.label ? { label: number.label } : {},
-          ...number.unit ? { unit: number.unit } : {},
-          ...number.student_control ? {
+          initial: number2.initial,
+          min: number2.min,
+          max: number2.max,
+          ...number2.label ? { label: number2.label } : {},
+          ...number2.unit ? { unit: number2.unit } : {},
+          ...number2.student_control ? {
             control: {
               kind: "slider",
-              ...number.student_control.step ? { step: number.student_control.step } : {}
+              ...number2.student_control.step ? { step: number2.student_control.step } : {}
             }
           } : {}
-        })), ...[...visualVariables.values()].map((variable) => ({ ...variable, ...variable.control ? { control: { ...variable.control } } : {} }))]
+        }))), ...[...visualVariables.values()].map((variable) => ({ ...variable, ...variable.control ? { control: { ...variable.control } } : {} }))]
       } : {},
       ...tasks.length ? { tasks } : {},
       ...reflections.length ? { reflections } : {}
@@ -21914,16 +22932,16 @@ function vertexCompatible(value2) {
   let usesDecimal = false;
   const visit = (candidate) => {
     if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return;
-    const record5 = candidate;
-    delete record5.minItems;
-    delete record5.maxItems;
-    if (record5.type === "number") {
+    const record6 = candidate;
+    delete record6.minItems;
+    delete record6.maxItems;
+    if (record6.type === "number") {
       usesDecimal = true;
-      for (const key of Object.keys(record5)) delete record5[key];
-      record5.$ref = "#/$defs/modelDecimal";
+      for (const key of Object.keys(record6)) delete record6[key];
+      record6.$ref = "#/$defs/modelDecimal";
       return;
     }
-    for (const child of Object.values(record5)) {
+    for (const child of Object.values(record6)) {
       if (Array.isArray(child)) child.forEach(visit);
       else visit(child);
     }
@@ -22529,7 +23547,30 @@ var MATH_SECTION_FACTS = {
     const start = lessonNumbers.map((number) => Number(numbers[number - 1]?.initial ?? 0));
     if (!lessonNumbers.length || baseTenStartFault(start)) return {};
     const now = lessonNumbers.map((number, place5) => state.get(number) ?? start[place5]);
-    return { facts: { numbers: lessonNumbers, ...baseTenFacts(start, now) } };
+    return { facts: { numbers: lessonNumbers, ...baseTenFacts2(start, now) } };
+  },
+  // The place-value chart in its own terms (OLL 0025), once it is drawn: the number, what the card gives, its
+  // columns and the parts it pulls apart into, what is still to do, and the learner's practice number.
+  place_value_chart: ({ established, numbers, state, language }) => {
+    if (!numbers || !established?.numbers?.length) return {};
+    const lessonNumbers = established.numbers;
+    const values = lessonNumbers.map((number2) => Number(numbers[number2 - 1]?.initial ?? 0));
+    const given = String(established.parameters?.given ?? "");
+    if (placeValueStartFault(values, given)) return {};
+    const chartLanguage = /^en(?:-|$)/iu.test(language ?? "") ? "en-US" : "zh-CN";
+    const number = Math.round(values[0] * 1e3);
+    const { top_place, decimals } = placeValueColumnsFor(values.map((value2) => Math.round(value2 * 1e3)), chartLanguage);
+    const left = state.get(lessonNumbers[0]) ?? values[0];
+    return { facts: {
+      numbers: lessonNumbers,
+      number: values[0],
+      task: given === "numeral" ? "pull_apart" : "build",
+      given,
+      columns: placeValueColumns(top_place, decimals).map((place5) => placeValueColumnName(place5, chartLanguage)),
+      parts: placeValueParts(number).map((part) => ({ place: placeValueColumnName(part.place, chartLanguage), digit: part.digit, value: placeValueDecimal(part.value) })),
+      still_to_do: left,
+      ...values[1] !== void 0 ? { practice_number: values[1] } : {}
+    } };
   },
   function_plot: ({ established }) => established && fixedLineSamples(established) ? { lead: { sample_slope: "constant" } } : {},
   geometric_rearrangement: ({ mode, established, numbers, state }) => {
@@ -23499,14 +24540,14 @@ function lowerModelActionReferences(actionName, action, currentMoment, numberCou
   }
   return lowered;
 }
-function lowerIntegerDecimal(record5, prefix, path) {
-  const mantissa = record5[`${prefix}_mantissa`];
-  const scale2 = record5[`${prefix}_scale`];
+function lowerIntegerDecimal(record6, prefix, path) {
+  const mantissa = record6[`${prefix}_mantissa`];
+  const scale2 = record6[`${prefix}_scale`];
   if (!Number.isInteger(mantissa) || Math.abs(Number(mantissa)) > 1e12 || !Number.isInteger(scale2) || Number(scale2) < 0 || Number(scale2) > 12) {
     throw new LessonPlanError("LESSON_PLAN_MODEL_NUMBER", path, "expected bounded integer mantissa and scale from 0 to 12");
   }
-  delete record5[`${prefix}_mantissa`];
-  delete record5[`${prefix}_scale`];
+  delete record6[`${prefix}_mantissa`];
+  delete record6[`${prefix}_scale`];
   return Number(mantissa) / 10 ** Number(scale2);
 }
 function cardMovedNumbers(actions) {
@@ -24965,7 +26006,8 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       mode,
       established,
       numbers: outline.numbers,
-      state
+      state,
+      language: input.language
     }) ?? {};
     return [{
       ...lead,
@@ -25274,8 +26316,8 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
 
 // src/raw-reply.ts
 var RAW_REPLY_PREFIX = "learning-coach: raw ";
-function frameRawReply(record5) {
-  return `${RAW_REPLY_PREFIX}${JSON.stringify(record5)}
+function frameRawReply(record6) {
+  return `${RAW_REPLY_PREFIX}${JSON.stringify(record6)}
 `;
 }
 function envelopeText(payload) {
@@ -25288,9 +26330,9 @@ function modelTextFromRawReply(line) {
   const rest = line.startsWith(RAW_REPLY_PREFIX) ? line.slice(RAW_REPLY_PREFIX.length) : line;
   if (rest.startsWith("{")) {
     try {
-      const record5 = JSON.parse(rest);
-      if (record5.kind === "content" && typeof record5.body === "string") return record5.body;
-      if (record5.kind === "payload") return envelopeText(record5.body);
+      const record6 = JSON.parse(rest);
+      if (record6.kind === "content" && typeof record6.body === "string") return record6.body;
+      if (record6.kind === "payload") return envelopeText(record6.body);
     } catch {
     }
   }
@@ -25356,6 +26398,8 @@ export {
   modelTextFromRawReply,
   numericAnswerTolerance,
   offeredRecipes,
+  placeValueThousandths,
+  placeValueWordsWrite,
   praiseArithmetic,
   promptSlot,
   recipeDeclares,

@@ -557,6 +557,8 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
   // one's state as the lesson plays, so every move starts from what the card shows.
   const movers = new Map<number, { visual: CompiledVisual; capability: LessonPlanVisualContent["capability"]; position: number }>();
   const moverStates = new Map<CompiledVisual, { start: number[]; now: number[] }>();
+  // Lesson numbers such a card reads but does not bind (the place-value chart): not declared in the lesson.
+  const unboundNumbers = new Set<number>();
   // Every number such a card binds anywhere in the plan: none of them moves before its card is drawn.
   const cardNumbers = new Set(plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).flatMap((action) => (
     action.action === "create" && action.kind === "visual" && RECIPE_HOOKS[(action.content as LessonPlanVisualContent).capability]?.number_moves
@@ -606,7 +608,11 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
         const state = mover && moverStates.get(mover.visual);
         if (!mover || !state) continue;
         state.now = [...state.start];
-        for (const other of mover.visual.mover!.numbers) replayed.add(variableAlias(other));
+        // A card that binds none of its numbers replays its own variables only (they are not declared).
+        for (const other of mover.visual.mover!.numbers) {
+          if (mover.visual.mover!.unbound) replayed.delete(variableAlias(other));
+          else replayed.add(variableAlias(other));
+        }
         for (const variable of mover.visual.variables ?? []) replayed.add(variable.as);
       }
       // This moment's animations of such a visual are one teaching step: applied lowest place first, and
@@ -677,6 +683,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
                 const state = RECIPE_HOOKS[visualContent.capability]!.number_moves!.state(start);
                 moverStates.set(visual, { start: state, now: [...state] });
                 visual.mover.numbers.forEach((number, position) => movers.set(number, { visual, capability: visualContent.capability, position }));
+                if (visual.mover.unbound) for (const number of visual.mover.numbers) unboundNumbers.add(number);
               }
             }
             wholeTargets.set(alias, visual.whole);
@@ -876,13 +883,19 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
           // The card's own task: "bring this number to a value" is done on the card, by its rules.
           // The mat's state when the lesson ends: every section's moves have been played by now.
           const end = moverStates.get(mover.visual)?.now ?? [];
-          const own = mover.visual.mover!.task(mover.position, activity.value, end);
+          const own = mover.visual.mover!.task(mover.position, activity.value, end, [activity.prompt, ...activity.hints]);
           if ("refuse" in own) fail("LESSON_PLAN_ACTIVITY", `${activityPath}.value`, own.refuse);
           if ("drop" in own) {
             programAdjustments.push({ section: sectionOffset + 1, kind: "activity_removed", reason: own.reason ?? "nothing_to_do_on_card", task: taskAlias, detail: `${taskAlias} (${activityPath}): ${own.drop}` });
             return;
           }
           addTask({ ...common, ...own.task } as unknown as NonNullable<AuthoringLesson["lesson"]["tasks"]>[number], droppedPraise);
+          // What the card adds after its task (the place-value chart's row of parts): its own prompt, and the
+          // hints the model wrote for the task, which are about the same number's places.
+          own.then?.forEach((extra, index) => addTask({
+            as: `${taskAlias}-${index + 2}`, availability: { kind: "after_lesson" as const }, hints: [...common.hints],
+            ...(common.hint_after_attempts ? { hint_after_attempts: common.hint_after_attempts } : {}), ...extra,
+          } as unknown as NonNullable<AuthoringLesson["lesson"]["tasks"]>[number]));
           return;
         }
         addTask({
@@ -974,7 +987,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
         },
       } : {}),
       ...(plan.numbers?.length || visualVariables.size ? {
-        variables: [...(plan.numbers ?? []).map((number, index) => ({
+        variables: [...(plan.numbers ?? []).flatMap((number, index) => (unboundNumbers.has(index + 1) ? [] : [number]).map((number) => ({
           as: variableAlias(index + 1), initial: number.initial, min: number.min, max: number.max,
           ...(number.label ? { label: number.label } : {}),
           ...(number.unit ? { unit: number.unit } : {}),
@@ -984,7 +997,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
               ...(number.student_control.step ? { step: number.student_control.step } : {}),
             },
           } : {}),
-        })), ...[...visualVariables.values()].map((variable) => ({ ...variable, ...(variable.control ? { control: { ...variable.control } } : {}) }))],
+        }))), ...[...visualVariables.values()].map((variable) => ({ ...variable, ...(variable.control ? { control: { ...variable.control } } : {}) }))],
       } : {}),
       ...(tasks.length ? { tasks } : {}),
       ...(reflections.length ? { reflections } : {}),

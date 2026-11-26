@@ -3132,7 +3132,7 @@ export async function generateLessonPlanWithModel(
     const established = source?.action === "create" && source.kind === "visual" ? source.content as LessonPlanVisualContent : undefined;
     const mode = visual.create_section === section ? "create" : "reuse";
     const { lead = {}, facts = {} } = SECTION_FACTS[visual.capability]?.({
-      section, mode, established, numbers: outline.numbers, state,
+      section, mode, established, numbers: outline.numbers, state, language: input.language,
     }) ?? {};
     return [{
       ...lead,

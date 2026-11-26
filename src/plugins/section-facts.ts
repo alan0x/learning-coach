@@ -10,6 +10,8 @@ export interface SectionFactsInput {
   numbers: LessonPlanOutline["numbers"];
   /** Each shared number's value when this section starts. */
   state: ReadonlyMap<number, number>;
+  /** The lesson's language, when the request names one (a card whose own words differ by language). */
+  language?: string;
 }
 
 /**
