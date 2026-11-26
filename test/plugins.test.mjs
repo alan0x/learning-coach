@@ -72,7 +72,7 @@ test("recipe hooks and section facts are keyed by known recipes, and unknown nam
     for (const recipe of Object.keys(table)) assert.ok(RECIPE_CATALOG_ORDER.includes(recipe) || api.TRIAL_RECIPES.includes(recipe), recipe);
     for (const name of ["constructor", "toString", "__proto__", "hasOwnProperty"]) assert.equal(table[name], undefined, name);
   }
-  assert.deepEqual(Object.keys(RECIPE_HOOKS).sort(), ["base_ten_trade", "coordinate_circle", "fraction_model", "function_plot", "function_surface_with_section", "implicit_surface_with_section", "number_line", "number_line_compare", "number_line_rounding", "number_line_solution", "number_line_steps", "place_value_chart", "process_diagram"]);
+  assert.deepEqual(Object.keys(RECIPE_HOOKS).sort(), ["base_ten_trade", "coordinate_circle", "fraction_model", "function_plot", "function_surface_with_section", "implicit_surface_with_section", "number_line", "number_line_compare", "number_line_rounding", "number_line_solution", "number_line_steps", "place_value_chart", "place_value_trade", "process_diagram"]);
 });
 
 // A repair request names the first problem found, so moving recipes into
@@ -137,9 +137,9 @@ test("a compiled lesson records the plugins that built its visuals", () => {
   assert.deepEqual(lessonPlanPlugins({ sections: [] }), {});
   assert.deepEqual(lessonPlanPlugins(plan("process_diagram")), { shared: "0.1.0" });
   assert.deepEqual(lessonPlanPlugins(plan("spring_and_mass")), { physics: "0.1.0", shared: "0.1.0" });
-  // The math plugin's installed version (0.8.0 since the place-value chart, OLL 0025). Learn reads only the names;
+  // The math plugin's installed version (0.9.0 since the place-value trade card, OLL 0026). Learn reads only the names;
   // a player checks the versions a lesson's features need (a number line still needs math 0.2.0).
-  assert.deepEqual(lessonPlanPlugins(plan("unit_circle_projection")), { math: "0.8.0", shared: "0.1.0" });
+  assert.deepEqual(lessonPlanPlugins(plan("unit_circle_projection")), { math: "0.9.0", shared: "0.1.0" });
   assert.equal(typeof compileLessonPlan, "function");
 });
 

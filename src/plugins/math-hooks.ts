@@ -10,6 +10,7 @@ import { normalizePlotInputInstructions, validateTeachingClaims } from "./math-t
 import { formulaError, formulaFunctions, parseModelFormula } from "./math-formulas.js";
 import { BASE_TEN_DRAWN, baseTenColumns, baseTenMoves, baseTenState } from "./base-ten-moves.js";
 import { placeValueMoves, placeValueState } from "./place-value-moves.js";
+import { TRADE_NUMBER, placeValueTradeColumnsOf, placeValueTradeMoves, placeValueTradeStartFault, placeValueTradeState, placeValueTradeThousandths } from "./place-value-trade-moves.js";
 import { plotCurveNumbers, plotSampleNumbers, validatePlotSampleNumbers, normalizePlotDraftBindings } from "./plot-bindings.js";
 
 /**
@@ -177,6 +178,29 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
     },
     // Building, the chart's number is the value on the chart, from 0; pulling apart, what is still on it.
     number_moves: { state: placeValueState, moves: placeValueMoves },
+  },
+  place_value_trade: {
+    // The card's numbers have no control: the learner works it by its own taps (OLL 0026; owner, 2026-11-24:
+    // the model never names a control). Each number's range is its own value, and columns finished runs from 0
+    // to the card's columns; the compiler checks every number and each step itself, so nothing is fitted.
+    fit_numbers(content, plan) {
+      const numbers = content.numbers ?? [];
+      const definitions = numbers.map((number) => plan.numbers?.[number - 1]);
+      if (!definitions.length || definitions.some((definition) => !definition)) return new Map();
+      const operation = (content.parameters as Record<string, unknown> | undefined)?.operation;
+      const values = definitions.map((definition) => definition!.initial);
+      const columns = placeValueTradeStartFault(values, operation) ? undefined
+        : placeValueTradeColumnsOf(operation as "add" | "subtract", placeValueTradeThousandths(values[0]!)!, placeValueTradeThousandths(values[1]!)!).length;
+      definitions.forEach((definition, position) => {
+        definition!.min = position === TRADE_NUMBER.finished ? 0 : Math.min(0, definition!.initial);
+        definition!.max = position === TRADE_NUMBER.finished ? columns ?? Math.max(0, definition!.initial) : Math.max(0, definition!.initial);
+        delete definition!.student_control;
+        delete definition!.unit;
+      });
+      return new Map();
+    },
+    // Columns finished moves forward from 0; the two numbers and the practice pair never move.
+    number_moves: { state: placeValueTradeState, moves: placeValueTradeMoves },
   },
   number_line: { fit_numbers: fitNumberLineNumbers },
   number_line_compare: { fit_numbers: fitComparedNumbers },

@@ -22,8 +22,8 @@ test("place_value_chart is offered by default, last in the catalog (owner, 2026-
   assert.ok(api.LESSON_PLAN_CAPABILITY_NAMES.includes("place_value_chart"));
   assert.equal(api.RECIPE_PLUGIN.place_value_chart, "math");
   assert.deepEqual(api.RECIPE_SCHEMA_PROPERTIES.place_value_chart, { given: { enum: ["name", "expanded", "expanded_factors", "place_counts", "numeral"] } });
-  // Last in the provider's property order, where the trial put it.
-  assert.equal(api.SCHEMA_PROPERTY_ORDER.at(-1), "given");
+  // In the provider's property order where the trial put it, before the trade trial's operation (OLL 0026).
+  assert.deepEqual(api.SCHEMA_PROPERTY_ORDER.slice(-2), ["given", "operation"]);
   const moves = api.RECIPE_HOOKS.place_value_chart.number_moves;
   const build = { parameters: { given: "name" } }, apart = { parameters: { given: "numeral" } };
   const to = (state, ...values) => moves.moves(state, values.map((value) => ({ position: 0, to: value })));
@@ -286,7 +286,7 @@ test("a stubbed generation run: the chart, its steps and the practice reach the 
   `);
   assert.deepEqual(result.beats, [["write", "focus"], ["animate"], ["animate"], ["animate"]]);
   assert.deepEqual(result.tasks.map((task) => [task.completion.kind, task.completion.fact, task.start.values.section_01_moment_01_item_01_number]), [["card_fact", "built", 30705000]]);
-  assert.deepEqual(result.plugins, { math: "0.8.0", shared: "0.1.0" });
+  assert.deepEqual(result.plugins, { math: "0.9.0", shared: "0.1.0" });
   // Section 2 is told the chart in its own terms, with what the demonstration left to do.
   const facts = JSON.stringify(result.later);
   for (const fact of ['"number":60408', '"given":"name"', '"on_chart_now":60408', '"still_to_place":0', '"practice_number":30705', '"Ten thousands"']) assert.ok(facts.includes(fact), fact);
