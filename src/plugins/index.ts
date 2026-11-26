@@ -70,7 +70,9 @@ export const RETIRED_RECIPES = ["cube_with_section"] as const satisfies readonly
  * offers it by naming it in LEARNING_COACH_TRIAL_RECIPES (comma-separated);
  * a trial recipe goes after the catalog.
  */
-export const TRIAL_RECIPES = ["constant_speed_motion", "fraction_model"] as const satisfies readonly (keyof AllRecipes)[];
+// place_value_chart: the place-value chart (OLL decision 0025), built 2026-11-25; offered only when named,
+// until its objective check and the owner's decision.
+export const TRIAL_RECIPES = ["constant_speed_motion", "fraction_model", "place_value_chart"] as const satisfies readonly (keyof AllRecipes)[];
 
 /** The trial recipes a comma-separated list names, in TRIAL_RECIPES order. */
 export function enabledTrialRecipes(list: string | undefined): Array<typeof TRIAL_RECIPES[number]> {
@@ -125,6 +127,8 @@ export const SCHEMA_PROPERTY_ORDER = [
   "solids", "join", "show", "interaction",
   // The fraction model trial recipe (decision 0021); last, so requests without it keep their order.
   "fractions", "fraction_shape", "fraction_view", "split_each_part",
+  // The place-value chart trial recipe (decision 0025); last, so requests without it keep their order.
+  "given",
 ] as const;
 
 /** One prompt bullet: its core text and the installed plugins' sentences, or "" when empty. */

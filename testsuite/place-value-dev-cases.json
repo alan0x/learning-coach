@@ -1,0 +1,299 @@
+{
+ "note": "Building a number from its name or expanded form, and pulling it apart: development cases for need 35P-05, 2026-11-25, written from blueprint.json in this folder (rows E1-E6). Used for design and tuning; the scoring set is separate, written later by a fresh agent from the blueprint alone, sealed. Never taken from the question set. PV-01 to PV-15 are cases this need serves (8 en-US, 7 zh-CN; 8 build, 7 pull_apart): expect.number is the number as a plain decimal string, expect.direction is build (name, place counts or expanded form to numeral) or pull_apart (numeral to its places, including one digit's value). PV-16 to PV-21 are near misses that belong to other needs (expect.need names it): the place-value chart must not be used. Chinese cases use 万级/个级 grouping and 十分位、百分位、千分位, as Chinese learners say them; Chinese decimals are built from place counts, not from a spoken name, since Chinese reads decimals digit by digit. expect.given (added 2026-11-25): the form the card shows — name, expanded (values), expanded_factors (digit × place value), place_counts (how many of each place), or numeral for pulling apart.",
+ "cases": [
+  {
+   "id": "PV-01",
+   "row": "E1",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "Empty chart; 'sixty thousand' puts 6 in the ten thousands, 'four hundred eight' puts 4 in the hundreds and 8 in the ones; thousands and tens stay empty and are read as 0: 60,408, not 6,408.",
+   "prompt": "My teacher said sixty thousand four hundred eight and I wrote 6408 but she marked it wrong. What did I mess up?",
+   "expect": {
+    "need": "35P-05",
+    "number": "60408",
+    "direction": "build",
+    "given": "name"
+   }
+  },
+  {
+   "id": "PV-02",
+   "row": "E1",
+   "language": "zh-CN",
+   "kind": "detailed",
+   "teacher_picture": "空的数位表；七千：千位放7个；零：百位、十位空着；九：个位放9个。读出来空位写0：7009，不是709。",
+   "prompt": "放假在家我给儿子念数让他写，念到“七千零九”，他写成了709。我说少了一个0他也不懂中间到底要几个0。怎么给他讲清楚？",
+   "expect": {
+    "need": "35P-05",
+    "number": "7009",
+    "direction": "build",
+    "given": "name"
+   }
+  },
+  {
+   "id": "PV-03",
+   "row": "E2",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "7 x 10,000 + 2 x 100 + 9 x 1 written above an empty chart; 7 counters in the ten thousands, 2 in the hundreds, 9 in the ones; thousands and tens empty, so 70,209.",
+   "prompt": "Worksheet has 7 x 10,000 + 2 x 100 + 9 x 1 and a blank after it. Can I just squish the 7, 2 and 9 together?",
+   "expect": {
+    "need": "35P-05",
+    "number": "70209",
+    "direction": "build",
+    "given": "expanded_factors"
+   }
+  },
+  {
+   "id": "PV-04",
+   "row": "E2",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "数位表：千位放8个，十位放6个，个位放3个；百位空着写0：8063。",
+   "prompt": "8个千、6个十和3个一合起来是几？我写的863，同桌说不对。",
+   "expect": {
+    "need": "35P-05",
+    "number": "8063",
+    "direction": "build",
+    "given": "place_counts"
+   }
+  },
+  {
+   "id": "PV-05",
+   "row": "E2",
+   "language": "en-US",
+   "kind": "detailed",
+   "teacher_picture": "900,000 + 4,000 + 20 + 6 above a chart in two periods; 9 in the hundred thousands, 4 in the thousands, 2 in the tens, 6 in the ones; ten thousands and hundreds empty: 904,026.",
+   "prompt": "My son's homework gives 900,000 + 4,000 + 20 + 6 and asks for the standard number. He keeps writing things like 9000004026 because he just glues the parts together. How do I show him where each piece actually goes?",
+   "expect": {
+    "need": "35P-05",
+    "number": "904026",
+    "direction": "build",
+    "given": "expanded"
+   }
+  },
+  {
+   "id": "PV-06",
+   "row": "E3",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "8,305 on the chart; each column lifted off as a part: 8 x 1,000 + 3 x 100 + 0 x 10 + 5 x 1, or 8,000 + 300 + 5; the empty tens give nothing.",
+   "prompt": "How am I supposed to write 8,305 in expanded form? Do I need a part for the zero or do I skip it?",
+   "expect": {
+    "need": "35P-05",
+    "number": "8305",
+    "direction": "pull_apart",
+    "given": "numeral"
+   }
+  },
+  {
+   "id": "PV-07",
+   "row": "E3",
+   "language": "zh-CN",
+   "kind": "detailed",
+   "teacher_picture": "62017放在数位表上；一位一位拿下来：6个万、2个千、0个百、1个十、7个一，写成60000+2000+10+7（或6×10000+2×1000+1×10+7×1）。",
+   "prompt": "女儿四年级，作业要把62017拆成几个万、几个千、几个百……加起来的样子。她卡在百位那个0上，不知道要不要写出来。我该怎么跟她讲？",
+   "expect": {
+    "need": "35P-05",
+    "number": "62017",
+    "direction": "pull_apart",
+    "given": "numeral"
+   }
+  },
+  {
+   "id": "PV-08",
+   "row": "E4",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "数位表分万级和个级；三十万：万级是30，即十万位3、万位0；零六百：个级是0600，即百位6；写出来300600。",
+   "prompt": "三十万零六百用数字怎么写？我写成了30600，是不是少了什么？",
+   "expect": {
+    "need": "35P-05",
+    "number": "300600",
+    "direction": "build",
+    "given": "name"
+   }
+  },
+  {
+   "id": "PV-09",
+   "row": "E4",
+   "language": "en-US",
+   "kind": "detailed",
+   "teacher_picture": "250,708 on a chart split into the thousands period and the ones period; each period read as a three-digit number plus its name: two hundred fifty thousand, seven hundred eight; then each column's worth: 200,000 + 50,000 + 700 + 8.",
+   "prompt": "We were looking at the car's odometer, 250708, and my 4th grader read it as 'two fifty, seven oh eight.' I'd like her to read it the proper way and see what each part is worth. Where do I start?",
+   "expect": {
+    "need": "35P-05",
+    "number": "250708",
+    "direction": "pull_apart",
+    "given": "numeral"
+   }
+  },
+  {
+   "id": "PV-10",
+   "row": "E5",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "数位表过了个位有小数点，后面是十分位、百分位、千分位；个位0，十分位放3，百分位空着，千分位放9：0.309。",
+   "prompt": "有个小数，个位是0，十分位上是3，百分位上什么都没有，千分位上是9，应该怎么写？我写0.39被老师打了叉。",
+   "expect": {
+    "need": "35P-05",
+    "number": "0.309",
+    "direction": "build",
+    "given": "place_counts"
+   }
+  },
+  {
+   "id": "PV-11",
+   "row": "E5",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "5.204 on the chart past the point; pulled apart: 5 x 1 + 2 x (1/10) + 0 x (1/100) + 4 x (1/1000), also 5 + 0.2 + 0.004.",
+   "prompt": "We have to write 5.204 as ones plus tenths plus hundredths plus thousandths using fractions like 1/10. What would that even look like?",
+   "expect": {
+    "need": "35P-05",
+    "number": "5.204",
+    "direction": "pull_apart",
+    "given": "numeral"
+   }
+  },
+  {
+   "id": "PV-12",
+   "row": "E5",
+   "language": "zh-CN",
+   "kind": "detailed",
+   "teacher_picture": "26.075放在数位表上；十位2、个位6、十分位0、百分位7、千分位5；一位一位拆下：2×10+6×1+0×(1/10)+7×(1/100)+5×(1/1000)，即20+6+0.07+0.005。",
+   "prompt": "孩子五年级，题目要把26.075按“几个十、几个一、几个十分之一……”写成展开的式子。她不明白十分位上的0要怎么处理，也搞不清百分位和千分位分别是多少。能帮忙讲一下吗？",
+   "expect": {
+    "need": "35P-05",
+    "number": "26.075",
+    "direction": "pull_apart",
+    "given": "numeral"
+   }
+  },
+  {
+   "id": "PV-13",
+   "row": "E5",
+   "language": "en-US",
+   "kind": "detailed",
+   "teacher_picture": "Chart past the point; 'six' puts 6 in the ones; 'forty-one thousandths' is 41 thousandths, so 4 in the hundredths and 1 in the thousandths; tenths empty, read as 0: 6.041, not 6.41.",
+   "prompt": "My son's homework says to write six and forty-one thousandths as a decimal and he put 6.41. Honestly I'm not sure myself. How do we figure out where the digits go?",
+   "expect": {
+    "need": "35P-05",
+    "number": "6.041",
+    "direction": "build",
+    "given": "name"
+   }
+  },
+  {
+   "id": "PV-14",
+   "row": "E6",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "572,380 on the chart; the ten-thousands column circled; its 7 counters lifted out: 7 ten thousands = 70,000, one term of 500,000 + 70,000 + 2,000 + 300 + 80.",
+   "prompt": "In 572,380 how much is the 7 really worth? My friend says it's just 7 and I think it's 70,000.",
+   "expect": {
+    "need": "35P-05",
+    "number": "572380",
+    "direction": "pull_apart",
+    "given": "numeral"
+   }
+  },
+  {
+   "id": "PV-15",
+   "row": "E6",
+   "language": "zh-CN",
+   "kind": "detailed",
+   "teacher_picture": "4.738放在数位表上；圈出百分位；拿出3个百分之一：0.03，即3×(1/100)，是4+0.7+0.03+0.008里的一项。",
+   "prompt": "女儿五年级，问她4.738里的3表示多少，她总说就是3。我想让她明白这个3在哪一位、到底有多大，该怎么讲？",
+   "expect": {
+    "need": "35P-05",
+    "number": "4.738",
+    "direction": "pull_apart",
+    "given": "numeral"
+   }
+  },
+  {
+   "id": "PV-16",
+   "row": "E5",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "Not this need: comparing two decimals by place (5.NBT.A.3.b), need 35P-06.",
+   "prompt": "Is 0.625 bigger than 0.7? It has more digits so I figured it wins, but my sister laughed at me.",
+   "expect": {
+    "need": "35P-06",
+    "forbid": [
+     "place_value_chart"
+    ]
+   }
+  },
+  {
+   "id": "PV-17",
+   "row": "E6",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "Not this need: a digit is worth ten times the same digit one place to its right (4.NBT.A.1), need 35P-04.",
+   "prompt": "5550里面有三个5，百位上的5是十位上的5的几倍？为什么？",
+   "expect": {
+    "need": "35P-04",
+    "forbid": [
+     "place_value_chart"
+    ]
+   }
+  },
+  {
+   "id": "PV-18",
+   "row": "E2",
+   "language": "en-US",
+   "kind": "detailed",
+   "teacher_picture": "Not this need: subtracting with trades across zeros (4.NBT.B.4), need 35P-07.",
+   "prompt": "My son is doing 40,005 minus 1,238 and gets totally lost borrowing across all those zeros. How do I explain what's going on?",
+   "expect": {
+    "need": "35P-07",
+    "forbid": [
+     "place_value_chart"
+    ]
+   }
+  },
+  {
+   "id": "PV-19",
+   "row": "E4",
+   "language": "zh-CN",
+   "kind": "detailed",
+   "teacher_picture": "Not this need: rounding to the nearest ten thousand (4.NBT.A.3), need 35P-01.",
+   "prompt": "新闻里说体育馆昨晚来了约3万人，孩子查到实际是28640人，问我为什么可以说成“约3万”。这个怎么跟她讲？",
+   "expect": {
+    "need": "35P-01",
+    "forbid": [
+     "place_value_chart"
+    ]
+   }
+  },
+  {
+   "id": "PV-20",
+   "row": "E3",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "Not this need: trading ten ones for a ten with blocks (1.NBT.B.2.a), need K2N-23.",
+   "prompt": "I've got 4 long rods and 15 little cubes. If I trade ten cubes for another rod, what do I end up with?",
+   "expect": {
+    "need": "K2N-23",
+    "forbid": [
+     "place_value_chart"
+    ]
+   }
+  },
+  {
+   "id": "PV-21",
+   "row": "E5",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "Not this need: one place renamed as units of a smaller place, 0.3 as thousandths (5.NBT.A.1), need 35P-04.",
+   "prompt": "3个十分之一等于多少个千分之一？我算出来是30，好像不对。",
+   "expect": {
+    "need": "35P-04",
+    "forbid": [
+     "place_value_chart"
+    ]
+   }
+  }
+ ]
+}

@@ -45,7 +45,7 @@ export function samplePlan(capability) {
   // solid_3d takes no outline numbers: it makes its own cut or unfold slider (OLL decision 0019).
   const numberCount = capability === "process_diagram" || capability === "solid_3d"
     ? 0
-    : capability === "rectangle_unit_square_array" || capability === "number_line_compare" || capability === "base_ten_trade"
+    : capability === "rectangle_unit_square_array" || capability === "number_line_compare" || capability === "base_ten_trade" || capability === "place_value_chart"
       ? 2
       : capability === "number_line_steps"
         ? 3
@@ -69,6 +69,8 @@ export function samplePlan(capability) {
             ? { expression: "x^2+y^2+z^2", level: 1, section_axis: "z" }
           : capability === "solid_3d"
             ? { solids: [{ shape: "cylinder", radius: 2, height: 5 }], show: ["volume"], interaction: "cut" }
+            : capability === "place_value_chart"
+            ? { given: "name" }
             : numberLineParameters ?? {},
         ...(hasNumber ? { numbers: Array.from({ length: numberCount }, (_unused, index) => index + 1) } : {}),
       },
@@ -86,7 +88,7 @@ export function samplePlan(capability) {
     firstMomentActions.push({
       action: "animate",
       number: 1,
-      end_value: capability === "base_ten_trade" ? 4 : capability === "circle_polygon_bounds" ? 96 : capability === "rectangle_unit_square_array" ? 6 : capability === "number_line_rounding" ? 43 : capability === "number_line_steps" ? 7 : 0.75,
+      end_value: capability === "base_ten_trade" ? 4 : capability === "place_value_chart" ? 0 : capability === "circle_polygon_bounds" ? 96 : capability === "rectangle_unit_square_array" ? 6 : capability === "number_line_rounding" ? 43 : capability === "number_line_steps" ? 7 : 0.75,
       easing: "linear",
       duration_intent: "brief",
       timing: "during_speech",
@@ -111,6 +113,10 @@ export function samplePlan(capability) {
         : capability === "base_ten_trade"
         // The trading mat (OLL decision 0023): 14 loose ones and 2 tens; the ones are traded down to 4.
         ? { initial: index === 0 ? 14 : 2, min: 0, max: 20, label: index === 0 ? "loose ones" : "tens" }
+        : capability === "place_value_chart"
+        // The place-value chart (OLL decision 0025): 4,050 built from its name, all at once (what is still to
+        // do goes to 0); the learner builds 3,207.
+        ? { initial: index === 0 ? 4050 : 3207, min: 0, max: index === 0 ? 4050 : 3207, label: index === 0 ? "the number" : "practice number" }
         : capability === "number_line_compare"
         ? { initial: index === 0 ? 0.5 : 0.25, min: 0, max: 1, label: index === 0 ? "first" : "second", student_control: { kind: "slider", step: 0.05 } }
         : capability === "rectangle_unit_square_array"
@@ -161,7 +167,7 @@ export function samplePlan(capability) {
             kind: "number_target",
             prompt: "Move the main value to one half.",
             number_controls: [{ number: 1, controls: ["slider"] }],
-            value: capability === "circle_polygon_bounds" ? 96 : capability === "number_line_rounding" ? 45 : capability === "number_line_steps" ? 6 : 0.5,
+            value: capability === "place_value_chart" ? 3207 : capability === "circle_polygon_bounds" ? 96 : capability === "number_line_rounding" ? 45 : capability === "number_line_steps" ? 6 : 0.5,
             tolerance: 0.02,
             hints: ["Watch the numeric value."],
           }],
@@ -201,6 +207,47 @@ export function samplePlan(capability) {
       focus: [reusable(1, 1)],
     },
   };
+}
+
+/** What is still to do after each place of a number is done, highest place first: 60408 -> [408, 8, 0]. */
+export function placeValueSteps(number) {
+  const thousandths = Math.round(number * 1000);
+  const parts = String(thousandths).split("").map((digit, index, all) => Number(digit) * 10 ** (all.length - 1 - index)).filter(Boolean);
+  return parts.map((_part, index) => Number((parts.slice(index + 1).reduce((sum, part) => sum + part, 0) / 1000).toFixed(3)));
+}
+
+/**
+ * A lesson on the place-value chart (OLL decision 0025), as the model writes one: the question's number and a
+ * practice number as lesson numbers, what the card gives, the demonstration as targets on the number (what is
+ * still to do, `steps`, one moment each: by default a place at a time), the practice as a number target, and
+ * (to build) a typed question after it. Compiled through the real pipeline by the tests.
+ */
+export function placeValuePlan({ number, practice, given, steps = placeValueSteps(number), prompt, hints = ["Say each place's value as you go."], typed = given !== "numeral" }) {
+  const plan = samplePlan("place_value_chart");
+  plan.numbers = [
+    { initial: number, min: 0, max: number, label: "the number" },
+    ...(practice !== undefined ? [{ initial: practice, min: 0, max: practice, label: "practice number" }] : []),
+  ];
+  const first = plan.sections[0].moments[0];
+  first.actions = first.actions.filter((action) => action.action !== "animate");
+  first.actions[0].content = { capability: "place_value_chart", parameters: { given }, numbers: practice !== undefined ? [1, 2] : [1] };
+  plan.sections[0].moments.push(...steps.map((left, index) => ({
+    narration: `Step ${index + 1}.`,
+    actions: [{ action: "animate", number: 1, end_value: left, duration_intent: "brief", timing: "during_speech" }],
+  })));
+  plan.sections[0].student_activities = [{
+    kind: "number_target",
+    prompt: prompt ?? (given === "numeral" ? "Your turn: pull the number on the chart apart." : "Your turn: build the number the card gives."),
+    number_controls: [{ number: 1, controls: ["slider"] }],
+    value: practice ?? number, tolerance: 0.5, hints,
+  }];
+  if (typed) {
+    plan.sections[1].student_activities = [{
+      kind: "numeric_answer", prompt: "What number did you build?", answer: String(practice ?? number), check: String(practice ?? number),
+      reference: reusable(1, 1), hints: ["Read the chart from the left."],
+    }];
+  }
+  return plan;
 }
 
 /**

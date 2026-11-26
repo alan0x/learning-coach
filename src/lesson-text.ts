@@ -24,6 +24,8 @@ const EN: Readonly<Record<string, string>> = {
   "当前白板只能执行二维图形和三维场景，不能精确模拟四维超立方体的四维旋转。你可以改问它的三维投影原理或基本结构。": "The board supports 2D diagrams and 3D scenes, but cannot accurately simulate a 4D hypercube rotating in four dimensions. You can ask about its 3D projections or basic structure instead.",
   "立体图形": "Solids", "截面高度": "Cut height", "展开": "Unfold",
   "分数": "Fractions", "每份是 {{v0}}": "Each share is {{v0}}", "画面的下一步": "the picture's next step",
+  "写出每一部分是多少。": "Write what each part is worth.",
+  "每一部分是这一位上的圆片个数乘这一位的值。": "Each part is the number of disks in that place times the value of the place.",
   "y 截距": "y-intercept", "x 截距": "x-intercept", "对称轴": "Axis of symmetry", "定义域": "Domain", "值域": "Range",
   "A点的x坐标": "x-coordinate of point A", "B点的x坐标": "x-coordinate of point B",
   "我没能稳定读清这次手写选区，请重新框选，或者把公式写大一些再试一次。": "I could not read the selected handwriting reliably. Select it again, or write the formula larger and try again.",

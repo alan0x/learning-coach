@@ -185,6 +185,26 @@ export const MATH_RECIPES = {
     required_features: ["trade_ten_for_one"],
     model_guidance: "方块换一换：十个一换一个十，十个十换一个百。数值依次是散的一、十的个数，题目有百或一共满100时再加百的个数（没有百写0），照题目写。一共满100时画板有百位：十满十也要换成一个百，通常讲到每一位都不到十为止。讲到交换的那一刻把“一”的数值动画到换完的个数（一次少整十，如26到6），十自己跟着多；换百就把“十”动画到换完的个数（如11到1），百自己跟着多。方块的总数永远不变，只能交换：把一堆变成另一个数（如508加3个十变成538）不能在方块上练，用填数题问。课后练习时方块回到课程开头那一堆，孩子自己换；那一堆已经是目标时，从课程结束时那一堆开始，所以“换回”开头的个数也可以。练习的目标是交换路上“一”或“十”的某个个数（摆面画好以后，visuals_for_section 给出 loose_ones_as_traded、tens_as_traded），说成“换成几个”，不说“调到”；方块上的练习要练本课 goals 里的交换。提示讲数学（如十个一换一个十），不讲怎么操作。填数题另出新题时用文字说一堆新的方块，题目只写回答要用的话，不加和这道题无关的事实。说方块只用数位的名字：一、十、百（如“10个十换成1个百”），不另起名字（如“十条”“百板”）",
   },
+  // OLL decision 0025 (a trial, off by default): the place-value chart on lesson numbers, on the trading mat's
+  // pattern. The model writes the question's number and a different practice number, what the card gives, the
+  // demonstration as targets on the number (what is still to do, cleared a place at a time) and the practice;
+  // the program writes every number text on the card, plays the steps and makes the learner's task.
+  place_value_chart: {
+    parts: ["whole"],
+    number_inputs: ["number", "practice"],
+    number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }],
+    parameter_names: ["given"],
+    model_parameter_names: ["given"],
+    required_model_schema_parameters: ["given"],
+    semantic_parameters: ["given"],
+    output_kinds: ["place_value_chart"],
+    // Two lesson variables a column: when a lesson holds too many, the chart is the picture that goes.
+    binds_many_variables: true,
+    // No control: the learner works the chart by its own taps (+, a disk, take out); the model never names one.
+    student_controls: [],
+    required_features: ["place_value_parts"],
+    model_guidance: "数位表：照读法、展开式或每一位有几个摆出一个数，或把一个数按数位一位一位拆开（到百万位和千分位）。不用于比较两个数、十个这一位是左边一位的一个、在表上加减、凑整，也不用于低年级的十个一换一个十（用方块）。数值依次是题目的数和练习的数（另一个数，不是题目的，免得孩子照抄演示），写实际大小（26.075），最多三位小数。given 是卡片上给出的：摆数写 name（读法）、expanded（值的和，如 4,000 + 50）、expanded_factors（如 4 × 1,000 + 5 × 10）或 place_counts（如 8个千、6个十和3个一）；拆数写 numeral，拆的数有小数时整数部分英文课不超过三位、中文课不超过四位。只有一位不是零的数（4000、0.05）不用 expanded，也不拆。带乘号的小数写法（3 × (1/10)）只用于英文五年级的小数题或题目自己这样写；中文课用 place_counts（3个0.1、9个0.01和2个0.001）或值的和（0.3 + 0.09 + 0.002）。卡片上的读法、展开式和数字都由程序写。演示：把题目的数动画到还没做完的部分（摆数是还没摆上的，拆数是还在表上的），每一步去掉一位或几位，通常从最高位起，如 60408 先到 408，再到 8，最后到 0。练习：对题目的数写一个数值目标题（数值写练习的数），孩子在表上摆出或拆开练习的数；摆数题的题目和提示不写练习的数（卡片上已经给出它的读法或展开式）；拆完以后程序出一行空，写每一部分是多少。说数位用名字（千位、十分位、hundreds），不说怎么点卡片",
+  },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
     number_inputs: ["columns_or_length", "rows_or_width"],
@@ -362,6 +382,8 @@ const MATH_SCHEMA_PROPERTIES = {
     // (probe 2).
     split_each_part: { enum: ["2", "3", "4", "5", "6"] },
   },
+  // What the place-value chart gives (OLL 0025): a build form, or the numeral to pull apart. The program writes the text.
+  place_value_chart: { given: { enum: ["name", "expanded", "expanded_factors", "place_counts", "numeral"] } },
   solid_3d: {
     // The compiler checks the fields (each solid's shape and sizes), so the schema carries no strictness keywords.
     solids: { type: "array", minItems: 1, maxItems: 2, items: { type: "object", properties: {

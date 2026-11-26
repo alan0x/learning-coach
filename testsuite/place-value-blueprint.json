@@ -1,0 +1,60 @@
+{
+  "note": "Building a number from its name or expanded form, and pulling it apart: blueprint for need 35P-05 of the frozen K-12 component map (Grades 3-5 place value, row 5), 2026-11-25. One row per idea, from the Common Core standards: 4.NBT.A.2 (read and write multi-digit whole numbers using numerals, number names and expanded form; to 1,000,000 by the domain footnote) and 5.NBT.A.3.a (read and write decimals to thousandths using numerals, number names and expanded form, e.g. 347.392 = 3 x 100 + 4 x 10 + 7 x 1 + 3 x (1/10) + 9 x (1/100) + 2 x (1/1000)). Each row's teacher picture says what a good teacher draws, written without reference to any card or component. Neighbours, not this need: one place is ten of the next (35P-04), comparing by place (35P-06), adding and subtracting with trades (35P-07), rounding (35P-01), K-2 trading ones for tens with blocks (K2N-23). Cases (development and scoring) are written from these rows, worded as learners ask, in English and Chinese. Never taken from the question set.",
+  "rows": [
+    {
+      "id": "E1",
+      "idea": "Building a whole number from its spoken or written name",
+      "standards": [
+        "4.NBT.A.2"
+      ],
+      "grades": "4",
+      "teacher_picture": "A place-value chart drawn on the board, columns empty; the name said or written above it, one piece at a time ('sixty thousand' then 'four hundred eight'); for each piece, that many counters put in its column; a column the name never mentions is left empty and gets a 0 when the numeral is read off underneath: 60,408. In Chinese the name is read the same way in its own groups (七千零九: 7 in the thousands, nothing in the hundreds and tens, 9 in the ones; the 零 marks the empty places)."
+    },
+    {
+      "id": "E2",
+      "idea": "Building a numeral from expanded form, including a place with nothing in it",
+      "standards": [
+        "4.NBT.A.2"
+      ],
+      "grades": "4",
+      "teacher_picture": "The expanded form written above an empty chart (4 x 1,000 + 5 x 10); each term's counters placed in the column it names (4 in the thousands, 5 in the tens); the hundreds and ones stay empty; the numeral read off the chart with a 0 in each empty column: 4,050, not 45. The same for a sum of place values (900,000 + 4,000 + 20 + 6)."
+    },
+    {
+      "id": "E3",
+      "idea": "Pulling a whole number apart into expanded form",
+      "standards": [
+        "4.NBT.A.2"
+      ],
+      "grades": "4",
+      "teacher_picture": "A numeral written on the chart, one digit's counters in each column; then each column lifted off one at a time and written as its own part (8,305 = 8 x 1,000 + 3 x 100 + 5 x 1, or 8,000 + 300 + 5); an empty column is shown as giving nothing (0 x 10), and the parts added back together give the number again."
+    },
+    {
+      "id": "E4",
+      "idea": "Large numbers in periods, to the millions",
+      "standards": [
+        "4.NBT.A.2"
+      ],
+      "grades": "4",
+      "teacher_picture": "The chart grouped by period (thousands: hundred thousands, ten thousands, thousands; ones: hundreds, tens, ones), a comma or gap between the groups and 1,000,000 as one counter in a millions column; each period read as a three-digit number followed by its period's name (250,708: 'two hundred fifty thousand, seven hundred eight'), written the other way by filling each period from its name. In Chinese the groups are four places (万级, 个级): 三十万零六百 is 30 in the 万级 and 0600 in the 个级, so 300600."
+    },
+    {
+      "id": "E5",
+      "idea": "Decimals to thousandths: building and pulling apart, with expanded form in fractions or decimals",
+      "standards": [
+        "5.NBT.A.3.a"
+      ],
+      "grades": "5",
+      "teacher_picture": "The chart carried past the ones with a fixed decimal point, columns tenths, hundredths, thousandths; counters placed from a name ('six and forty-one thousandths': 6 ones, then 41 thousandths as 4 hundredths and 1 thousandth, tenths empty: 6.041) or from expanded form; and a decimal pulled apart column by column: 347.392 = 3 x 100 + 4 x 10 + 7 x 1 + 3 x (1/10) + 9 x (1/100) + 2 x (1/1000), each term also written as a decimal (0.3, 0.09, 0.002)."
+    },
+    {
+      "id": "E6",
+      "idea": "The value of one digit, as one part of pulling the number apart",
+      "standards": [
+        "4.NBT.A.2",
+        "5.NBT.A.3.a"
+      ],
+      "grades": "4-5",
+      "teacher_picture": "The number on the chart; the column holding the digit in question circled; that column's counters lifted out alone and named by their place (7 ten thousands), then written as a value (70,000) and as its term of the expanded form; the same for a digit past the point (the 3 in 4.738 is 3 hundredths: 0.03, 3 x (1/100))."
+    }
+  ]
+}

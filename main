@@ -386,7 +386,7 @@ var require_codegen = __commonJS({
       AND: new code_1._Code("&&"),
       ADD: new code_1._Code("+")
     };
-    var Node = class {
+    var Node2 = class {
       optimizeNodes() {
         return this;
       }
@@ -394,7 +394,7 @@ var require_codegen = __commonJS({
         return this;
       }
     };
-    var Def = class extends Node {
+    var Def = class extends Node2 {
       constructor(varKind, name, rhs) {
         super();
         this.varKind = varKind;
@@ -417,7 +417,7 @@ var require_codegen = __commonJS({
         return this.rhs instanceof code_1._CodeOrName ? this.rhs.names : {};
       }
     };
-    var Assign = class extends Node {
+    var Assign = class extends Node2 {
       constructor(lhs, rhs, sideEffects) {
         super();
         this.lhs = lhs;
@@ -447,7 +447,7 @@ var require_codegen = __commonJS({
         return `${this.lhs} ${this.op}= ${this.rhs};` + _n;
       }
     };
-    var Label = class extends Node {
+    var Label = class extends Node2 {
       constructor(label) {
         super();
         this.label = label;
@@ -457,7 +457,7 @@ var require_codegen = __commonJS({
         return `${this.label}:` + _n;
       }
     };
-    var Break = class extends Node {
+    var Break = class extends Node2 {
       constructor(label) {
         super();
         this.label = label;
@@ -468,7 +468,7 @@ var require_codegen = __commonJS({
         return `break${label};` + _n;
       }
     };
-    var Throw = class extends Node {
+    var Throw = class extends Node2 {
       constructor(error) {
         super();
         this.error = error;
@@ -480,7 +480,7 @@ var require_codegen = __commonJS({
         return this.error.names;
       }
     };
-    var AnyCode = class extends Node {
+    var AnyCode = class extends Node2 {
       constructor(code) {
         super();
         this.code = code;
@@ -499,7 +499,7 @@ var require_codegen = __commonJS({
         return this.code instanceof code_1._CodeOrName ? this.code.names : {};
       }
     };
-    var ParentNode = class extends Node {
+    var ParentNode = class extends Node2 {
       constructor(nodes = []) {
         super();
         this.nodes = nodes;
@@ -4337,7 +4337,7 @@ var require_core = __commonJS({
       errorsText(errors = this.errors, { separator = ", ", dataVar = "data" } = {}) {
         if (!errors || errors.length === 0)
           return "No errors";
-        return errors.map((e) => `${dataVar}${e.instancePath} ${e.message}`).reduce((text2, msg) => text2 + separator + msg);
+        return errors.map((e) => `${dataVar}${e.instancePath} ${e.message}`).reduce((text3, msg) => text3 + separator + msg);
       }
       $dataMetaSchema(metaSchema, keywordsJsonPointers) {
         const rules = this.RULES.all;
@@ -7174,8 +7174,8 @@ import { appendFileSync, mkdirSync, realpathSync, writeFileSync } from "node:fs"
 
 // src/raw-reply.ts
 var RAW_REPLY_PREFIX = "learning-coach: raw ";
-function frameRawReply(record) {
-  return `${RAW_REPLY_PREFIX}${JSON.stringify(record)}
+function frameRawReply(record3) {
+  return `${RAW_REPLY_PREFIX}${JSON.stringify(record3)}
 `;
 }
 
@@ -7525,7 +7525,7 @@ var v0_1_schema_default = {
               properties: {
                 kind: { const: "card_fact" },
                 node: { $ref: "#/$defs/alias" },
-                fact: { enum: ["no_trade_left", "count"] },
+                fact: { enum: ["no_trade_left", "count", "built", "pulled_all"] },
                 at: { enum: ["ones", "tens", "hundreds"] },
                 value: { type: "integer", minimum: 0 }
               }
@@ -7627,7 +7627,7 @@ var v0_1_schema_default = {
         do: { enum: ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate", "hide", "view", "tap"] },
         when: { enum: ["before_speech", "during_speech", "after_speech"] },
         as: { $ref: "#/$defs/alias" },
-        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model", "base_ten_trade"] },
+        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model", "base_ten_trade", "place_value_chart"] },
         role: { type: "string" },
         content: { type: "object" },
         place: { $ref: "#/$defs/placement" },
@@ -7648,8 +7648,8 @@ var v0_1_schema_default = {
         reason: { type: "string" },
         show: { type: "string" },
         preset: { enum: ["front", "top", "side", "isometric"] },
-        tap: { enum: ["gather", "ungather", "make", "break"] },
-        at: { enum: ["ones", "tens", "hundreds"] },
+        tap: { enum: ["gather", "ungather", "make", "break", "add", "remove", "take_out"] },
+        at: { enum: ["thousandths", "hundredths", "tenths", "ones", "tens", "hundreds", "thousands", "ten-thousands", "hundred-thousands", "millions"] },
         source: {
           type: "object",
           required: ["selection", "confirmed_by"],
@@ -7720,6 +7720,13 @@ var v0_1_schema_default = {
             properties: { do: { const: "write" }, kind: { const: "base_ten_trade" } }
           },
           then: { properties: { content: { $ref: "#/$defs/baseTenTradeContent" } } }
+        },
+        {
+          if: {
+            required: ["do", "kind"],
+            properties: { do: { const: "write" }, kind: { const: "place_value_chart" } }
+          },
+          then: { properties: { content: { $ref: "#/$defs/placeValueChartContent" } } }
         },
         {
           if: { properties: { do: { const: "revise" } } },
@@ -7992,6 +7999,41 @@ var v0_1_schema_default = {
         }
       }
     },
+    placeValueChartContent: {
+      type: "object",
+      required: ["mode", "given", "top_place", "decimals", "target", "places"],
+      additionalProperties: false,
+      properties: {
+        language: { enum: ["en-US", "zh-CN"] },
+        mode: { enum: ["build", "apart"] },
+        given: { enum: ["name", "expanded", "expanded_factors", "place_counts", "numeral"] },
+        top_place: { type: "integer", minimum: 0, maximum: 6 },
+        decimals: { type: "boolean" },
+        target: { type: "integer", minimum: 1, maximum: 9999999999 },
+        places: {
+          type: "array",
+          minItems: 1,
+          maxItems: 10,
+          items: {
+            type: "object",
+            required: ["as", "place", "count"],
+            additionalProperties: false,
+            properties: {
+              as: { enum: ["thousandths", "hundredths", "tenths", "ones", "tens", "hundreds", "thousands", "ten-thousands", "hundred-thousands", "millions"] },
+              place: { type: "integer", minimum: -3, maximum: 6 },
+              count: { type: "integer", minimum: 0, maximum: 9 },
+              pulled: { type: "integer", minimum: 0, maximum: 9 }
+            }
+          }
+        },
+        bindings: {
+          type: "array",
+          minItems: 1,
+          maxItems: 64,
+          items: { $ref: "#/$defs/valueBinding" }
+        }
+      }
+    },
     scene3dContent: {
       type: "object",
       required: ["objects", "camera", "fallback"],
@@ -8143,7 +8185,7 @@ var v0_1_schema_default = {
       required: ["target", "expression"],
       additionalProperties: false,
       properties: {
-        target: { type: "string", pattern: "^[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*$" },
+        target: { type: "string", pattern: "^(?:[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*|target)$" },
         expression: { type: "string", minLength: 1, maxLength: 256 },
         allow_zero: { const: true },
         hide_when_undefined: { const: true },
@@ -8464,8 +8506,8 @@ var NUMBER_LINE_LIMITS = {
   hops: 24
 };
 var FRACTION = /^\s*(-)?\s*(?:(\d+)\s+)?(\d+)\s*\/\s*(\d+)\s*$/u;
-function parseFraction(text2) {
-  const match = FRACTION.exec(text2);
+function parseFraction(text3) {
+  const match = FRACTION.exec(text3);
   if (!match)
     return void 0;
   const [, sign, whole, top, bottom] = match;
@@ -8522,10 +8564,153 @@ var BASE_TEN_TRADE_LANGUAGE_FEATURE = "plugin:math/base-ten-trade-language@1";
 var BASE_TEN_TRADE_LANGUAGE_VERSION = "0.6.0";
 var BASE_TEN_TRADE_SLIDER_FEATURE = "plugin:math/base-ten-trade-slider@1";
 var BASE_TEN_TRADE_SLIDER_VERSION = "0.7.0";
+var BASE_TEN_TRADE_LANGUAGES = ["en-US", "zh-CN"];
 var BASE_TEN_TRADE_BINDINGS = {
   places: ["count", "tray"]
 };
+var BASE_TEN_TRADE_PLACES = ["ones", "tens", "hundreds"];
+var BASE_TEN_TRADE_LIMITS = {
+  /** The most of each place the mat draws (tens: 29 after a break, plus five trades from 59 ones). */
+  drawn: [59, 34, 9],
+  /** The most of each place a pile may start with. */
+  start: [59, 19, 9],
+  /** A break is refused if the place below would then hold more than this. */
+  room: [59, 29],
+  /** A tray holds exactly ten: the size of one unit of the next place (owner, 2026-11-22). */
+  tray: 10
+};
+function record(value, path, fail) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    fail(path, "Expected an object");
+  return value;
+}
+function only(value, allowed, path, fail) {
+  for (const key of Object.keys(value))
+    if (!allowed.includes(key))
+      fail(`${path}/${key}`, `Unknown base-ten trade field '${key}'`);
+}
+function text(raw, path, fail, max = 120) {
+  if (raw !== void 0 && (typeof raw !== "string" || raw.length > max))
+    fail(path, `Expected text of at most ${max} characters`);
+}
+function wholeNumber(raw, path, low, high, fail, what) {
+  if (typeof raw !== "number" || !Number.isInteger(raw) || raw < low || raw > high)
+    fail(path, `${what} is a whole number from ${low} to ${high}`);
+  return raw;
+}
 var hasTray = (columns, p) => p >= 0 && p < columns - 1;
+var valueOf = (counts) => counts.reduce((sum, count, p) => sum + count * 10 ** p, 0);
+function validateBaseTenTradeContent(raw, path, fail, options = {}) {
+  const content = record(raw, path, fail);
+  only(content, ["title", "caption", "columns", "places", "bindings", "language"], path, fail);
+  if (content.language !== void 0 && !BASE_TEN_TRADE_LANGUAGES.includes(content.language)) {
+    fail(`${path}/language`, `A mat speaks ${BASE_TEN_TRADE_LANGUAGES.join(" or ")}`);
+  }
+  text(content.title, `${path}/title`, fail);
+  text(content.caption, `${path}/caption`, fail, 480);
+  const columns = content.columns;
+  if (columns !== 2 && columns !== 3)
+    fail(`${path}/columns`, "A mat has 2 columns (tens and ones) or 3 (hundreds, tens and ones)");
+  if (!Array.isArray(content.places) || content.places.length !== columns) {
+    fail(`${path}/places`, `A mat of ${columns} columns lists ${columns} places, ones first`);
+  }
+  const counts = [];
+  const trays = [];
+  for (const [p, item] of content.places.entries()) {
+    const at = `${path}/places/${p}`;
+    const place = record(item, at, fail);
+    only(place, ["as", "count", "tray"], at, fail);
+    if (place.as !== BASE_TEN_TRADE_PLACES[p])
+      fail(`${at}/as`, `Place ${p + 1} is '${BASE_TEN_TRADE_PLACES[p]}' (places are listed ones first)`);
+    const most2 = columns === 2 && p === 1 ? 9 : (options.boundValues ? BASE_TEN_TRADE_LIMITS.drawn : BASE_TEN_TRADE_LIMITS.start)[p];
+    counts.push(wholeNumber(place.count, `${at}/count`, 0, most2, fail, `The count of ${place.as}`));
+    if (hasTray(columns, p)) {
+      trays.push(place.tray === void 0 ? 0 : wholeNumber(place.tray, `${at}/tray`, 0, BASE_TEN_TRADE_LIMITS.tray, fail, `The ${place.as} tray`));
+    } else if (place.tray !== void 0) {
+      fail(`${at}/tray`, `The ${place.as} have no tray: there is no column above them`);
+    }
+  }
+  if (options.boundValues)
+    return;
+  for (const [p, tray] of trays.entries()) {
+    if (tray > counts[p])
+      fail(`${path}/places/${p}/tray`, `The ${BASE_TEN_TRADE_PLACES[p]} tray holds more than there are ${BASE_TEN_TRADE_PLACES[p]}`);
+  }
+  const most = columns === 2 ? 99 : 999;
+  if (valueOf(counts) > most) {
+    fail(`${path}/places`, columns === 2 ? "This pile makes a hundred or more: use 3 columns" : "This pile makes more than 9 hundreds after trading");
+  }
+}
+function baseTenMat(raw) {
+  const content = raw;
+  const columns = content.columns === 3 ? 3 : 2;
+  const whole = (value) => typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0;
+  const places = Array.isArray(content.places) ? content.places : [];
+  const counts = Array.from({ length: columns }, (_, p) => Math.min(whole(places[p]?.count), columns === 2 && p === 1 ? 9 : BASE_TEN_TRADE_LIMITS.drawn[p]));
+  const trays = Array.from({ length: columns - 1 }, (_, p) => Math.min(whole(places[p]?.tray), counts[p], BASE_TEN_TRADE_LIMITS.tray));
+  return { columns, counts, trays };
+}
+var set = (values, index, value) => values.map((x, i) => i === index ? value : x);
+var loose = (mat, p) => mat.counts[p] - (hasTray(mat.columns, p) ? mat.trays[p] : 0);
+function applyBaseTenTap(mat, tap) {
+  const p = tap.place;
+  if (!Number.isInteger(p) || p < 0 || p >= mat.columns)
+    return { ok: false, reason: "no_tray" };
+  if (tap.kind === "gather") {
+    if (!hasTray(mat.columns, p))
+      return { ok: false, reason: "no_tray" };
+    if (mat.trays[p] >= BASE_TEN_TRADE_LIMITS.tray)
+      return { ok: false, reason: "tray_full" };
+    if (loose(mat, p) <= 0)
+      return { ok: false, reason: "none_loose" };
+    return { ok: true, mat: { ...mat, trays: set(mat.trays, p, mat.trays[p] + 1) } };
+  }
+  if (tap.kind === "ungather") {
+    if (!hasTray(mat.columns, p))
+      return { ok: false, reason: "no_tray" };
+    if (mat.trays[p] <= 0)
+      return { ok: false, reason: "tray_empty" };
+    return { ok: true, mat: { ...mat, trays: set(mat.trays, p, mat.trays[p] - 1) } };
+  }
+  if (tap.kind === "make") {
+    if (!hasTray(mat.columns, p))
+      return { ok: false, reason: "no_tray" };
+    if (mat.trays[p] === 0)
+      return { ok: false, reason: "tray_empty" };
+    if (mat.trays[p] !== BASE_TEN_TRADE_LIMITS.tray)
+      return { ok: false, reason: "tray_not_ten" };
+    const counts2 = set(set(mat.counts, p, mat.counts[p] - 10), p + 1, mat.counts[p + 1] + 1);
+    return { ok: true, mat: { ...mat, counts: counts2, trays: set(mat.trays, p, 0) } };
+  }
+  if (p < 1)
+    return { ok: false, reason: "no_tray" };
+  if (loose(mat, p) <= 0)
+    return { ok: false, reason: "none_loose" };
+  if (mat.trays[p - 1] !== 0)
+    return { ok: false, reason: "tray_not_empty" };
+  if (mat.counts[p - 1] + 10 > BASE_TEN_TRADE_LIMITS.room[p - 1])
+    return { ok: false, reason: "no_room" };
+  const counts = set(set(mat.counts, p, mat.counts[p] - 1), p - 1, mat.counts[p - 1] + 10);
+  return { ok: true, mat: { ...mat, counts, trays: set(mat.trays, p - 1, 10) } };
+}
+function baseTenTapReachable(mat) {
+  const key = (state) => `${state.counts.join(",")}/${state.trays.join(",")}`;
+  const seen = /* @__PURE__ */ new Set([key(mat)]);
+  const found = [mat];
+  const kinds = ["gather", "ungather", "make", "break"];
+  for (let i = 0; i < found.length; i += 1) {
+    for (let place = 0; place < mat.columns; place += 1) {
+      for (const kind of kinds) {
+        const result = applyBaseTenTap(found[i], { kind, place });
+        if (!result.ok || seen.has(key(result.mat)))
+          continue;
+        seen.add(key(result.mat));
+        found.push(result.mat);
+      }
+    }
+  }
+  return found;
+}
 function baseTenBoundField(raw, alias) {
   const content = raw;
   const places = Array.isArray(content?.places) ? content.places : [];
@@ -8546,6 +8731,659 @@ function baseTenSliderPlace(raw, alias) {
   const columns = raw?.columns === 3 ? 3 : 2;
   return bound && bound.field === "count" && hasTray(columns, bound.place) ? bound.place : void 0;
 }
+function baseTenLanguage(raw) {
+  return raw?.language === "zh-CN" ? "zh-CN" : "en-US";
+}
+var BASE_TEN_WORDS = {
+  "en-US": {
+    /** The mat's own name, for a screen reader (review of #95). */
+    matLabel: "A place-value mat",
+    headings: ["Ones", "Tens", "Hundreds"],
+    trayLabel: ["Ten ones make a ten", "Ten tens make a hundred"],
+    make: ["\u2190 Make a ten", "\u2190 Make a hundred"],
+    break: ["Break a ten \u2192", "Break a hundred \u2192"],
+    put: ["Put this one in the tray", "Put this ten in the tray", "Put this hundred in the tray"],
+    take: ["Take this one out of the tray", "Take this ten out of the tray", "Take this hundred out of the tray"],
+    refusal: {
+      tray_full: ["The tray holds only ten.", "The tray holds only ten."],
+      // A fact, true whether more can still go in or not (first-use test): never "fill it", which can be impossible.
+      tray_not_ten: ["This tray does not hold a ten: a ten is ten ones.", "This tray does not hold a hundred: a hundred is ten tens."],
+      tray_empty: ["Tap ones to put them in the tray first.", "Tap tens to put them in the tray first."],
+      tray_not_empty: ["Empty the tray first.", "Empty the tray first."],
+      no_room: ["There is no room on the mat for ten more.", "There is no room on the mat for ten more."],
+      none_loose: ["There is no loose one to use.", "There is no loose ten to use.", "There is no loose hundred to use."]
+    },
+    other: "That can't be done here.",
+    /** How to work the mat (owner, 2026-11-24: the component says how it is used, as fixed text): two columns, then three. */
+    howTo: [
+      "Tap a block to put it in the tray; tap it again to take it out. When the tray holds ten, press Make a ten. Press Break a ten to turn a ten into ten ones. Then press I'm done.",
+      "Tap a block to put it in its tray; tap it again to take it out. When a tray holds ten, press Make a ten or Make a hundred. Press Break a ten or Break a hundred to turn it into ten of the place below. Then press I'm done."
+    ]
+  },
+  "zh-CN": {
+    matLabel: "\u6570\u4F4D\u65B9\u5757",
+    headings: ["\u4E2A\u4F4D", "\u5341\u4F4D", "\u767E\u4F4D"],
+    trayLabel: ["\u5341\u4E2A\u4E00\u662F\u4E00\u4E2A\u5341", "\u5341\u4E2A\u5341\u662F\u4E00\u4E2A\u767E"],
+    make: ["\u2190 \u6362\u6210\u4E00\u4E2A\u5341", "\u2190 \u6362\u6210\u4E00\u4E2A\u767E"],
+    break: ["\u62C6\u5F00\u4E00\u4E2A\u5341 \u2192", "\u62C6\u5F00\u4E00\u4E2A\u767E \u2192"],
+    put: ["\u628A\u8FD9\u4E2A\u4E00\u653E\u8FDB\u6258\u76D8", "\u628A\u8FD9\u4E2A\u5341\u653E\u8FDB\u6258\u76D8", "\u628A\u8FD9\u4E2A\u767E\u653E\u8FDB\u6258\u76D8"],
+    take: ["\u628A\u8FD9\u4E2A\u4E00\u4ECE\u6258\u76D8\u91CC\u62FF\u51FA\u6765", "\u628A\u8FD9\u4E2A\u5341\u4ECE\u6258\u76D8\u91CC\u62FF\u51FA\u6765", "\u628A\u8FD9\u4E2A\u767E\u4ECE\u6258\u76D8\u91CC\u62FF\u51FA\u6765"],
+    refusal: {
+      tray_full: ["\u6258\u76D8\u91CC\u53EA\u80FD\u653E\u5341\u4E2A\u3002", "\u6258\u76D8\u91CC\u53EA\u80FD\u653E\u5341\u4E2A\u3002"],
+      tray_not_ten: ["\u6258\u76D8\u91CC\u8FD8\u4E0D\u662F\u4E00\u4E2A\u5341\uFF1A\u4E00\u4E2A\u5341\u662F\u5341\u4E2A\u4E00\u3002", "\u6258\u76D8\u91CC\u8FD8\u4E0D\u662F\u4E00\u4E2A\u767E\uFF1A\u4E00\u4E2A\u767E\u662F\u5341\u4E2A\u5341\u3002"],
+      tray_empty: ["\u5148\u70B9\u4E2A\u4F4D\u91CC\u7684\u4E00\uFF0C\u628A\u5B83\u4EEC\u653E\u8FDB\u6258\u76D8\u3002", "\u5148\u70B9\u5341\u4F4D\u91CC\u7684\u5341\uFF0C\u628A\u5B83\u4EEC\u653E\u8FDB\u6258\u76D8\u3002"],
+      tray_not_empty: ["\u5148\u628A\u6258\u76D8\u6E05\u7A7A\u3002", "\u5148\u628A\u6258\u76D8\u6E05\u7A7A\u3002"],
+      no_room: ["\u6CA1\u6709\u5730\u65B9\u518D\u653E\u5341\u4E2A\u4E86\u3002", "\u6CA1\u6709\u5730\u65B9\u518D\u653E\u5341\u4E2A\u4E86\u3002"],
+      none_loose: ["\u6CA1\u6709\u6563\u7684\u4E00\u53EF\u4EE5\u7528\u4E86\u3002", "\u6CA1\u6709\u6563\u7684\u5341\u53EF\u4EE5\u7528\u4E86\u3002", "\u6CA1\u6709\u6563\u7684\u767E\u53EF\u4EE5\u7528\u4E86\u3002"]
+    },
+    other: "\u8FD9\u91CC\u4E0D\u80FD\u8FD9\u6837\u505A\u3002",
+    howTo: [
+      "\u70B9\u4E00\u4E2A\u65B9\u5757\uFF0C\u628A\u5B83\u653E\u8FDB\u6258\u76D8\uFF1B\u518D\u70B9\u4E00\u4E0B\u5C31\u62FF\u51FA\u6765\u3002\u6258\u76D8\u91CC\u6709\u5341\u4E2A\u65F6\uFF0C\u6309\u300C\u6362\u6210\u4E00\u4E2A\u5341\u300D\u3002\u6309\u300C\u62C6\u5F00\u4E00\u4E2A\u5341\u300D\uFF0C\u628A\u4E00\u4E2A\u5341\u62C6\u6210\u5341\u4E2A\u4E00\u3002\u505A\u597D\u540E\u6309\u300C\u6211\u505A\u5B8C\u4E86\u300D\u3002",
+      "\u70B9\u4E00\u4E2A\u65B9\u5757\uFF0C\u628A\u5B83\u653E\u8FDB\u6258\u76D8\uFF1B\u518D\u70B9\u4E00\u4E0B\u5C31\u62FF\u51FA\u6765\u3002\u6258\u76D8\u91CC\u6709\u5341\u4E2A\u65F6\uFF0C\u6309\u300C\u6362\u6210\u4E00\u4E2A\u5341\u300D\u6216\u300C\u6362\u6210\u4E00\u4E2A\u767E\u300D\u3002\u6309\u300C\u62C6\u5F00\u4E00\u4E2A\u5341\u300D\u6216\u300C\u62C6\u5F00\u4E00\u4E2A\u767E\u300D\uFF0C\u628A\u5B83\u62C6\u6210\u5341\u4E2A\u4F4E\u4E00\u4F4D\u7684\u65B9\u5757\u3002\u505A\u597D\u540E\u6309\u300C\u6211\u505A\u5B8C\u4E86\u300D\u3002"
+    ]
+  }
+};
+function baseTenHowTo(raw) {
+  const words2 = BASE_TEN_WORDS[baseTenLanguage(raw)];
+  return words2.howTo[raw?.columns === 3 ? 1 : 0];
+}
+function baseTenRefusalText(reason, place, language = "en-US") {
+  const words2 = BASE_TEN_WORDS[language] ?? BASE_TEN_WORDS["en-US"];
+  const sentences = words2.refusal[reason];
+  if (!sentences)
+    return words2.other;
+  return sentences[Math.min(Math.max(0, Number.isInteger(place) ? place : 0), sentences.length - 1)];
+}
+function baseTenChanges(before, after) {
+  const changes = [];
+  for (let p = 0; p < after.columns; p += 1) {
+    if (after.counts[p] !== before.counts[p])
+      changes.push({ place: p, field: "count", before: before.counts[p], after: after.counts[p] });
+    if (p < after.trays.length && after.trays[p] !== before.trays[p])
+      changes.push({ place: p, field: "tray", before: before.trays[p], after: after.trays[p] });
+  }
+  return changes;
+}
+function baseTenFacts(mat) {
+  const value = valueOf(mat.counts);
+  const noTradeLeft = mat.counts.slice(0, mat.columns - 1).every((count) => count < 10);
+  let digits = 1;
+  while (digits < mat.columns && value >= 10 ** digits)
+    digits += 1;
+  const places = Array.from({ length: digits }, (_, i) => digits - 1 - i);
+  const parts = places.map((p) => mat.counts[p] * 10 ** p);
+  return { value, no_trade_left: noTradeLeft, digits, counts: places.map((p) => mat.counts[p]), parts, equation: `${value} = ${parts.join(" + ")}` };
+}
+
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/place-value-chart.js
+var PLACE_VALUE_CHART_KIND = "place_value_chart";
+var PLACE_VALUE_CHART_FEATURE = "plugin:math/place-value-chart@1";
+var PLACE_VALUE_CHART_PLUGIN_VERSION = "0.8.0";
+var PLACE_VALUE_CHART_LANGUAGES = ["en-US", "zh-CN"];
+var PLACE_VALUE_CHART_BINDINGS = {
+  places: ["count", "pulled"]
+};
+var PLACE_VALUE_CHART_CARD_BINDINGS = ["target"];
+var PLACE_VALUE_MIN_PLACE = -3;
+var PLACE_VALUE_MAX_PLACE = 6;
+var PLACE_VALUE_MAX_PER_PLACE = 9;
+var PLACE_VALUE_MAX_VALUE = 10 ** (PLACE_VALUE_MAX_PLACE + 1) * 1e3 - 1;
+var PLACE_VALUE_CHART_MODES = ["build", "apart"];
+var PLACE_VALUE_BUILD_GIVENS = ["name", "expanded", "expanded_factors", "place_counts"];
+var PLACE_VALUE_PLACE_ALIASES = {
+  6: "millions",
+  5: "hundred-thousands",
+  4: "ten-thousands",
+  3: "thousands",
+  2: "hundreds",
+  1: "tens",
+  0: "ones",
+  [-1]: "tenths",
+  [-2]: "hundredths",
+  [-3]: "thousandths"
+};
+var PLACE_VALUE_TAP_PLACES = Object.freeze(Array.from({ length: PLACE_VALUE_MAX_PLACE - PLACE_VALUE_MIN_PLACE + 1 }, (_, i) => PLACE_VALUE_PLACE_ALIASES[i + PLACE_VALUE_MIN_PLACE]));
+var placeValueTapIndex = (place) => place - PLACE_VALUE_MIN_PLACE;
+var placeValueTapPlace = (index) => index + PLACE_VALUE_MIN_PLACE;
+var SHORT = { "en-US": "en", "zh-CN": "zh" };
+var short = (language) => SHORT[language ?? "en-US"] ?? "en";
+function placeValueDigitAt(value, place) {
+  return Math.floor(value / 10 ** (place + 3)) % 10;
+}
+function placeValueTopPlace(value) {
+  for (let place = PLACE_VALUE_MAX_PLACE; place >= PLACE_VALUE_MIN_PLACE; place -= 1)
+    if (placeValueDigitAt(value, place))
+      return place;
+  return 0;
+}
+function placeValueHasFraction(value) {
+  return value % 1e3 !== 0;
+}
+var groupThousands = (whole) => String(whole).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+function placeValueNumeral(value, language = "en-US") {
+  const whole = Math.floor(value / 1e3);
+  const frac = value % 1e3;
+  const wholeText = short(language) === "en" ? groupThousands(whole) : String(whole);
+  if (!frac)
+    return wholeText;
+  return `${wholeText}.${String(frac).padStart(3, "0").replace(/0+$/u, "")}`;
+}
+var EN_PLACE = { 6: "Millions", 5: "Hundred thousands", 4: "Ten thousands", 3: "Thousands", 2: "Hundreds", 1: "Tens", 0: "Ones", [-1]: "Tenths", [-2]: "Hundredths", [-3]: "Thousandths" };
+var ZH_PLACE = { 6: "\u767E\u4E07\u4F4D", 5: "\u5341\u4E07\u4F4D", 4: "\u4E07\u4F4D", 3: "\u5343\u4F4D", 2: "\u767E\u4F4D", 1: "\u5341\u4F4D", 0: "\u4E2A\u4F4D", [-1]: "\u5341\u5206\u4F4D", [-2]: "\u767E\u5206\u4F4D", [-3]: "\u5343\u5206\u4F4D" };
+function placeValueColumnName(place, language = "en-US") {
+  return (short(language) === "en" ? EN_PLACE : ZH_PLACE)[place];
+}
+var periodSize = (language) => short(language) === "en" ? 3 : 4;
+function placeValuePeriodTop(place, language = "en-US") {
+  const size = periodSize(language);
+  return Math.min(PLACE_VALUE_MAX_PLACE, (Math.floor(Math.max(place, 0) / size) + 1) * size - 1);
+}
+function placeValueColumns(topPlace, decimals) {
+  const columns = [];
+  for (let place = topPlace; place >= 0; place -= 1)
+    columns.push(place);
+  if (decimals)
+    columns.push(-1, -2, -3);
+  return columns;
+}
+function placeValueParts(value) {
+  const list = [];
+  for (let place = PLACE_VALUE_MAX_PLACE; place >= PLACE_VALUE_MIN_PLACE; place -= 1) {
+    const digit = placeValueDigitAt(value, place);
+    if (digit)
+      list.push({ place, digit, value: digit * 10 ** (place + 3) });
+  }
+  return list;
+}
+function placeValueTaskFault(value, given) {
+  if (!value)
+    return "zero";
+  const parts = placeValueParts(value);
+  if ((given === "expanded" || given === "numeral") && parts.length < 2)
+    return "one_place";
+  if (given === "expanded_factors" && parts.length === 1 && parts[0].digit === 1)
+    return "one_place";
+  return void 0;
+}
+function placeValueAddDisk(chart, place) {
+  if (!(place in chart))
+    return { ok: false, reason: "no_place" };
+  if (chart[place] >= PLACE_VALUE_MAX_PER_PLACE)
+    return { ok: false, reason: "full" };
+  return { ok: true, chart: { ...chart, [place]: chart[place] + 1 } };
+}
+function placeValueRemoveDisk(chart, place) {
+  if (!(place in chart) || chart[place] === 0)
+    return { ok: false, reason: "empty" };
+  return { ok: true, chart: { ...chart, [place]: chart[place] - 1 } };
+}
+function placeValueChartValue(chart) {
+  return Object.entries(chart).reduce((sum, [place, count]) => sum + count * 10 ** (Number(place) + 3), 0);
+}
+function placeValueBuiltRight(chart, target) {
+  return placeValueChartValue(chart) === target;
+}
+function record2(value, path, fail) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    fail(path, "Expected an object");
+  return value;
+}
+function only2(value, allowed, path, fail) {
+  for (const key of Object.keys(value))
+    if (!allowed.includes(key))
+      fail(`${path}/${key}`, `Unknown place-value chart field '${key}'`);
+}
+function wholeNumber2(raw, path, low, high, fail, what) {
+  if (typeof raw !== "number" || !Number.isInteger(raw) || raw < low || raw > high)
+    fail(path, `${what} is a whole number from ${low} to ${high}`);
+  return raw;
+}
+function placeValueLanguage(raw) {
+  return raw?.language === "zh-CN" ? "zh-CN" : "en-US";
+}
+function placeValuePeriodTops(language = "en-US") {
+  return [...new Set(Array.from({ length: PLACE_VALUE_MAX_PLACE + 1 }, (_, place) => placeValuePeriodTop(place, language)))];
+}
+function validatePlaceValueChartContent(raw, path, fail, options = {}) {
+  const content = record2(raw, path, fail);
+  only2(content, ["language", "mode", "given", "top_place", "decimals", "target", "places", "bindings"], path, fail);
+  if (content.language !== void 0 && !PLACE_VALUE_CHART_LANGUAGES.includes(content.language)) {
+    fail(`${path}/language`, `A chart speaks ${PLACE_VALUE_CHART_LANGUAGES.join(" or ")}`);
+  }
+  const language = placeValueLanguage(content);
+  const mode = content.mode;
+  if (!PLACE_VALUE_CHART_MODES.includes(mode))
+    fail(`${path}/mode`, "A chart's mode is 'build' or 'apart'");
+  const given = content.given;
+  if (mode === "build" && !PLACE_VALUE_BUILD_GIVENS.includes(given)) {
+    fail(`${path}/given`, `A build task gives ${PLACE_VALUE_BUILD_GIVENS.join(", ")}`);
+  }
+  if (mode === "apart" && given !== "numeral")
+    fail(`${path}/given`, "A pull-apart task gives the numeral");
+  const tops = placeValuePeriodTops(language);
+  const top = wholeNumber2(content.top_place, `${path}/top_place`, 0, PLACE_VALUE_MAX_PLACE, fail, "The top place");
+  if (!tops.includes(top))
+    fail(`${path}/top_place`, `A ${language} chart shows whole periods: its top place is ${tops.join(", ")}`);
+  if (typeof content.decimals !== "boolean")
+    fail(`${path}/decimals`, "decimals is true or false");
+  const columns = placeValueColumns(top, content.decimals);
+  const target = wholeNumber2(content.target, `${path}/target`, 1, PLACE_VALUE_MAX_VALUE, fail, "The target (in thousandths)");
+  if (placeValueTopPlace(target) > top)
+    fail(`${path}/target`, `The target ${placeValueNumeral(target)} has a place above the chart's columns`);
+  if (placeValueHasFraction(target) && !content.decimals)
+    fail(`${path}/target`, `The target ${placeValueNumeral(target)} has a fraction part: the chart needs decimals`);
+  if (!Array.isArray(content.places) || content.places.length !== columns.length) {
+    fail(`${path}/places`, `A chart of these columns lists ${columns.length} places, highest first`);
+  }
+  for (const [i, item] of content.places.entries()) {
+    const at = `${path}/places/${i}`;
+    const place = record2(item, at, fail);
+    only2(place, ["as", "place", "count", "pulled"], at, fail);
+    const expected = columns[i];
+    if (place.place !== expected)
+      fail(`${at}/place`, `Place ${i + 1} is ${expected} (${placeValueColumnName(expected)}): places are listed highest first`);
+    if (place.as !== PLACE_VALUE_PLACE_ALIASES[expected])
+      fail(`${at}/as`, `Place ${expected} is '${PLACE_VALUE_PLACE_ALIASES[expected]}'`);
+    const name = placeValueColumnName(expected).toLowerCase();
+    const count = wholeNumber2(place.count, `${at}/count`, 0, PLACE_VALUE_MAX_PER_PLACE, fail, `The count of ${name}`);
+    if (mode === "build") {
+      if (place.pulled !== void 0)
+        fail(`${at}/pulled`, "A build task pulls nothing apart");
+      continue;
+    }
+    if (place.pulled === void 0)
+      fail(`${at}/pulled`, "A pull-apart task states how many of each place are pulled out");
+    const pulled = wholeNumber2(place.pulled, `${at}/pulled`, 0, PLACE_VALUE_MAX_PER_PLACE, fail, `The pulled ${name}`);
+    if (!options.boundValues && count + pulled !== placeValueDigitAt(target, expected)) {
+      fail(`${at}`, `The ${name} on the chart and pulled out make ${count + pulled}, not the target's digit ${placeValueDigitAt(target, expected)}`);
+    }
+  }
+  if (options.boundValues)
+    return;
+  if (placeValueTaskFault(target, given) === "one_place") {
+    fail(`${path}/target`, `${placeValueNumeral(target)} has one non-zero place: given as ${given === "numeral" ? "a numeral to pull apart" : "an expanded form"}, it shows its own answer`);
+  }
+  if (mode === "build" && content.places.reduce((sum, item) => sum + item.count * 10 ** (item.place + 3), 0) === target) {
+    fail(`${path}/places`, `The chart already holds ${placeValueNumeral(target)}: a build task starts before the number is built`);
+  }
+}
+function placeValueDrawnCount(count) {
+  if (typeof count !== "number" || !Number.isFinite(count))
+    return 0;
+  return Math.min(PLACE_VALUE_MAX_PER_PLACE, Math.max(0, Math.floor(count + 1e-9)));
+}
+function placeValueChartState(raw) {
+  const content = raw ?? {};
+  const top = typeof content.top_place === "number" && Number.isInteger(content.top_place) ? Math.min(PLACE_VALUE_MAX_PLACE, Math.max(0, content.top_place)) : 0;
+  const columns = placeValueColumns(top, content.decimals === true);
+  const places = Array.isArray(content.places) ? content.places : [];
+  const find = (place) => places.find((item) => item?.place === place);
+  const target = typeof content.target === "number" && Number.isFinite(content.target) ? Math.max(0, Math.round(content.target)) : 0;
+  return {
+    mode: content.mode === "apart" ? "apart" : "build",
+    columns,
+    counts: columns.map((place) => placeValueDrawnCount(find(place)?.count)),
+    pulled: columns.map((place) => placeValueDrawnCount(find(place)?.pulled)),
+    target
+  };
+}
+var disksOf = (state) => Object.fromEntries(state.columns.map((place, i) => [place, state.counts[i]]));
+function applyPlaceValueTap(state, tap) {
+  const index = state.columns.indexOf(tap.place);
+  if (index < 0)
+    return { ok: false, reason: "no_place" };
+  if (tap.tap === "take_out") {
+    if (state.mode !== "apart")
+      return { ok: false, reason: "wrong_mode" };
+    if (state.counts[index] === 0)
+      return { ok: false, reason: "empty" };
+    return {
+      ok: true,
+      state: { ...state, counts: state.counts.map((count, i) => i === index ? 0 : count), pulled: state.pulled.map((pulled, i) => i === index ? pulled + state.counts[index] : pulled) }
+    };
+  }
+  if (tap.tap !== "add" && tap.tap !== "remove")
+    return { ok: false, reason: "wrong_mode" };
+  if (state.mode !== "build")
+    return { ok: false, reason: "wrong_mode" };
+  const result = tap.tap === "add" ? placeValueAddDisk(disksOf(state), tap.place) : placeValueRemoveDisk(disksOf(state), tap.place);
+  if (!result.ok)
+    return { ok: false, reason: result.reason };
+  return { ok: true, state: { ...state, counts: state.columns.map((place) => result.chart[place]) } };
+}
+function placeValueChanges(before, after) {
+  const changes = [];
+  after.columns.forEach((place, index) => {
+    if (after.counts[index] !== before.counts[index])
+      changes.push({ index, place, field: "count", before: before.counts[index], after: after.counts[index] });
+    if (after.pulled[index] !== before.pulled[index])
+      changes.push({ index, place, field: "pulled", before: before.pulled[index], after: after.pulled[index] });
+  });
+  return changes;
+}
+function placeValueFacts(state) {
+  const value = placeValueChartValue(disksOf(state));
+  return {
+    value,
+    built: state.mode === "build" && placeValueBuiltRight(disksOf(state), state.target),
+    pulled_all: state.mode === "apart" && state.counts.every((count) => count === 0)
+  };
+}
+var PLACE_VALUE_WORDS = {
+  "en-US": {
+    chartLabel: "A place-value chart",
+    point: "Decimal point",
+    add: "+",
+    takeOut: "Take out",
+    addLabel: (name) => `Put a disk in the ${name.toLowerCase()}`,
+    removeLabel: (name) => `Take a disk from the ${name.toLowerCase()}`,
+    takeOutLabel: (name) => `Take out the ${name.toLowerCase()}`,
+    refusal: {
+      full: "This place holds nine at most. Ten of them make one of the next place.",
+      empty: "There is no disk in this place."
+    },
+    other: "That can't be done here.",
+    /** How to work the chart, per task (fixed text the host shows with a task on the card). */
+    howTo: {
+      build: "Tap + under a place to put a disk there. Tap a disk to take it away. Tap \u201CI'm done\u201D when the chart shows the number.",
+      apart: "Tap \u201CTake out\u201D under a place to pull its disks out. When every place is out, write what each part is worth."
+    }
+  },
+  "zh-CN": {
+    chartLabel: "\u6570\u4F4D\u8868",
+    point: "\u5C0F\u6570\u70B9",
+    add: "+",
+    takeOut: "\u62FF\u51FA\u6765",
+    addLabel: (name) => `\u5728${name}\u4E0A\u653E\u4E00\u4E2A`,
+    removeLabel: (name) => `\u4ECE${name}\u4E0A\u62FF\u8D70\u4E00\u4E2A`,
+    takeOutLabel: (name) => `\u628A${name}\u7684\u90FD\u62FF\u51FA\u6765`,
+    refusal: {
+      full: "\u8FD9\u4E00\u4F4D\u6700\u591A\u653E\u4E5D\u4E2A\u3002\u5341\u4E2A\u5C31\u662F\u5DE6\u8FB9\u4E00\u4F4D\u7684\u4E00\u4E2A\u3002",
+      empty: "\u8FD9\u4E00\u4F4D\u6CA1\u6709\u5706\u7247\u3002"
+    },
+    other: "\u8FD9\u91CC\u4E0D\u80FD\u8FD9\u6837\u505A\u3002",
+    howTo: {
+      build: "\u70B9\u6570\u4F4D\u4E0B\u9762\u7684\u201C+\u201D\uFF0C\u5728\u8FD9\u4E00\u4F4D\u653E\u4E00\u4E2A\uFF1B\u70B9\u4E00\u4E2A\u5C31\u62FF\u8D70\u5B83\u3002\u6446\u597D\u4E86\u70B9\u201C\u6211\u505A\u5B8C\u4E86\u201D\u3002",
+      apart: "\u70B9\u6570\u4F4D\u4E0B\u9762\u7684\u201C\u62FF\u51FA\u6765\u201D\uFF0C\u628A\u8FD9\u4E00\u4F4D\u7684\u90FD\u62FF\u51FA\u6765\u3002\u6BCF\u4E00\u4F4D\u90FD\u62FF\u51FA\u6765\u4EE5\u540E\uFF0C\u5199\u51FA\u6BCF\u4E00\u90E8\u5206\u662F\u591A\u5C11\u3002"
+    }
+  }
+};
+function placeValueHowTo(raw) {
+  const words2 = PLACE_VALUE_WORDS[placeValueLanguage(raw)];
+  return words2.howTo[raw?.mode === "apart" ? "apart" : "build"];
+}
+function placeValueRefusalText(reason, language = "en-US") {
+  const words2 = PLACE_VALUE_WORDS[language] ?? PLACE_VALUE_WORDS["en-US"];
+  return words2.refusal[reason] ?? words2.other;
+}
+var DISK = 30;
+var GAP = 4;
+var PAD = 5;
+var COLUMN = 2 * DISK + GAP + 2 * PAD;
+var ROWS = Math.ceil(PLACE_VALUE_MAX_PER_PLACE / 2);
+var BOX = 2 * PAD + ROWS * DISK + (ROWS - 1) * GAP;
+
+// node_modules/octos-lesson-language/dist/packages/core/src/cards.js
+var placeName = (content, place) => {
+  const places = content?.places;
+  const item = Array.isArray(places) ? places[place] : void 0;
+  return item?.id ?? item?.as;
+};
+var boundTargets = (content) => new Map((content.bindings ?? []).map((binding) => [binding.target, binding.expression.trim()]));
+var BASE_TEN_TRADE_CARD = Object.freeze({
+  kind: BASE_TEN_TRADE_KIND,
+  taps: ["gather", "ungather", "make", "break"],
+  places: BASE_TEN_TRADE_PLACES,
+  validateContent: (raw, path, fail) => validateBaseTenTradeContent(raw, path, fail),
+  state: baseTenMat,
+  apply: (mat, tap) => {
+    const result = applyBaseTenTap(mat, tap);
+    return result.ok ? { ok: true, state: result.mat } : result;
+  },
+  refusalText: (reason, place, language) => baseTenRefusalText(reason, place, language),
+  language: baseTenLanguage,
+  changes: baseTenChanges,
+  tapFields(content) {
+    const columns = content?.columns === 3 ? 3 : 2;
+    const fields = [];
+    for (let p = 0; p < columns; p += 1) {
+      fields.push({ place: p, field: "count", min: 0, max: columns === 2 && p === 1 ? 9 : BASE_TEN_TRADE_LIMITS.drawn[p] });
+      if (hasTray(columns, p))
+        fields.push({ place: p, field: "tray", min: 0, max: BASE_TEN_TRADE_LIMITS.tray });
+    }
+    return fields;
+  },
+  fieldTarget: (content, place, field) => `${placeName(content, place)}.${field}`,
+  contentAt(content, value) {
+    const at = structuredClone(content);
+    delete at.bindings;
+    for (const [p, place] of (Array.isArray(at.places) ? at.places : []).entries()) {
+      for (const field of ["count", "tray"]) {
+        const v = value(`${placeName(content, p)}.${field}`);
+        if (v !== void 0)
+          place[field] = v;
+      }
+    }
+    return at;
+  },
+  facts: Object.freeze({
+    /** Every place below the highest is under ten. */
+    no_trade_left: {
+      keys: [],
+      read: (_completion, mat) => {
+        const actual = baseTenFacts(mat).no_trade_left ? 1 : 0;
+        return { actual, target: 1, succeeded: actual === 1 };
+      },
+      /** Trading never changes the value: the practice pile's digits, each tray empty. */
+      donePile({ content, startValue }) {
+        const places = Array.isArray(content.places) ? content.places : [];
+        const bound = boundTargets(content);
+        const columns = places.length;
+        const value = places.reduce((sum, place, p) => sum + startValue(bound.get(`${place.id}.count`)) * 10 ** p, 0);
+        const result = {};
+        places.forEach((place, p) => {
+          const count = bound.get(`${place.id}.count`);
+          if (count)
+            result[count] = p === columns - 1 ? Math.floor(value / 10 ** p) : Math.floor(value / 10 ** p) % 10;
+          const tray = bound.get(`${place.id}.tray`);
+          if (tray)
+            result[tray] = 0;
+        });
+        return result;
+      }
+    },
+    /** The place `at` holds exactly `value`, its tray included (amendment 5). */
+    count: {
+      keys: ["at", "value"],
+      /**
+       * A count the learner makes by tapping: a place the card has, a whole number, not met by the practice
+       * pile, and reached by an exact search over the card's tap rules from that pile.
+       */
+      validate(completion, pile, fail) {
+        const place = BASE_TEN_TRADE_PLACES.indexOf(completion.at);
+        if (place < 0 || place >= pile.columns) {
+          fail("at", `A count is of a place the card has: ${BASE_TEN_TRADE_PLACES.slice(0, pile.columns).join(", ")}`);
+        }
+        const value = completion.value;
+        if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+          fail("value", "A count is a whole number");
+        }
+        if (pile.counts[place] === value) {
+          fail("value", `The practice pile already has ${value} ${completion.at}`);
+        }
+        const reached = [...new Set(baseTenTapReachable(pile).map((mat) => mat.counts[place]))].sort((a, b) => a - b);
+        if (!reached.includes(value)) {
+          fail("value", `Tapping this pile makes ${reached.join(" or ")} ${completion.at}, never ${value}`);
+        }
+      },
+      read: (completion, mat) => {
+        const actual = mat.counts[BASE_TEN_TRADE_PLACES.indexOf(completion.at)] ?? 0;
+        const target = completion.value;
+        return { actual, target, succeeded: actual === target };
+      },
+      /**
+       * The learner's own pile, as logged when they said done, laid tidy (each tray's units loose in their
+       * place, so no count changes). Without a usable logged pile: the pile with that count and every tray
+       * empty nearest the practice pile.
+       */
+      donePile({ content, completion, startValue, submitted }) {
+        const places = Array.isArray(content.places) ? content.places : [];
+        const bound = boundTargets(content);
+        const countAlias = bound.get(`${places[BASE_TEN_TRADE_PLACES.indexOf(completion.at)]?.id}.count`);
+        const usable = submitted && countAlias && submitted[countAlias] === completion.value && [...bound.values()].every((alias) => submitted[alias] !== void 0);
+        if (usable && submitted) {
+          const own = {};
+          for (const place of places) {
+            const count = bound.get(`${place.id}.count`);
+            if (count)
+              own[count] = submitted[count];
+            const tray = bound.get(`${place.id}.tray`);
+            if (tray)
+              own[tray] = 0;
+          }
+          return own;
+        }
+        const start = baseTenMat({ ...content, places: places.map((place) => ({ ...place, count: startValue(bound.get(`${place.id}.count`)), tray: startValue(bound.get(`${place.id}.tray`)) })) });
+        const p = BASE_TEN_TRADE_PLACES.indexOf(completion.at);
+        const distance = (mat) => mat.counts.reduce((sum, count, q) => sum + Math.abs(count - start.counts[q]), 0);
+        const made = baseTenTapReachable(start).filter((mat) => mat.counts[p] === completion.value && mat.trays.every((tray) => tray === 0)).sort((a, b) => distance(a) - distance(b))[0];
+        if (!made)
+          return void 0;
+        const result = {};
+        places.forEach((place, q) => {
+          const count = bound.get(`${place.id}.count`);
+          if (count)
+            result[count] = made.counts[q];
+          const tray = bound.get(`${place.id}.tray`);
+          if (tray)
+            result[tray] = 0;
+        });
+        return result;
+      }
+    }
+  })
+});
+var chartPlace = (content, place) => {
+  const places = content?.places;
+  return (Array.isArray(places) ? places : []).find((item) => item?.place === place);
+};
+var chartFieldTarget = (content, index, field) => {
+  const place = placeValueTapPlace(index);
+  const item = chartPlace(content, place);
+  return `${item?.id ?? item?.as ?? PLACE_VALUE_PLACE_ALIASES[place]}.${field}`;
+};
+var chartContentAtPile = (content, bound, pile) => PLACE_VALUE_CHART_CARD.contentAt(content, (target) => {
+  const alias = bound.get(target);
+  return alias === void 0 ? void 0 : pile[alias];
+});
+function chartDonePile(fact) {
+  return ({ content, startValue, submitted }) => {
+    const bound = boundTargets(content);
+    const aliases = [...bound.values()];
+    const targetAlias = bound.get("target");
+    const target = targetAlias ? startValue(targetAlias) : Number(content.target);
+    const places = Array.isArray(content.places) ? content.places : [];
+    const fits = (pile) => {
+      if (targetAlias && pile[targetAlias] !== target)
+        return false;
+      return places.every((item) => {
+        const name = item.id ?? item.as;
+        const count = bound.get(`${name}.count`);
+        const pulled = bound.get(`${name}.pulled`);
+        const values = [count, pulled].filter((alias) => alias !== void 0).map((alias) => pile[alias]);
+        if (!values.every((value) => Number.isInteger(value) && value >= 0 && value <= 9))
+          return false;
+        return pulled === void 0 || count !== void 0 && pile[count] + pile[pulled] === placeValueDigitAt(target, item.place);
+      });
+    };
+    if (submitted && aliases.every((alias) => submitted[alias] !== void 0) && fits(submitted) && placeValueFacts(placeValueChartState(chartContentAtPile(content, bound, submitted)))[fact]) {
+      return Object.fromEntries(aliases.map((alias) => [alias, submitted[alias]]));
+    }
+    const result = {};
+    if (targetAlias)
+      result[targetAlias] = target;
+    for (const item of places) {
+      const name = item.id ?? item.as;
+      const digit = placeValueDigitAt(target, item.place);
+      const count = bound.get(`${name}.count`);
+      if (count)
+        result[count] = fact === "built" ? digit : 0;
+      const pulled = bound.get(`${name}.pulled`);
+      if (pulled)
+        result[pulled] = fact === "built" ? 0 : digit;
+    }
+    return result;
+  };
+}
+var chartFact = (fact, mode) => ({
+  keys: [],
+  validate(_completion, state, fail) {
+    if (state.mode !== mode)
+      fail("fact", `'${fact}' is read on a chart whose mode is '${mode}'; this chart's is '${state.mode}'`);
+  },
+  read: (_completion, state) => {
+    const actual = placeValueFacts(state)[fact] ? 1 : 0;
+    return { actual, target: 1, succeeded: actual === 1 };
+  },
+  donePile: chartDonePile(fact)
+});
+var PLACE_VALUE_CHART_CARD = Object.freeze({
+  kind: PLACE_VALUE_CHART_KIND,
+  taps: ["add", "remove", "take_out"],
+  places: PLACE_VALUE_TAP_PLACES,
+  cardFields: ["target"],
+  validateContent: (raw, path, fail) => validatePlaceValueChartContent(raw, path, fail),
+  state: placeValueChartState,
+  apply: (state, tap) => applyPlaceValueTap(state, { tap: tap.kind, place: placeValueTapPlace(tap.place) }),
+  refusalText: (reason, _place, language) => placeValueRefusalText(reason, language === "zh-CN" ? "zh-CN" : "en-US"),
+  language: placeValueLanguage,
+  changes: (before, after) => placeValueChanges(before, after).map(({ place, field, before: from, after: to }) => ({ place: placeValueTapIndex(place), field, before: from, after: to })),
+  tapFields(content) {
+    const state = placeValueChartState(content);
+    return state.columns.flatMap((place) => [
+      { place: placeValueTapIndex(place), field: "count", min: 0, max: 9 },
+      ...state.mode === "apart" ? [{ place: placeValueTapIndex(place), field: "pulled", min: 0, max: 9 }] : []
+    ]);
+  },
+  fieldTarget: chartFieldTarget,
+  contentAt(content, value) {
+    const at = structuredClone(content);
+    delete at.bindings;
+    for (const item of Array.isArray(at.places) ? at.places : []) {
+      for (const field of at.mode === "apart" ? ["count", "pulled"] : ["count"]) {
+        const v = value(`${item.id ?? item.as}.${field}`);
+        if (v !== void 0)
+          item[field] = v;
+      }
+    }
+    const target = value("target");
+    if (target !== void 0)
+      at.target = target;
+    return at;
+  },
+  /** A chart to build starts empty; one to pull apart starts whole, nothing pulled out. */
+  validateStart(state, fail) {
+    state.columns.forEach((place, i) => {
+      const digit = placeValueDigitAt(state.target, place);
+      if (state.mode === "build" && state.counts[i] !== 0)
+        fail(`A chart to build starts empty; it has ${state.counts[i]} in place ${place}`);
+      if (state.mode === "apart" && (state.counts[i] !== digit || state.pulled[i] !== 0)) {
+        fail(`A chart to pull apart starts whole, nothing pulled out; place ${place} has ${state.counts[i]} on the chart and ${state.pulled[i]} pulled out, of ${digit}`);
+      }
+    });
+  },
+  facts: Object.freeze({
+    /** Build: the chart holds exactly the number (each place under ten, so its digits). */
+    built: chartFact("built", "build"),
+    /** Pull apart: every place has been taken out. */
+    pulled_all: chartFact("pulled_all", "apart")
+  })
+});
+var TAP_CARD_KINDS = Object.freeze({
+  [BASE_TEN_TRADE_KIND]: BASE_TEN_TRADE_CARD,
+  [PLACE_VALUE_CHART_KIND]: PLACE_VALUE_CHART_CARD
+});
+var TAP_CARD_KIND_NAMES = Object.freeze(Object.keys(TAP_CARD_KINDS));
 
 // node_modules/octos-lesson-language/dist/packages/core/src/capabilities.js
 var OLL_NODE_KINDS = [
@@ -8593,8 +9431,13 @@ var OLL_BINDING_CAPABILITIES = {
   },
   number_line: NUMBER_LINE_BINDINGS,
   fraction_model: FRACTION_MODEL_BINDINGS,
-  base_ten_trade: BASE_TEN_TRADE_BINDINGS
+  base_ten_trade: BASE_TEN_TRADE_BINDINGS,
+  place_value_chart: PLACE_VALUE_CHART_BINDINGS
 };
+var OLL_CARD_BINDING_CAPABILITIES = Object.freeze({
+  place_value_chart: PLACE_VALUE_CHART_CARD_BINDINGS
+});
+var OLL_CANONICAL_CARD_BINDING_CAPABILITIES = Object.freeze([...new Set(Object.values(OLL_CARD_BINDING_CAPABILITIES).flat())]);
 var EMPTY_BINDING_COLLECTIONS = Object.freeze({});
 function collectBindingCapabilities() {
   const collected = {};
@@ -8667,7 +9510,8 @@ var MATH_PLUGIN_MANIFEST = {
   // piece of each part; the program writes a fraction's other form beside its label (0021 amendment 2).
   // 0.5.0: trading tens and ones, the `base_ten_trade` card (decision 0023). 0.6.0: the mat speaks Chinese
   // (0023 amendment 3). 0.7.0: a slider on a place's count, each stop one trade (0023 amendment 4).
-  version: "0.7.0",
+  // 0.8.0: the place-value chart, the `place_value_chart` card (decision 0025).
+  version: "0.8.0",
   // Every subject plugin depends on the shared tools (decision 0012).
   depends: { shared: "0.1.0" },
   ollCore: ">=0.10.0"
@@ -8702,6 +9546,11 @@ var OLL_EXECUTION_FEATURES = Object.freeze({
   "student-tasks:card_fact": "0.14.0",
   // Decision 0023 amendment 5: a count the learner taps the card to; an older player knows only no_trade_left.
   "student-tasks:card_fact:count": "0.15.0",
+  // Decision 0025: a place-value chart is built, or pulled apart; an older player knows only the mat's facts.
+  "student-tasks:card_fact:built": "0.16.0",
+  "student-tasks:card_fact:pulled_all": "0.16.0",
+  // Decision 0025: a card-level field bound by its bare name (the chart's number); an older player cannot place it.
+  "value-bindings:card-field": "0.16.0",
   // Decision 0023 amendment 1: a row of blanks answered in one go; an older player has no such question.
   "student-tasks:numeric_row": "0.14.0",
   // The lesson taps a card by the card's rules (a demonstration); an older player does not know the action.
@@ -8740,7 +9589,7 @@ var looksLikeNumberLine = (content) => typeof content.range === "object" && cont
 var FIRST_PARTY_EXTENSIONS = Object.freeze([
   {
     plugin: { id: MATH_PLUGIN_MANIFEST.id, version: MATH_PLUGIN_MANIFEST.version },
-    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION, [FRACTION_MODEL_FEATURE]: FRACTION_MODEL_PLUGIN_VERSION, [BASE_TEN_TRADE_FEATURE]: BASE_TEN_TRADE_PLUGIN_VERSION, [BASE_TEN_TRADE_LANGUAGE_FEATURE]: BASE_TEN_TRADE_LANGUAGE_VERSION, [BASE_TEN_TRADE_SLIDER_FEATURE]: BASE_TEN_TRADE_SLIDER_VERSION },
+    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION, [FRACTION_MODEL_FEATURE]: FRACTION_MODEL_PLUGIN_VERSION, [BASE_TEN_TRADE_FEATURE]: BASE_TEN_TRADE_PLUGIN_VERSION, [BASE_TEN_TRADE_LANGUAGE_FEATURE]: BASE_TEN_TRADE_LANGUAGE_VERSION, [BASE_TEN_TRADE_SLIDER_FEATURE]: BASE_TEN_TRADE_SLIDER_VERSION, [PLACE_VALUE_CHART_FEATURE]: PLACE_VALUE_CHART_PLUGIN_VERSION },
     detect(content, kind, use, lesson) {
       if (kind === NUMBER_LINE_KIND || kind === void 0 && looksLikeNumberLine(content)) {
         use(NUMBER_LINE_FEATURE);
@@ -8756,11 +9605,13 @@ var FIRST_PARTY_EXTENSIONS = Object.freeze([
         if (lesson?.variables.some((variable) => variable.control?.kind === "slider" && baseTenSliderPlace(content, variable.as) !== void 0))
           use(BASE_TEN_TRADE_SLIDER_FEATURE);
       }
+      if (kind === PLACE_VALUE_CHART_KIND)
+        use(PLACE_VALUE_CHART_FEATURE);
     }
   }
 ]);
 var FIRST_PARTY_FEATURES = Object.freeze(Object.assign({}, ...FIRST_PARTY_EXTENSIONS.map((extension) => extension.features)));
-var PLUGIN_NODE_FEATURES = Object.freeze({ [NUMBER_LINE_KIND]: NUMBER_LINE_FEATURE, [FRACTION_MODEL_KIND]: FRACTION_MODEL_FEATURE, [BASE_TEN_TRADE_KIND]: BASE_TEN_TRADE_FEATURE });
+var PLUGIN_NODE_FEATURES = Object.freeze({ [NUMBER_LINE_KIND]: NUMBER_LINE_FEATURE, [FRACTION_MODEL_KIND]: FRACTION_MODEL_FEATURE, [BASE_TEN_TRADE_KIND]: BASE_TEN_TRADE_FEATURE, [PLACE_VALUE_CHART_KIND]: PLACE_VALUE_CHART_FEATURE });
 
 // node_modules/octos-lesson-language/dist/packages/core/src/index.js
 var ajv = new import__.Ajv2020({ allErrors: true, strict: false });
@@ -8772,6 +9623,7 @@ var SCENE3D_PRESET_VIEWS = {
   top: { yaw: 0, pitch: Math.PI / 2 },
   isometric: { yaw: 0.72, pitch: 0.55 }
 };
+var BINDABLE_NODE_KINDS = ["geometry", "plot", "scene3d", NUMBER_LINE_KIND, FRACTION_MODEL_KIND, ...TAP_CARD_KIND_NAMES];
 
 // node_modules/octos-lesson-language/dist/packages/plugin-math/src/solids.js
 var POLYHEDRON_REACH = { tetrahedron: 1 / Math.sqrt(3), octahedron: 1, dodecahedron: 0.7947, icosahedron: 0.8507 };
@@ -8896,6 +9748,12 @@ function buildImplicitSurfaceObject(input) {
 
 // node_modules/octos-lesson-language/dist/packages/plugin-math/src/number-line-form.js
 var NUMBER_LINE_FORM_LIMITS = { span: 40, subdivisions: NUMBER_LINE_LIMITS.subdivisions, moves: 3 };
+
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/card-how-to.js
+var HOW_TO = Object.freeze({
+  [BASE_TEN_TRADE_KIND]: baseTenHowTo,
+  [PLACE_VALUE_CHART_KIND]: placeValueHowTo
+});
 
 // src/selection-plot-routing.ts
 var MATH_FUNCTION_NAMES = /* @__PURE__ */ new Set([
@@ -9082,7 +9940,7 @@ function parseTopicAnalysisInput(raw) {
   }
   return { job_id: value.job_id, capability: value.capability, input };
 }
-var words = (text2) => text2.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+var words = (text3) => text3.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
 function loadTopicCatalog(directory = resolve(dirname(fileURLToPath(import.meta.url)), "data", "topic-catalog")) {
   const bytes = readFileSync(resolve(directory, "catalog.json"));
   const metadata = JSON.parse(readFileSync(resolve(directory, "metadata.json"), "utf8"));
@@ -9144,11 +10002,11 @@ var RESULT_RESPONSE_SCHEMA = {
   }
 };
 function parseModelJson(raw) {
-  const text2 = raw.trim();
-  const block = /^```(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n```$/i.exec(text2);
+  const text3 = raw.trim();
+  const block = /^```(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n```$/i.exec(text3);
   let value;
   try {
-    value = JSON.parse(block ? block[1] : text2);
+    value = JSON.parse(block ? block[1] : text3);
   } catch {
     throw new TopicAnalysisError("unparseable-analysis-result", "Model reply is not JSON");
   }
@@ -9273,10 +10131,10 @@ function completedObjectText(source, propertyName) {
   return void 0;
 }
 function completedJsonObjectProperty(source, propertyName) {
-  const text2 = completedObjectText(source, propertyName);
-  if (text2 === void 0) return void 0;
+  const text3 = completedObjectText(source, propertyName);
+  if (text3 === void 0) return void 0;
   try {
-    return JSON.parse(text2);
+    return JSON.parse(text3);
   } catch {
     return void 0;
   }
@@ -9291,7 +10149,7 @@ function object(value, what) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${what} must be an object`);
   return value;
 }
-function text(value, what, max = 4e3) {
+function text2(value, what, max = 4e3) {
   if (typeof value !== "string") throw new Error(`${what} must be a string`);
   const trimmed = value.trim();
   if (trimmed.length > max) throw new Error(`${what} is too long`);
@@ -9312,10 +10170,10 @@ function parseLesson(value) {
   if (!TOPIC_TYPES.includes(topicType)) throw new Error("lesson.topic_type is invalid");
   if (!Array.isArray(lesson.goals)) throw new Error("lesson.goals must be a list");
   return {
-    language: text(lesson.language, "lesson.language", 32) || "en-US",
-    topic: text(lesson.topic, "lesson.topic", 200),
+    language: text2(lesson.language, "lesson.language", 32) || "en-US",
+    topic: text2(lesson.topic, "lesson.topic", 200),
     topic_type: topicType,
-    goals: lesson.goals.slice(0, 8).map((goal, index) => text(goal, `lesson.goals[${index}]`, 300))
+    goals: lesson.goals.slice(0, 8).map((goal, index) => text2(goal, `lesson.goals[${index}]`, 300))
   };
 }
 function parseCards(value) {
@@ -9324,32 +10182,32 @@ function parseCards(value) {
     const card = object(entry, `cards[${index}]`);
     if (!Array.isArray(card.board)) throw new Error(`cards[${index}].board must be a list`);
     return {
-      key: text(card.key, `cards[${index}].key`, 64),
-      title: text(card.title, `cards[${index}].title`, 200),
-      said: text(card.said, `cards[${index}].said`, 2e3),
-      board: card.board.slice(0, 24).map((item, position) => text(item, `cards[${index}].board[${position}]`, 300))
+      key: text2(card.key, `cards[${index}].key`, 64),
+      title: text2(card.title, `cards[${index}].title`, 200),
+      said: text2(card.said, `cards[${index}].said`, 2e3),
+      board: card.board.slice(0, 24).map((item, position) => text2(item, `cards[${index}].board[${position}]`, 300))
     };
   });
 }
 function parseOctoQuestionInput(raw) {
   const input = parseJson(raw, "Octo question input");
   const cards = parseCards(input.cards);
-  const cardKey = text(input.card_key, "card_key", 64);
+  const cardKey = text2(input.card_key, "card_key", 64);
   if (!cards.some((card) => card.key === cardKey)) throw new Error("card_key must name one of the cards");
-  return { turn_id: text(input.turn_id, "turn_id", 128), lesson: parseLesson(input.lesson), cards, card_key: cardKey };
+  return { turn_id: text2(input.turn_id, "turn_id", 128), lesson: parseLesson(input.lesson), cards, card_key: cardKey };
 }
 function parseInkToMathInput(raw) {
   const input = parseJson(raw, "Ink to math input");
   const lesson = object(input.lesson, "lesson");
   return {
-    turn_id: text(input.turn_id, "turn_id", 128),
-    lesson: { language: text(lesson.language, "lesson.language", 32) || "en-US" },
-    ink_media: text(input.ink_media, "ink_media", 512)
+    turn_id: text2(input.turn_id, "turn_id", 128),
+    lesson: { language: text2(lesson.language, "lesson.language", 32) || "en-US" },
+    ink_media: text2(input.ink_media, "ink_media", 512)
   };
 }
 function parseReviewInput(raw) {
   const input = parseJson(raw, "Review input");
-  return { turn_id: text(input.turn_id, "turn_id", 128), lesson: parseLesson(input.lesson), cards: parseCards(input.cards) };
+  return { turn_id: text2(input.turn_id, "turn_id", 128), lesson: parseLesson(input.lesson), cards: parseCards(input.cards) };
 }
 var OCTO_QUESTION_SCHEMA = {
   type: "object",
@@ -9448,7 +10306,7 @@ function reviewPrompts(input) {
 }
 var LINK = /https?:\/\/|www\./i;
 function safeSentence(value, what, max) {
-  const sentence = text(value, what, max);
+  const sentence = text2(value, what, max);
   if (!sentence) throw new Error(`${what} is empty`);
   if (LINK.test(sentence)) throw new Error(`${what} contains a link`);
   return sentence;
@@ -9463,7 +10321,7 @@ function parseInkToMath(raw) {
   const confidence = value.confidence;
   if (confidence !== "high" && confidence !== "medium" && confidence !== "low") throw new Error("confidence is invalid");
   if (typeof value.readable !== "boolean") throw new Error("readable must be a boolean");
-  const latex = text(value.latex, "latex", 400);
+  const latex = text2(value.latex, "latex", 400);
   if (UNSAFE_LATEX.test(latex)) throw new Error("latex uses a command that is not allowed");
   if (value.readable && !latex) throw new Error("readable math needs latex");
   return { latex: value.readable ? latex : "", confidence: value.readable ? confidence : "low", readable: value.readable };
@@ -9481,7 +10339,7 @@ function parseReview(raw, input) {
     if (input.lesson.topic_type === "other" && (kind === "slip" || kind === "misconception")) {
       throw new Error(`cards[${index}] judges facts in a topic that is not math`);
     }
-    return { key: text(card.key, `cards[${index}].key`, 64), status, kind, message: safeSentence(card.message, `cards[${index}].message`, 400) };
+    return { key: text2(card.key, `cards[${index}].key`, 64), status, kind, message: safeSentence(card.message, `cards[${index}].message`, 400) };
   });
   const expected = input.cards.map((card) => card.key);
   if (reviews.map((review) => review.key).join("|") !== expected.join("|")) throw new Error("the review must cover every card in order");
@@ -9494,8 +10352,8 @@ function parsePersonalDetails(value, input) {
   const details = [];
   value.forEach((entry, index) => {
     const detail = object(entry, `personal_details[${index}]`);
-    const key = text(detail.key, `personal_details[${index}].key`, 64);
-    const quote = text(detail.quote, `personal_details[${index}].quote`, 200);
+    const key = text2(detail.key, `personal_details[${index}].key`, 64);
+    const quote = text2(detail.quote, `personal_details[${index}].quote`, 200);
     const kind = detail.kind;
     if (!DETAIL_KINDS.includes(kind)) throw new Error(`personal_details[${index}].kind is invalid`);
     if (!quote || !said.get(key)?.includes(quote.toLowerCase())) return;
@@ -10017,14 +10875,14 @@ function geminiResponseContent(payload, provider) {
       `${label} response was truncated at maxOutputTokens`
     );
   }
-  const text2 = candidate.content?.parts?.map((part) => typeof part.text === "string" ? part.text : "").join("").trim();
-  if (!text2) {
+  const text3 = candidate.content?.parts?.map((part) => typeof part.text === "string" ? part.text : "").join("").trim();
+  if (!text3) {
     throw new ToolExecutionError(
       providerErrorCode(provider, "RESPONSE_EMPTY"),
       `${label} response contains no JSON text (finishReason=${candidate.finishReason ?? "unknown"})`
     );
   }
-  return text2;
+  return text3;
 }
 function structuredModelRequestBody(client, request, thinkingLevel) {
   const userParts = [{ text: request.prompt }];
@@ -10539,7 +11397,7 @@ async function probeStructuredModelSchema(client, schema, options = {}) {
   const startedAt = Date.now();
   const provider = modelProvider(client);
   try {
-    const text2 = await callStructuredModel(client, {
+    const text3 = await callStructuredModel(client, {
       label: options.label ?? "lesson-plan-outline",
       turnId: options.turnId ?? `provider-schema-probe-${Date.now()}`,
       systemPrompt: "Return exactly one minimal JSON value that satisfies the supplied response schema.",
@@ -10547,7 +11405,7 @@ async function probeStructuredModelSchema(client, schema, options = {}) {
       responseSchema: schema,
       maxTokens: options.maxTokens ?? Math.min(client.maxTokens, 4096)
     });
-    JSON.parse(text2);
+    JSON.parse(text3);
     return {
       ok: true,
       provider,
@@ -10611,14 +11469,14 @@ async function readGeminiStructuredStream(response, startedAt, provider, onMiles
     const candidate = isRecord2(candidates[0]) ? candidates[0] : {};
     const candidateContent = isRecord2(candidate.content) ? candidate.content : {};
     const parts = Array.isArray(candidateContent.parts) ? candidateContent.parts : [];
-    const text2 = parts.map((part) => isRecord2(part) && typeof part.text === "string" ? part.text : "").join("");
-    if (text2) {
+    const text3 = parts.map((part) => isRecord2(part) && typeof part.text === "string" ? part.text : "").join("");
+    if (text3) {
       chunks += 1;
       if (firstChunkMs === void 0) {
         firstChunkMs = Date.now() - startedAt;
         onMilestone?.("first-chunk", firstChunkMs);
       }
-      content += text2;
+      content += text3;
       if (outlineCompletedMs === void 0 && completedJsonObjectProperty(content, "outline") !== void 0) {
         outlineCompletedMs = Date.now() - startedAt;
         onMilestone?.("outline-completed", outlineCompletedMs);
@@ -11321,7 +12179,7 @@ function parseSelectionModelResponse(raw, input) {
     throw new Error("interpretation_confidence is invalid");
   }
   const title = nonEmpty("title");
-  const text2 = nonEmpty("text");
+  const text3 = nonEmpty("text");
   const interpretationContent = reusableRecognition ? requireNonEmptyString(input.recognized_content, "recognized_content") : nonEmpty("interpretation_content");
   const items = Array.isArray(output.items) ? output.items.map((item, index) => requireNonEmptyString(item, `items[${index}]`)) : [];
   let response;
@@ -11384,7 +12242,7 @@ function parseSelectionModelResponse(raw, input) {
         kind: "plot",
         plot_kind: "explicit",
         title,
-        text: text2,
+        text: text3,
         expression: route.expression,
         x_range: viewport.x,
         y_range: viewport.y
@@ -11396,7 +12254,7 @@ function parseSelectionModelResponse(raw, input) {
         kind: "plot",
         plot_kind: "implicit",
         title,
-        text: text2,
+        text: text3,
         expression: route.expression,
         level: route.level,
         samples: 80,
@@ -11426,10 +12284,10 @@ function parseSelectionModelResponse(raw, input) {
     return {
       kind: "scene3d",
       title,
-      text: text2,
+      text: text3,
       content: {
         title,
-        fallback: text2,
+        fallback: text3,
         axes: true,
         camera: { yaw: 0.65, pitch: 0.45, zoom: 1 },
         objects: [object2]
@@ -11441,11 +12299,11 @@ function parseSelectionModelResponse(raw, input) {
       if (!boardWriting || !["check-and-suggest", "custom-question"].includes(input.tool_id)) {
         throw new Error("Client does not support board writing");
       }
-      const lines = text2.split(/\r?\n/u).map((line) => line.trim()).filter(Boolean);
-      if (!lines.length || lines.length > 8 || text2.length > 500 || lines.some((line) => line.length > 160 || /[\u0000-\u0008\u000b-\u001f\u007f]/u.test(line))) {
+      const lines = text3.split(/\r?\n/u).map((line) => line.trim()).filter(Boolean);
+      if (!lines.length || lines.length > 8 || text3.length > 500 || lines.some((line) => line.length > 160 || /[\u0000-\u0008\u000b-\u001f\u007f]/u.test(line))) {
         throw new Error("Board writing exceeds text budget");
       }
-      response = { kind: "board_writing", title, text: text2, lines };
+      response = { kind: "board_writing", title, text: text3, lines };
     } else if (responseKind === "plot" || responseKind === "implicit_plot") {
       if (!visualizationRequested) {
         throw new Error(`${input.tool_id} cannot return a plot response`);
@@ -11465,14 +12323,14 @@ function parseSelectionModelResponse(raw, input) {
         if (!["unreadable_expression", "unsupported_variables", "unsupported_representation", "unsafe_complexity"].includes(reasonCode)) {
           throw new Error("reason_code is invalid");
         }
-        response = corrected && alternatives.length === 0 ? corrected : unsupported(reasonCode, text2, failureAlternatives[reasonCode]);
+        response = corrected && alternatives.length === 0 ? corrected : unsupported(reasonCode, text3, failureAlternatives[reasonCode]);
       }
     } else if (responseKind === "explanation") {
       const explanationFailure = confidence === "low" ? "unreadable_expression" : "unsupported_representation";
-      response = visualizationRequested && input.tool_id === "generate-plot" ? unsupported(explanationFailure, text2, failureAlternatives[explanationFailure]) : {
+      response = visualizationRequested && input.tool_id === "generate-plot" ? unsupported(explanationFailure, text3, failureAlternatives[explanationFailure]) : {
         kind: "explanation",
         title,
-        text: text2,
+        text: text3,
         ...items.length > 0 ? { items } : {}
       };
     } else {

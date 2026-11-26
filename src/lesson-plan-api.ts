@@ -7,3 +7,4 @@ export { INSTALLED_PLUGINS, RECIPE_CATALOG_ORDER, TRIAL_RECIPES, TRIAL_RETIRES, 
 export { RECIPE_HOOKS } from "./plugins/hooks.js";
 export { SECTION_FACTS } from "./plugins/section-facts.js";
 export { frameRawReply, modelTextFromRawReply, RAW_REPLY_PREFIX, type RawReplyRecord } from "./raw-reply.js";
+export { placeValueWordsWrite, placeValueThousandths } from "./plugins/place-value-moves.js";

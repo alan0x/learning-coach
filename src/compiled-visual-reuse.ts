@@ -17,13 +17,22 @@ export interface CompiledVisual {
    * card plays a change as actions, and how "bring this number to a value" becomes the learner's task on it.
    */
   mover?: {
+    /**
+     * The card binds none of its lesson numbers: it reads them and binds variables of its own (the place-value
+     * chart, whose number is in thousandths). Such numbers are not declared in the lesson, which holds at most
+     * 16 variables (OLL), so a chart's own variables have the room.
+     */
+    unbound?: boolean;
     /** The visual's lesson numbers, in its number order. */
     numbers: number[];
     /** `room` is how many actions the moment can still hold (OLL allows 24 in a beat). */
     play(steps: ReadonlyArray<{ position: number; from: number[]; to: number[] }>, room: number): AuthoringAction[];
     /** `end` is the card's state when the lesson ends (a task whose value the lesson's start already shows starts there). */
+    /** `words` are the task's prompt and hints, as the model wrote them (a card whose task must not write its answer reads them). */
     /** `drop` removes only this task (recorded with `reason`, default nothing_to_do_on_card); `refuse` asks again. */
-    task(position: number, value: number, end: readonly number[]): { task: Record<string, unknown> } | { drop: string; reason?: string } | { refuse: string };
+    /** `then` are tasks the card adds after it (the place-value chart's row of parts), each with its own prompt. */
+    task(position: number, value: number, end: readonly number[], words?: readonly string[]):
+      { task: Record<string, unknown>; then?: Array<Record<string, unknown>> } | { drop: string; reason?: string } | { refuse: string };
   };
 }
 
