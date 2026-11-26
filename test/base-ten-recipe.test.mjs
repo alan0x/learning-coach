@@ -18,7 +18,7 @@ const CASES = JSON.parse(readFileSync(new URL("../testsuite/base-ten-dev-cases.j
 
 test("base_ten_trade is offered by default, last in the catalog (owner, 2026-11-25), on lesson numbers, no fields of its own", () => {
   assert.equal(api.TRIAL_RECIPES.includes("base_ten_trade"), false);
-  assert.equal(api.RECIPE_CATALOG_ORDER.at(-1), "base_ten_trade");
+  assert.equal(api.RECIPE_CATALOG_ORDER.at(-2), "base_ten_trade"); // the place-value chart follows it since 2026-11-26
   assert.ok(api.OFFERED_RECIPES.includes("base_ten_trade"));
   assert.ok(api.LESSON_PLAN_CAPABILITY_NAMES.includes("base_ten_trade"));
   assert.equal(api.RECIPE_PLUGIN.base_ten_trade, "math");

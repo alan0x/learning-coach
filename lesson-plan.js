@@ -15530,7 +15530,7 @@ var MATH_RECIPES = {
     required_features: ["trade_ten_for_one"],
     model_guidance: "\u65B9\u5757\u6362\u4E00\u6362\uFF1A\u5341\u4E2A\u4E00\u6362\u4E00\u4E2A\u5341\uFF0C\u5341\u4E2A\u5341\u6362\u4E00\u4E2A\u767E\u3002\u6570\u503C\u4F9D\u6B21\u662F\u6563\u7684\u4E00\u3001\u5341\u7684\u4E2A\u6570\uFF0C\u9898\u76EE\u6709\u767E\u6216\u4E00\u5171\u6EE1100\u65F6\u518D\u52A0\u767E\u7684\u4E2A\u6570\uFF08\u6CA1\u6709\u767E\u51990\uFF09\uFF0C\u7167\u9898\u76EE\u5199\u3002\u4E00\u5171\u6EE1100\u65F6\u753B\u677F\u6709\u767E\u4F4D\uFF1A\u5341\u6EE1\u5341\u4E5F\u8981\u6362\u6210\u4E00\u4E2A\u767E\uFF0C\u901A\u5E38\u8BB2\u5230\u6BCF\u4E00\u4F4D\u90FD\u4E0D\u5230\u5341\u4E3A\u6B62\u3002\u8BB2\u5230\u4EA4\u6362\u7684\u90A3\u4E00\u523B\u628A\u201C\u4E00\u201D\u7684\u6570\u503C\u52A8\u753B\u5230\u6362\u5B8C\u7684\u4E2A\u6570\uFF08\u4E00\u6B21\u5C11\u6574\u5341\uFF0C\u598226\u52306\uFF09\uFF0C\u5341\u81EA\u5DF1\u8DDF\u7740\u591A\uFF1B\u6362\u767E\u5C31\u628A\u201C\u5341\u201D\u52A8\u753B\u5230\u6362\u5B8C\u7684\u4E2A\u6570\uFF08\u598211\u52301\uFF09\uFF0C\u767E\u81EA\u5DF1\u8DDF\u7740\u591A\u3002\u65B9\u5757\u7684\u603B\u6570\u6C38\u8FDC\u4E0D\u53D8\uFF0C\u53EA\u80FD\u4EA4\u6362\uFF1A\u628A\u4E00\u5806\u53D8\u6210\u53E6\u4E00\u4E2A\u6570\uFF08\u5982508\u52A03\u4E2A\u5341\u53D8\u6210538\uFF09\u4E0D\u80FD\u5728\u65B9\u5757\u4E0A\u7EC3\uFF0C\u7528\u586B\u6570\u9898\u95EE\u3002\u8BFE\u540E\u7EC3\u4E60\u65F6\u65B9\u5757\u56DE\u5230\u8BFE\u7A0B\u5F00\u5934\u90A3\u4E00\u5806\uFF0C\u5B69\u5B50\u81EA\u5DF1\u6362\uFF1B\u90A3\u4E00\u5806\u5DF2\u7ECF\u662F\u76EE\u6807\u65F6\uFF0C\u4ECE\u8BFE\u7A0B\u7ED3\u675F\u65F6\u90A3\u4E00\u5806\u5F00\u59CB\uFF0C\u6240\u4EE5\u201C\u6362\u56DE\u201D\u5F00\u5934\u7684\u4E2A\u6570\u4E5F\u53EF\u4EE5\u3002\u7EC3\u4E60\u7684\u76EE\u6807\u662F\u4EA4\u6362\u8DEF\u4E0A\u201C\u4E00\u201D\u6216\u201C\u5341\u201D\u7684\u67D0\u4E2A\u4E2A\u6570\uFF08\u6446\u9762\u753B\u597D\u4EE5\u540E\uFF0Cvisuals_for_section \u7ED9\u51FA loose_ones_as_traded\u3001tens_as_traded\uFF09\uFF0C\u8BF4\u6210\u201C\u6362\u6210\u51E0\u4E2A\u201D\uFF0C\u4E0D\u8BF4\u201C\u8C03\u5230\u201D\uFF1B\u65B9\u5757\u4E0A\u7684\u7EC3\u4E60\u8981\u7EC3\u672C\u8BFE goals \u91CC\u7684\u4EA4\u6362\u3002\u63D0\u793A\u8BB2\u6570\u5B66\uFF08\u5982\u5341\u4E2A\u4E00\u6362\u4E00\u4E2A\u5341\uFF09\uFF0C\u4E0D\u8BB2\u600E\u4E48\u64CD\u4F5C\u3002\u586B\u6570\u9898\u53E6\u51FA\u65B0\u9898\u65F6\u7528\u6587\u5B57\u8BF4\u4E00\u5806\u65B0\u7684\u65B9\u5757\uFF0C\u9898\u76EE\u53EA\u5199\u56DE\u7B54\u8981\u7528\u7684\u8BDD\uFF0C\u4E0D\u52A0\u548C\u8FD9\u9053\u9898\u65E0\u5173\u7684\u4E8B\u5B9E\u3002\u8BF4\u65B9\u5757\u53EA\u7528\u6570\u4F4D\u7684\u540D\u5B57\uFF1A\u4E00\u3001\u5341\u3001\u767E\uFF08\u5982\u201C10\u4E2A\u5341\u6362\u62101\u4E2A\u767E\u201D\uFF09\uFF0C\u4E0D\u53E6\u8D77\u540D\u5B57\uFF08\u5982\u201C\u5341\u6761\u201D\u201C\u767E\u677F\u201D\uFF09"
   },
-  // OLL decision 0025 (a trial, off by default): the place-value chart on lesson numbers, on the trading mat's
+  // OLL decision 0025 (offered by default since 2026-11-26, owner): the place-value chart on lesson numbers, on the trading mat's
   // pattern. The model writes the question's number and a different practice number, what the card gives, the
   // demonstration as targets on the number (the value on the chart: built up from 0, or what is still on it as it is pulled apart) and the practice;
   // the program writes every number text on the card, plays the steps and makes the learner's task.
@@ -16133,10 +16133,13 @@ var RECIPE_CATALOG_ORDER = [
   // The trading mat (OLL decision 0023): adopted by the owner on 2026-11-25 after three objective checks of
   // the 33 development cases and the fix that withdraws a picture instead of losing the lesson (Coach #170),
   // ahead of a speed gate. Last, where the checks offered it.
-  "base_ten_trade"
+  "base_ten_trade",
+  // The place-value chart (OLL decision 0025): adopted by the owner on 2026-11-26 after objective check 1 of
+  // the 21 development cases and the pull-apart fix (Coach #177). Last, where the check offered it.
+  "place_value_chart"
 ];
 var RETIRED_RECIPES = ["cube_with_section"];
-var TRIAL_RECIPES = ["constant_speed_motion", "fraction_model", "place_value_chart"];
+var TRIAL_RECIPES = ["constant_speed_motion", "fraction_model"];
 function enabledTrialRecipes(list2) {
   const named = new Set((list2 ?? "").split(",").map((name) => name.trim()).filter(Boolean));
   return TRIAL_RECIPES.filter((name) => named.has(name));
@@ -17728,6 +17731,13 @@ function placeValueState(start, content) {
   const build = content?.parameters?.given !== "numeral";
   return [build ? 0 : start[0], ...start.slice(1), start[0], build ? 1 : 0];
 }
+function placeValueNextValues(number, from, build) {
+  if (build) {
+    const parts = placeValueParts(number);
+    return [.../* @__PURE__ */ new Set([...parts.map((_, k) => parts.slice(0, k + 1).reduce((sum, part) => sum + part.value, 0)), number])].filter((value2) => value2 > from && placesOnlyIn(from, value2).length === 0);
+  }
+  return placeValueParts(from).map((_, k, all2) => all2.slice(k + 1).reduce((sum, part) => sum + part.value, 0));
+}
 function placeValueMove(state, position, to) {
   if (position !== 0 || state.length < 3) return "the practice number is the learner's: it does not move in the lesson. Animate the question's number to show the demonstration";
   const build = state.at(-1) === 1;
@@ -17739,12 +17749,11 @@ function placeValueMove(state, position, to) {
   const ofNumber = PLACES.every((place5) => !placeValueDigitAt(target, place5) || placeValueDigitAt(target, place5) === placeValueDigitAt(number, place5));
   const kept = build ? placesOnlyIn(from, target).length === 0 : placesOnlyIn(target, from).length === 0;
   if (!ofNumber || !kept) {
-    const parts = placeValueParts(number);
     if (build) {
-      const placed = [.../* @__PURE__ */ new Set([...parts.map((_, k) => parts.slice(0, k + 1).reduce((sum, part) => sum + part.value, 0)), number])].filter((value2) => value2 > from && placesOnlyIn(from, value2).length === 0);
+      const placed = placeValueNextValues(number, from, true);
       return `building, the chart's number is the value on the chart: it starts at 0 and each step puts whole places of ${placeValueDecimal(number)} on the chart, highest first; places already on stay, so from ${placeValueDecimal(from)} it can be ${placed.length ? placed.map(placeValueDecimal).join(", ") : `only ${placeValueDecimal(from)}: the number is built`}`;
     }
-    const left = placeValueParts(from).map((_, k, all2) => all2.slice(k + 1).reduce((sum, part) => sum + part.value, 0));
+    const left = placeValueNextValues(number, from, false);
     return `pulling apart, the chart's number is what is still on the chart: it starts at the number and each step takes whole places out, highest first, so from ${placeValueDecimal(from)} it can be ${left.map(placeValueDecimal).join(", ")}`;
   }
   const next = [...state];
@@ -23591,8 +23600,8 @@ var MATH_SECTION_FACTS = {
   },
   // The place-value chart in its own terms (OLL 0025), once it is drawn: the number, what the card gives, its
   // columns and the parts it pulls apart into, where the demonstration stands in the guidance's own terms (building:
-  // the value on the chart now and what is still to place; pulling apart: what is still on the chart and what is
-  // out), and the learner's practice number.
+  // the value on the chart now and what is still to place; pulling apart: what is still on the chart, what is
+  // out, the places still on and the values the number can go to next), and the learner's practice number.
   place_value_chart: ({ established, numbers, state, language }) => {
     if (!numbers || !established?.numbers?.length) return {};
     const lessonNumbers = established.numbers;
@@ -23611,7 +23620,15 @@ var MATH_SECTION_FACTS = {
       given,
       columns: placeValueColumns(top_place, decimals).map((place5) => placeValueColumnName(place5, chartLanguage)),
       parts: placeValueParts(number).map((part) => ({ place: placeValueColumnName(part.place, chartLanguage), digit: part.digit, value: placeValueDecimal(part.value) })),
-      ...build ? { on_chart_now: placeValueDecimal(now), still_to_place: placeValueDecimal(number - now) } : { still_on_chart: placeValueDecimal(now), taken_out: placeValueDecimal(number - now) },
+      ...build ? { on_chart_now: placeValueDecimal(now), still_to_place: placeValueDecimal(number - now) } : {
+        still_on_chart: placeValueDecimal(now),
+        taken_out: placeValueDecimal(number - now),
+        // Where the demonstration can go next, as facts (objective check 1: PV-07 and PV-09 wrote the value
+        // still on the chart again in a later section, which changes nothing, and two more never moved it again).
+        // Not an instruction: a lesson may rightly stop with places still on the chart.
+        places_still_on_chart: placeValueParts(now).map((part) => placeValueColumnName(part.place, chartLanguage)),
+        ...now > 0 ? { next_values: placeValueNextValues(number, now, false).map(placeValueDecimal) } : {}
+      },
       ...values[1] !== void 0 ? { practice_number: values[1] } : {}
     } };
   },

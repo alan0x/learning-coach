@@ -49,7 +49,7 @@ const passes = (id, result) => {
 test("the line in steps is offered by default, after the other number lines, where the trial put it (owner, 2026-11-15)", () => {
   assert.equal(api.TRIAL_RECIPES.includes("number_line_steps"), false);
   // solid_3d follows it since 2026-11-18.
-  assert.deepEqual(api.LESSON_PLAN_CAPABILITY_NAMES.slice(-4, -1), ["number_line_rounding", "number_line_steps", "solid_3d"]);
+  assert.deepEqual(api.LESSON_PLAN_CAPABILITY_NAMES.slice(-5, -2), ["number_line_rounding", "number_line_steps", "solid_3d"]);
   assert.equal(api.RECIPE_PLUGIN.number_line_steps, "math");
 });
 
