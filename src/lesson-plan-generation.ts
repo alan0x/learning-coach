@@ -3101,7 +3101,10 @@ export async function generateLessonPlanWithModel(
         if (hook && content.numbers?.length && !cards.some((card) => card.numbers.join() === content.numbers!.join())) {
           // The card's state when it is drawn: its lesson numbers as the card reads them there (a chart to build
           // starts empty, whatever number it is to show), then what its start adds (a hundreds column).
-          const started = hook.state(content.numbers.map((number) => outline.numbers![number - 1].initial), content);
+          const initial = content.numbers.map((number) => outline.numbers![number - 1].initial);
+          // A state shorter than the card's numbers (a mat whose hundreds start at 0) keeps the rest as written.
+          const started = [...hook.state(initial, content)];
+          initial.forEach((value, position) => { if (started[position] === undefined) started[position] = value; });
           cards.push({ numbers: [...content.numbers], hook, started });
           content.numbers.forEach((number, position) => state.set(number, started[position]!));
         }

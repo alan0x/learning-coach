@@ -26018,7 +26018,11 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         const content = action.content;
         const hook = RECIPE_HOOKS[content.capability]?.number_moves;
         if (hook && content.numbers?.length && !cards.some((card) => card.numbers.join() === content.numbers.join())) {
-          const started = hook.state(content.numbers.map((number) => outline.numbers[number - 1].initial), content);
+          const initial = content.numbers.map((number) => outline.numbers[number - 1].initial);
+          const started = [...hook.state(initial, content)];
+          initial.forEach((value2, position) => {
+            if (started[position] === void 0) started[position] = value2;
+          });
           cards.push({ numbers: [...content.numbers], hook, started });
           content.numbers.forEach((number, position) => state.set(number, started[position]));
         }
