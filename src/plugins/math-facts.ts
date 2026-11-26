@@ -4,7 +4,7 @@ import { REARRANGEMENT_FACTS, REARRANGEMENT_MODEL_GUIDANCE, type RearrangementCo
 import { fixedLineSamples } from "./math-teaching-contracts.js";
 import type { SectionFactsHook } from "./section-facts.js";
 import { baseTenFacts, baseTenStartFault } from "./base-ten-moves.js";
-import { placeValueDecimal, placeValueStartFault } from "./place-value-moves.js";
+import { placeValueDecimal, placeValueNextValues, placeValueStartFault } from "./place-value-moves.js";
 import { placeValueColumnName, placeValueColumns, placeValueColumnsFor, placeValueParts } from "octos-lesson-language/plugin-math";
 
 export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
@@ -22,8 +22,8 @@ export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
   },
   // The place-value chart in its own terms (OLL 0025), once it is drawn: the number, what the card gives, its
   // columns and the parts it pulls apart into, where the demonstration stands in the guidance's own terms (building:
-  // the value on the chart now and what is still to place; pulling apart: what is still on the chart and what is
-  // out), and the learner's practice number.
+  // the value on the chart now and what is still to place; pulling apart: what is still on the chart, what is
+  // out, the places still on and the values the number can go to next), and the learner's practice number.
   place_value_chart: ({ established, numbers, state, language }) => {
     if (!numbers || !established?.numbers?.length) return {};
     const lessonNumbers = established.numbers;
@@ -45,7 +45,14 @@ export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
       parts: placeValueParts(number).map((part) => ({ place: placeValueColumnName(part.place, chartLanguage), digit: part.digit, value: placeValueDecimal(part.value) })),
       ...(build
         ? { on_chart_now: placeValueDecimal(now), still_to_place: placeValueDecimal(number - now) }
-        : { still_on_chart: placeValueDecimal(now), taken_out: placeValueDecimal(number - now) }),
+        : {
+          still_on_chart: placeValueDecimal(now), taken_out: placeValueDecimal(number - now),
+          // Where the demonstration can go next, as facts (objective check 1: PV-07 and PV-09 wrote the value
+          // still on the chart again in a later section, which changes nothing, and two more never moved it again).
+          // Not an instruction: a lesson may rightly stop with places still on the chart.
+          places_still_on_chart: placeValueParts(now).map((part) => placeValueColumnName(part.place, chartLanguage)),
+          ...(now > 0 ? { next_values: placeValueNextValues(number, now, false).map(placeValueDecimal) } : {}),
+        }),
       ...(values[1] !== undefined ? { practice_number: values[1] } : {}),
     } };
   },

@@ -226,8 +226,18 @@ test("section facts: the chart in its own terms, once it is drawn", () => {
     numbers: [1, 2], number: 26.075, task: "pull_apart", given: "numeral",
     columns: ["Hundreds", "Tens", "Ones", "Tenths", "Hundredths", "Thousandths"],
     parts: [{ place: "Tens", digit: 2, value: 20 }, { place: "Ones", digit: 6, value: 6 }, { place: "Hundredths", digit: 7, value: 0.07 }, { place: "Thousandths", digit: 5, value: 0.005 }],
-    still_on_chart: 0.075, taken_out: 26, practice_number: 18.064,
+    still_on_chart: 0.075, taken_out: 26,
+    // Where the demonstration can go next, as facts: the places still on, and the values left as the highest come out.
+    places_still_on_chart: ["Hundredths", "Thousandths"], next_values: [0.005, 0],
+    practice_number: 18.064,
   });
+  // A later section of a whole number half pulled apart (objective check 1, PV-07's shape: 62017 at 17) is told
+  // the tens and ones are still on, and that 7 or 0 come next; once all is out, nothing is left and no next value.
+  const whole = [{ initial: 62017, min: 62017, max: 62017 }, { initial: 30405, min: 10000, max: 99999 }];
+  const half = facts({ section: 2, mode: "reuse", established, numbers: whole, state: new Map([[1, 17]]), language: "zh-CN" }).facts;
+  assert.deepEqual([half.still_on_chart, half.places_still_on_chart, half.next_values], [17, ["十位", "个位"], [7, 0]]);
+  const out = facts({ section: 2, mode: "reuse", established, numbers: whole, state: new Map([[1, 0]]), language: "zh-CN" }).facts;
+  assert.deepEqual([out.still_on_chart, out.places_still_on_chart, "next_values" in out], [0, [], false]);
   // Building, in the guidance's terms: the value on the chart now (0 when it is drawn) and what is still to place.
   const toBuild = { ...established, parameters: { given: "place_counts" } };
   assert.deepEqual(facts({ section: 2, mode: "reuse", established: toBuild, numbers, state: new Map([[1, 20]]), language: "en-US" }).facts.on_chart_now, 20);
