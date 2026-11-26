@@ -1,0 +1,344 @@
+{
+ "note": "Adding and subtracting on a place-value chart with trades: development cases for need 35P-07, 2026-11-25, written from blueprint.json in this folder (rows A1-A6). Used for design and tuning; the scoring set is separate, written later by a fresh agent from the blueprint alone, sealed. Never taken from the question set. PT-01 to PT-15 are cases this need serves (8 en-US, 7 zh-CN; 7 add, 8 subtract; 11 whole numbers, 4 decimals): expect.numbers are the two numbers as plain decimal strings, expect.result the answer. PT-16 to PT-21 are near misses that belong to other needs (expect.need names it): this need's component must not be used (forbid names the component's recipe, place_value_trade (OLL decision 0026)). Chinese cases use 进位/退位, 满十进一/退一作十, as Chinese learners say them.",
+ "cases": [
+  {
+   "id": "PT-01",
+   "row": "A1",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "Both numbers on the chart: 3486 + 2739; every carry shown as a trade between neighbouring columns; the total read off the chart: 6225.",
+   "prompt": "How do I add 3,486 + 2,739? I keep forgetting to carry.",
+   "expect": {
+    "need": "35P-07",
+    "operation": "add",
+    "numbers": [
+     "3486",
+     "2739"
+    ],
+    "result": "6225"
+   }
+  },
+  {
+   "id": "PT-02",
+   "row": "A1",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "Both numbers on the chart: 4527 + 1685; every carry shown as a trade between neighbouring columns; the total read off the chart: 6212.",
+   "prompt": "孩子做 4527 + 1685 这道竖式，每一位都要进，他老是忘记加上进上来的 1，有什么办法？",
+   "expect": {
+    "need": "35P-07",
+    "operation": "add",
+    "numbers": [
+     "4527",
+     "1685"
+    ],
+    "result": "6212"
+   }
+  },
+  {
+   "id": "PT-03",
+   "row": "A2",
+   "language": "en-US",
+   "kind": "detailed",
+   "teacher_picture": "Both numbers on the chart: 5960 + 2047; every carry shown as a trade between neighbouring columns; the total read off the chart: 8007.",
+   "prompt": "My answer to 5,960 + 2,047 was 7,907. My teacher says there are two carries in a row. Can you show me where they come from?",
+   "expect": {
+    "need": "35P-07",
+    "operation": "add",
+    "numbers": [
+     "5960",
+     "2047"
+    ],
+    "result": "8007"
+   }
+  },
+  {
+   "id": "PT-04",
+   "row": "A2",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "Both numbers on the chart: 68957 + 21068; every carry shown as a trade between neighbouring columns; the total read off the chart: 90025.",
+   "prompt": "68957 + 21068 怎么算？连着好几次进位，我都晕了",
+   "expect": {
+    "need": "35P-07",
+    "operation": "add",
+    "numbers": [
+     "68957",
+     "21068"
+    ],
+    "result": "90025"
+   }
+  },
+  {
+   "id": "PT-05",
+   "row": "A2",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "Both numbers on the chart: 4999 + 2001; every carry shown as a trade between neighbouring columns; the total read off the chart: 7000.",
+   "prompt": "Tutor here: a student was amazed that 4,999 plus 2,001 comes out as exactly 7,000. I'd like a picture of the carrying rippling along.",
+   "expect": {
+    "need": "35P-07",
+    "operation": "add",
+    "numbers": [
+     "4999",
+     "2001"
+    ],
+    "result": "7000"
+   }
+  },
+  {
+   "id": "PT-06",
+   "row": "A3",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "The first number on the chart: 7352 − 2618; every borrow shown as a trade between neighbouring columns; the difference read off the chart: 4734.",
+   "prompt": "Can you show me 7,352 − 2,618? I don't get borrowing.",
+   "expect": {
+    "need": "35P-07",
+    "operation": "subtract",
+    "numbers": [
+     "7352",
+     "2618"
+    ],
+    "result": "4734"
+   }
+  },
+  {
+   "id": "PT-07",
+   "row": "A3",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "The first number on the chart: 8452 − 3671; every borrow shown as a trade between neighbouring columns; the difference read off the chart: 4781.",
+   "prompt": "8452 − 3671 十位和百位都不够减，要怎么借？",
+   "expect": {
+    "need": "35P-07",
+    "operation": "subtract",
+    "numbers": [
+     "8452",
+     "3671"
+    ],
+    "result": "4781"
+   }
+  },
+  {
+   "id": "PT-08",
+   "row": "A3",
+   "language": "zh-CN",
+   "kind": "detailed",
+   "teacher_picture": "The first number on the chart: 6203 − 1857; every borrow shown as a trade between neighbouring columns; the difference read off the chart: 4346.",
+   "prompt": "孩子算 6203 − 1857 得 5654，错在哪里？怎么给他讲退位？",
+   "expect": {
+    "need": "35P-07",
+    "operation": "subtract",
+    "numbers": [
+     "6203",
+     "1857"
+    ],
+    "result": "4346"
+   }
+  },
+  {
+   "id": "PT-09",
+   "row": "A4",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "The first number on the chart: 50003 − 2476; every borrow shown as a trade between neighbouring columns; the difference read off the chart: 47527.",
+   "prompt": "Stuck on 50,003 minus 2,476: three zeros sit between the 5 and the 3 and I can't borrow from a zero.",
+   "expect": {
+    "need": "35P-07",
+    "operation": "subtract",
+    "numbers": [
+     "50003",
+     "2476"
+    ],
+    "result": "47527"
+   }
+  },
+  {
+   "id": "PT-10",
+   "row": "A4",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "The first number on the chart: 3000 − 1468; every borrow shown as a trade between neighbouring columns; the difference read off the chart: 1532.",
+   "prompt": "3000 − 1468 中间都是 0，怎么退位？",
+   "expect": {
+    "need": "35P-07",
+    "operation": "subtract",
+    "numbers": [
+     "3000",
+     "1468"
+    ],
+    "result": "1532"
+   }
+  },
+  {
+   "id": "PT-11",
+   "row": "A4",
+   "language": "en-US",
+   "kind": "detailed",
+   "teacher_picture": "The first number on the chart: 6004 − 2756; every borrow shown as a trade between neighbouring columns; the difference read off the chart: 3248.",
+   "prompt": "My son did 6,004 − 2,756 and got 4,752. Where did he go wrong?",
+   "expect": {
+    "need": "35P-07",
+    "operation": "subtract",
+    "numbers": [
+     "6004",
+     "2756"
+    ],
+    "result": "3248"
+   }
+  },
+  {
+   "id": "PT-12",
+   "row": "A5",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "Both numbers on the chart: 2.75 + 1.48; every carry shown as a trade between neighbouring columns; the total read off the chart: 4.23.",
+   "prompt": "Homework: 2.75 plus 1.48. The hundredths come to 13, so what happens to the extra?",
+   "expect": {
+    "need": "35P-07",
+    "operation": "add",
+    "numbers": [
+     "2.75",
+     "1.48"
+    ],
+    "result": "4.23"
+   }
+  },
+  {
+   "id": "PT-13",
+   "row": "A5",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "Both numbers on the chart: 3.68 + 4.57; every carry shown as a trade between neighbouring columns; the total read off the chart: 8.25.",
+   "prompt": "3.68 + 4.57 小数加法怎么进位？",
+   "expect": {
+    "need": "35P-07",
+    "operation": "add",
+    "numbers": [
+     "3.68",
+     "4.57"
+    ],
+    "result": "8.25"
+   }
+  },
+  {
+   "id": "PT-14",
+   "row": "A6",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "The first number on the chart: 5 − 1.36; every borrow shown as a trade between neighbouring columns; the difference read off the chart: 3.64.",
+   "prompt": "Taking 1.36 away from 5: there are no tenths or hundredths in 5, so where do they come from?",
+   "expect": {
+    "need": "35P-07",
+    "operation": "subtract",
+    "numbers": [
+     "5",
+     "1.36"
+    ],
+    "result": "3.64"
+   }
+  },
+  {
+   "id": "PT-15",
+   "row": "A6",
+   "language": "zh-CN",
+   "kind": "detailed",
+   "teacher_picture": "The first number on the chart: 8.2 − 3.75; every borrow shown as a trade between neighbouring columns; the difference read off the chart: 4.45.",
+   "prompt": "8.2 − 3.75 怎么算？8.2 后面没有百分位，孩子不知道怎么减",
+   "expect": {
+    "need": "35P-07",
+    "operation": "subtract",
+    "numbers": [
+     "8.2",
+     "3.75"
+    ],
+    "result": "4.45"
+   }
+  },
+  {
+   "id": "PT-16",
+   "row": null,
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "Not this need: Rounding to the nearest thousand (4.NBT.A.3). Need 35P-01.",
+   "prompt": "What is 46,712 rounded to the nearest thousand?",
+   "expect": {
+    "need": "35P-01",
+    "forbid": [
+     "place_value_trade"
+    ]
+   }
+  },
+  {
+   "id": "PT-17",
+   "row": null,
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "Not this need: Comparing two decimals by place (5.NBT.A.3.b). Need 35P-06.",
+   "prompt": "3.09 跟 3.1 比，孩子说 3.09 位数多所以更大，怎么纠正？",
+   "expect": {
+    "need": "35P-06",
+    "forbid": [
+     "place_value_trade"
+    ]
+   }
+  },
+  {
+   "id": "PT-18",
+   "row": null,
+   "language": "en-US",
+   "kind": "detailed",
+   "teacher_picture": "Not this need: Pulling a decimal apart into its places (5.NBT.A.3.a). Need 35P-05.",
+   "prompt": "How do I write 6.04 in expanded form? My kid wrote 6 + 4.",
+   "expect": {
+    "need": "35P-05",
+    "forbid": [
+     "place_value_trade"
+    ]
+   }
+  },
+  {
+   "id": "PT-19",
+   "row": null,
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "Not this need: A place is ten times the place to its right (4.NBT.A.1). Need 35P-04.",
+   "prompt": "数字7在百位和在十位，表示的大小差多少？",
+   "expect": {
+    "need": "35P-04",
+    "forbid": [
+     "place_value_trade"
+    ]
+   }
+  },
+  {
+   "id": "PT-20",
+   "row": null,
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "Not this need: Partial products in an area model (4.NBT.B.5). Need 35P-08.",
+   "prompt": "My daughter's class splits 23 by 45 into four rectangles and adds them up. Why does that work?",
+   "expect": {
+    "need": "35P-08",
+    "forbid": [
+     "place_value_trade"
+    ]
+   }
+  },
+  {
+   "id": "PT-21",
+   "row": null,
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "Not this need: K-2 trading ten ones for a ten with blocks (1.NBT.C.4). Need K2N-23.",
+   "prompt": "一年级：38 + 5 怎么凑十？用小方块怎么摆？",
+   "expect": {
+    "need": "K2N-23",
+    "forbid": [
+     "place_value_trade"
+    ]
+   }
+  }
+ ]
+}
