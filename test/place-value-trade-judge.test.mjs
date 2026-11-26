@@ -198,9 +198,9 @@ test("every task on the card has a goal the learner can reach", () => {
   // A pair with no carry, or one the card cannot draw, has no task on the card to do.
   // The typed answer after it has no finished chart to read either.
   assert.deepEqual(failed(judgePlaceValueTrade(item, lesson([["1234", "4321"]]))),
-    ["practice-1: the practice pair is one the card takes", "answer-1: the typed answer is the result of the pair on the card"]);
+    ["practice-1: the practice pair is one the card takes", "answer-1: the typed answer after the card's task is the result of its pair"]);
   assert.deepEqual(failed(judgePlaceValueTrade(byId["PT-06"], tradeLesson({ operation: "subtract", a: "7352", b: "2618", practice: [["2618", "7352"]] }))),
-    ["practice-1: the practice pair is one the card takes", "answer-1: the typed answer is the result of the pair on the card"]);
+    ["practice-1: the practice pair is one the card takes", "answer-1: the typed answer after the card's task is the result of its pair"]);
   // A practice that starts demonstrated or worked.
   const demoed = lesson([["4658", "1573"]]);
   demoed.lesson.tasks[0].start.values.finished = 2;
@@ -216,20 +216,26 @@ test("every task on the card has a goal the learner can reach", () => {
   delete noStart.lesson.tasks[0].start;
   // Without a start the card keeps the lesson's pair, so the answer to the practice pair is not on it.
   assert.deepEqual(failed(judgePlaceValueTrade(item, noStart)),
-    ["practice-1: the task on the card starts on its own pair", "answer-1: the typed answer is the result of the pair on the card"]);
-  // The typed answer is the result of the pair on the card when it opens: the practice pair's, read exactly.
-  assert.deepEqual(failed(judgePlaceValueTrade(item, lesson([["4658", "1573"]], { answers: ["6225"] }))), ["answer-1: the typed answer is the result of the pair on the card"]);
+    ["practice-1: the task on the card starts on its own pair", "answer-1: the typed answer after the card's task is the result of its pair"]);
+  // The typed answer after the task is read off its finished chart: the practice pair's result, read exactly.
+  assert.deepEqual(failed(judgePlaceValueTrade(item, lesson([["4658", "1573"]], { answers: ["6225"] }))), ["answer-1: the typed answer after the card's task is the result of its pair"]);
   assert.ok(judgePlaceValueTrade(item, lesson([["4658", "1573"]], { answers: ["6,231"] })).pass);
   assert.ok(judgePlaceValueTrade(byId["PT-12"], tradeLesson({ operation: "add", a: "2.75", b: "1.48", practice: [["3.86", "2.57"]], answers: ["6.430"] })).pass);
   // Two practice pairs: each answer follows its own pair.
   const two = lesson([["4658", "1573"], ["2847", "3965"]]);
   assert.deepEqual(failed(judgePlaceValueTrade(item, two)), []);
   two.lesson.tasks[3].completion.answer = "6231";
-  assert.deepEqual(failed(judgePlaceValueTrade(item, two)), ["answer-2: the typed answer is the result of the pair on the card"]);
-  // Without a practice, a typed answer on the card asks for the lesson's own result.
+  assert.deepEqual(failed(judgePlaceValueTrade(item, two)), ["answer-2: the typed answer after the card's task is the result of its pair"]);
+  // Any other typed question by the card (Coach places a model's question by the last card) asks what its own
+  // words say: noted against the pair on the card, never failed.
   const asked = lesson([]);
-  asked.lesson.tasks.push({ as: "total", anchor: "sum", prompt: "What is the total?", availability: { kind: "after_lesson" }, allowed_operations: [{ kind: "answer_entry" }], completion: { kind: "numeric_answer", answer: "6225" } });
-  assert.ok(judgePlaceValueTrade(item, asked).pass);
-  asked.lesson.tasks[0].completion.answer = "6215";
-  assert.deepEqual(failed(judgePlaceValueTrade(item, asked)), ["total: the typed answer is the result of the pair on the card"]);
+  asked.lesson.tasks.push({ as: "total", anchor: "sum", prompt: "What is 3,486 + 2,739?", availability: { kind: "after_lesson" }, allowed_operations: [{ kind: "answer_entry" }], completion: { kind: "numeric_answer", answer: "6225" } });
+  assert.deepEqual([failed(judgePlaceValueTrade(item, asked)), noted(judgePlaceValueTrade(item, asked))], [[], ["the learner has a task on the card"]]);
+  asked.lesson.tasks[0].completion.answer = "57";
+  assert.deepEqual([failed(judgePlaceValueTrade(item, asked)), noted(judgePlaceValueTrade(item, asked))], [[], ["total: a typed question by the card asks the result of the pair on it", "the learner has a task on the card"]]);
+  // After a practice and its answer, a question about the lesson's own pair is noted, not failed.
+  const later = lesson([["4658", "1573"]]);
+  later.lesson.tasks.push({ as: "again", anchor: "sum", prompt: "And 3,486 + 2,739?", availability: { kind: "after_lesson" }, allowed_operations: [{ kind: "answer_entry" }], completion: { kind: "numeric_answer", answer: "6225" } });
+  assert.ok(judgePlaceValueTrade(item, later).pass);
+  assert.deepEqual(noted(judgePlaceValueTrade(item, later)), ["again: a typed question by the card asks the result of the pair on it"]);
 });

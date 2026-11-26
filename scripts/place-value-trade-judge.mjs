@@ -13,8 +13,8 @@
 //   lesson's language; and every task on the card has a goal the learner can reach: a task on the card is its
 //   `complete` fact by taps, on a practice pair the card takes (a carry or borrow, no negative difference, at
 //   most two decimals and six columns) that is not the lesson's pair, starting fresh (nothing demonstrated, no
-//   column worked); a typed answer anchored to the card expects the result of the pair the card holds when it
-//   opens (the practice pair before it, else the lesson's).
+//   column worked); the typed answer that follows a task on the card (anchored to it) expects the result of
+//   that task's pair, read off the finished chart (0026 §4).
 // - Notes (what the lesson chose to teach; the owner judges lessons): one card; how many columns the
 //   demonstration finishes (a lesson may stop partway, owner 2026-11-25: no hard rule, 0026 §8); the learner
 //   has a task on the card; a typed answer follows; the task's words name no control; a chart drawn beside
@@ -175,14 +175,18 @@ export function judgePlaceValueTrade(item, lesson) {
   const columns = Number.isSafeInteger(start.a) && Number.isSafeInteger(start.b) ? columnsFor(start.operation, start.a, start.b).length : undefined;
   note("the demonstration finishes every column", columns !== undefined && card.shown >= columns, `columns finished ${card.shown} of ${columns}`);
 
-  // Every task on the card, or anchored to it, has a goal the learner can reach.
+  // Every task on the card has a goal the learner can reach, and so does the typed answer that follows it.
   let holds = { a: start.a, b: start.b }; // the pair on the card when the next task opens
   let cardTasks = 0;
+  let afterCard = false; // the task before this one was a task on the card
   for (const task of card.tasks) {
     const completion = task.completion ?? {};
     const label = task.as ?? task.prompt ?? "a task";
+    const follows = afterCard;
+    afterCard = false;
     if (completion.kind === "card_fact" && completion.node === card.as) {
       cardTasks += 1;
+      afterCard = true;
       const ops = (task.allowed_operations ?? []).map((operation) => `${operation.kind}${operation.node && operation.node !== card.as ? `@${operation.node}` : ""}`).sort().join(",");
       check(`${label}: the task on the card is its complete fact, by taps`, completion.fact === "complete" && ops === "card_tap",
         JSON.stringify([task.allowed_operations, completion]));
@@ -206,9 +210,12 @@ export function judgePlaceValueTrade(item, lesson) {
         ? resultOf(start.operation, holds.a, holds.b) : undefined;
       const answer = tradeThousandths(completion.answer);
       const tolerance = Math.round((Number(completion.tolerance) || 0) * 1000);
-      check(`${label}: the typed answer is the result of the pair on the card`,
-        expected !== undefined && answer !== undefined && Math.abs(answer - expected) <= tolerance,
-        `answer ${completion.answer}, card ${shownPair({ operation: start.operation, ...holds })} = ${expected === undefined ? "?" : tradeNumeral(expected)}`);
+      const reads = expected !== undefined && answer !== undefined && Math.abs(answer - expected) <= tolerance;
+      const detail = `answer ${completion.answer}, card ${shownPair({ operation: start.operation, ...holds })} = ${expected === undefined ? "?" : tradeNumeral(expected)}`;
+      // The answer typed after a task on the card is read off that finished chart (0026 §4): it must be the pair's.
+      // Another typed question placed by the card may ask anything its own words say: noted, not judged.
+      if (follows) check(`${label}: the typed answer after the card's task is the result of its pair`, reads, detail);
+      else note(`${label}: a typed question by the card asks the result of the pair on it`, reads, detail);
     }
   }
   note("the learner has a task on the card", cardTasks > 0, "no task on the card");
