@@ -573,7 +573,8 @@ test("PT-14's shape beside a later picture: the card's four numbers lead, the fi
     `);
     assert.equal(result.error, undefined, String(refs));
     assert.deepEqual(result.numbers.at(-1), { initial: 0, min: 0, max: 6, label: "columns finished" });
-    assert.deepEqual(result.adjustments, [{ kind: "visual_removed", section: 2, capability: "place_value_chart", reason: "visual_limits_after_retries" }]);
+    // It goes at once, with no repair spent on it (make-ten objective check 1).
+    assert.deepEqual(result.adjustments, [{ kind: "visual_removed", section: 2, capability: "place_value_chart", reason: "shares_tap_card_numbers" }]);
     assert.match(result.lesson, /"kind":"place_value_trade"/u);
   }
 });

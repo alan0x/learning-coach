@@ -10,6 +10,17 @@ export function fail(code: string, path: string, message: string, capability?: s
   throw new LessonPlanError(code, path, message, capability);
 }
 
+/**
+ * A tap card's lesson numbers are shown by another picture (`sharingAt` is its section, `cardAt` the card's). The
+ * later of the two is the one a section still being written can lose; when that is the other picture, or both are
+ * in the same section, the other picture goes at once, with no repair: the card is the need's picture. An other
+ * picture an earlier, published section drew cannot go, so then the card is named, as before.
+ */
+export function failSharedTapCardNumbers(path: string, message: string, card: string, other: string, sharingAt: number, cardAt: number): never {
+  if (sharingAt >= cardAt) throw new LessonPlanError("LESSON_PLAN_SHARED_NUMBER", path, message, other, true, card);
+  throw new LessonPlanError("LESSON_PLAN_SHARED_NUMBER", path, message, card);
+}
+
 export function pad(index: number): string {
   return String(index).padStart(2, "0");
 }

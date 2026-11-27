@@ -479,13 +479,23 @@ export class LessonPlanError extends Error {
   readonly path: string;
   /** The recipe that cannot show what the plan asks of it, when the fault is that recipe's. */
   readonly capability?: string;
+  /**
+   * The picture named by `capability` goes at once, with no repair: it shows a tap card's lesson numbers, and the
+   * card is the need's picture (make-ten objective check 1: a number line on the card's numbers was refused three
+   * times before it went, three calls and about 20 s each).
+   */
+  readonly withdrawAtOnce?: boolean;
+  /** With `withdrawAtOnce`: the tap card whose numbers the picture shows, named instead when the picture cannot go alone. */
+  readonly tapCard?: string;
 
-  constructor(code: string, path: string, message: string, capability?: string) {
+  constructor(code: string, path: string, message: string, capability?: string, withdrawAtOnce?: boolean, tapCard?: string) {
     super(`${path}: ${message}`);
     this.name = "LessonPlanError";
     this.code = code;
     this.path = path;
     if (capability) this.capability = capability;
+    if (capability && withdrawAtOnce) this.withdrawAtOnce = true;
+    if (capability && withdrawAtOnce && tapCard) this.tapCard = tapCard;
   }
 }
 

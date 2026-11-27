@@ -44,7 +44,8 @@ test("make_ten is a trial, off by default: built, not offered; its guidance and 
   assert.deepEqual(offered.ranges, [[0, 10], [0, 0, 4]]);
   assert.deepEqual([offered.min, offered.many, offered.controls], [6, true, []]);
   // Short guidance (tracked, not capped): the pair, the practice pair, the target 10 (or 9); no control named.
-  assert.equal(Buffer.byteLength(offered.guidance), 796);
+  assert.equal(Buffer.byteLength(offered.guidance), 847);
+  assert.ok(offered.guidance.includes("只画这张卡片，不再画数轴"), "used alone for its sum (make-ten objective check 1)");
   assert.ok(!/滑块|slider|拖|按钮/u.test(offered.guidance), "the guidance names no control");
 });
 
@@ -383,4 +384,102 @@ test("the fixed sample (used for request hashes with the trial on) compiles thro
     console.log(JSON.stringify({ kinds: compiled.lesson.lesson.tasks.map((task) => task.completion.kind), adjustments: compiled.program_adjustments }));
   `);
   assert.deepEqual(result, { kinds: ["card_fact", "numeric_row"], adjustments: [] });
+});
+
+// Make-ten objective check 1 (MT-02, MT-09, MT-11): a number line on the card's numbers in a later section was
+// refused three times before it went. A picture on a tap card's numbers now goes at once, with no repair.
+const sharedRun = (sectionWithLine) => withTrial(`
+  const api = await import(${here("../lesson-plan.js")});
+  const { makeTenPlan, samplePlan, makeSamplePlanModelCompatible } = await import(${here("./sample-plans.mjs")});
+  const { modelResponseHelpers } = await import(${here("./model-responses.mjs")});
+  const { bootstrapModelResponse, bootstrapSectionFromExact, stagedOutline, toModelSectionDraft } = modelResponseHelpers(api.LESSON_PLAN_CAPABILITY_REGISTRY);
+  const plan = makeTenPlan({ numbers: [8, 6], practice: [7, 5] });
+  const clean = makeSamplePlanModelCompatible(structuredClone(plan));
+  const cleanDrafts = clean.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({ section: index + 1, version: clean.version, moments, student_activities }));
+  // The same lesson with a number line on the card's first number (8) in section ${sectionWithLine}.
+  const line = samplePlan("number_line_steps").sections[0].moments[0].actions.find((action) => action.action === "create");
+  const at = plan.sections[${sectionWithLine} - 1];
+  at.reusable_items = [...(at.reusable_items ?? []), { kind: "board_item", board_kind: "visual", capability: "number_line_steps" }];
+  at.moments[0].actions.push({ ...structuredClone(line), content: { ...structuredClone(line.content), numbers: [1, 2, 3] }, placement: { relation: "new_region" }, reusable_item: at.reusable_items.length });
+  const shared = makeSamplePlanModelCompatible(plan);
+  const drafts = shared.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({ section: index + 1, version: shared.version, moments, student_activities }));
+  const outline = stagedOutline(shared, drafts);
+  const requests = [], adjustments = [], rejected = [];
+  let generated, error, sectionTwo = 0, replanned = false;
+  try {
+    generated = await api.generateLessonPlanWithModel(async (request) => {
+      requests.push(request.label + (request.section ? request.section : ""));
+      if (requests.length > 8) throw new Error("unexpected extra model request");
+      if (request.label === "lesson-plan-bootstrap") return bootstrapModelResponse(request, outline, bootstrapSectionFromExact(outline, drafts[0]));
+      if (request.label === "lesson-plan-outline") {
+        replanned = true;
+        return JSON.stringify(stagedOutline(clean, cleanDrafts));
+      }
+      if (request.section === 2) sectionTwo += 1;
+      return JSON.stringify((replanned || sectionTwo > 1 ? cleanDrafts : drafts)[request.section - 1]);
+    }, { turn_id: "make-ten", learner_request: "How do I explain 8 + 6 by making a ten?", language: "en-US" }, {
+      max_attempts_per_part: 3, on_program_adjustment: (adjustment) => adjustments.push(adjustment), on_rejected_part: (part) => rejected.push(part.error.code),
+    });
+  } catch (caught) { error = caught.message; }
+  console.log(JSON.stringify({ error, requests, rejected, adjustments: adjustments.map(({ kind, section, capability, reason }) => ({ kind, section, capability, reason })),
+    drawn: generated ? generated.lesson.steps.flatMap((step) => step.beats.flatMap((beat) => beat.actions.filter((action) => action.do === "write").map((action) => action.kind))) : [] }));
+`);
+
+test("a picture on the card's numbers in a later section goes at once, with no repair; the card stays", () => {
+  const result = sharedRun(2);
+  assert.deepEqual(result.requests, ["lesson-plan-bootstrap", "lesson-plan-section2", "lesson-plan-section2"]);
+  assert.equal(result.error, undefined);
+  assert.deepEqual(result.adjustments.filter((adjustment) => adjustment.kind === "visual_removed"), [{ kind: "visual_removed", section: 2, capability: "number_line_steps", reason: "shares_tap_card_numbers" }]);
+  // One rejected section 2, then section 2 written again without the line: no repair spent on it.
+  assert.deepEqual(result.rejected, ["LESSON_PLAN_SHARED_NUMBER"]);
+  assert.equal(result.requests.filter((label) => label === "lesson-plan-section2").length, 2);
+  assert.ok(result.drawn.includes("make_ten"));
+  assert.equal(result.drawn.includes("number_line"), false);
+});
+
+test("a picture on the card's numbers in the card's own section 1 goes at once: the lesson is planned again without it", () => {
+  const result = sharedRun(1);
+  assert.equal(result.error, undefined);
+  // Before: three repairs of section 1, then a new outline without the card. Now: a new outline without the line.
+  assert.deepEqual(result.requests.slice(0, 2), ["lesson-plan-bootstrap", "lesson-plan-outline"]);
+  assert.deepEqual(result.adjustments.filter((adjustment) => adjustment.kind === "visual_removed"), [{ kind: "visual_removed", section: 1, capability: "number_line_steps", reason: "shares_tap_card_numbers" }]);
+  assert.ok(result.drawn.includes("make_ten"));
+});
+
+test("generic for tap cards: a later or same-section picture on a card's numbers is named to go at once; an earlier one names the card", () => {
+  const result = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    const { makeTenPlan, placeValueTradePlan, samplePlan } = await import(${here("./sample-plans.mjs")});
+    const line = samplePlan("number_line_steps").sections[0].moments[0].actions.find((action) => action.action === "create");
+    const out = {};
+    const withLine = (plan, section) => {
+      const at = plan.sections[section - 1];
+      at.reusable_items = [...(at.reusable_items ?? []), { kind: "board_item", board_kind: "visual", capability: "number_line_steps" }];
+      at.moments[0].actions.push({ ...structuredClone(line), content: { ...structuredClone(line.content), numbers: [1, 2, 3] }, placement: { relation: "new_region" }, reusable_item: at.reusable_items.length });
+      return plan;
+    };
+    for (const [name, plan] of [
+      ["make_ten later", withLine(makeTenPlan({ numbers: [8, 6], practice: [7, 5] }), 2)],
+      ["make_ten same", withLine(makeTenPlan({ numbers: [8, 6], practice: [7, 5] }), 1)],
+      ["trade later", withLine(placeValueTradePlan({ operation: "add", numbers: [3486, 2739], practice: [4658, 1573] }), 2)],
+    ]) {
+      try { api.compileAndValidateLessonPlan(plan, { language: "en-US" }); out[name] = { compiled: true }; }
+      catch (error) { out[name] = { code: error.code, capability: error.capability, at_once: error.withdrawAtOnce ?? false }; }
+    }
+    // The card in section 2 on the numbers of a line section 1 drew: the line is published, so the card is named, with repairs.
+    const late = makeTenPlan({ numbers: [8, 6], practice: [7, 5] });
+    const card = late.sections[0].moments[0].actions.shift();
+    late.sections[0].moments[0].actions.unshift({ ...structuredClone(line), content: { ...structuredClone(line.content), numbers: [1, 2, 3] }, placement: { relation: "new_region" }, reusable_item: 1 });
+    late.sections[0].reusable_items = [{ kind: "board_item", board_kind: "visual", capability: "number_line_steps" }];
+    late.sections[1].reusable_items = [...(late.sections[1].reusable_items ?? []), { kind: "board_item", board_kind: "visual", capability: "make_ten" }];
+    late.sections[1].moments[0].actions.push({ ...card, reusable_item: late.sections[1].reusable_items.length });
+    try { api.compileAndValidateLessonPlan(late, { language: "en-US" }); out.earlier = { compiled: true }; }
+    catch (error) { out.earlier = { code: error.code, capability: error.capability, at_once: error.withdrawAtOnce ?? false }; }
+    console.log(JSON.stringify(out));
+  `, "make_ten,place_value_trade");
+  assert.deepEqual(result["make_ten later"], { code: "LESSON_PLAN_SHARED_NUMBER", capability: "number_line_steps", at_once: true });
+  assert.deepEqual(result["make_ten same"], { code: "LESSON_PLAN_SHARED_NUMBER", capability: "number_line_steps", at_once: true });
+  assert.deepEqual(result["trade later"], { code: "LESSON_PLAN_SHARED_NUMBER", capability: "number_line_steps", at_once: true });
+  assert.equal(result.earlier.capability, "make_ten");
+  assert.equal(result.earlier.at_once, false);
 });
