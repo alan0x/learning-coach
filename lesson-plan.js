@@ -17705,10 +17705,14 @@ function timesTenStartProblem(values) {
   const [A, T, PA, PT, C] = values.map(placeValueThousandths);
   if ([A, T, PA, PT].some((value2) => value2 === void 0 || value2 <= 0)) return { fault: "the amount, the target and the practice's two numbers are numbers above 0 with at most three decimal places (thousandths)" };
   const written = timesTenProblemOf(A, T, C);
-  const own = "fault" in written ? timesTenProblemOf(A, T, void 0) : written;
+  const mixed = "fault" in written && C === T;
+  const own = "fault" in written && !mixed ? timesTenProblemOf(A, T, void 0) : written;
   const problem = "fault" in own ? written : own;
   if ("fault" in problem) {
     const said = placeValueTimesTenFaultText(problem.fault, A, T);
+    if (mixed) {
+      return { fault: `${said}; the target (the second number) is the unit the question asks for and counted in (the fifth number) the unit it names: 40 hundredths = ? tenths is 0.4, 0.1, then the practice, then 0.01` };
+    }
     return { fault: problem.fault === "same_unit" || problem.fault === "start_not_unit" ? `${said}; counted in (the fifth number) is the unit the question names, not the target: 3 tenths starts at 0.1, 40 hundredths at 0.01` : `the question: ${said}` };
   }
   const practice = placeValueTimesTenPracticeProblem(problem, PA, PT);
@@ -17718,6 +17722,10 @@ function timesTenStartProblem(values) {
     return { fault: `the practice is ${how}: ${placeValueTimesTenFaultText(practice.fault, PA, PT)}` };
   }
   return { problem, practice };
+}
+function timesTenOutlineFault(values) {
+  const found = timesTenStartProblem(values);
+  return "fault" in found ? found.fault : void 0;
 }
 function timesTenPathText(problem) {
   return placeValueTimesTenPath(problem).map((value2) => {
@@ -17779,14 +17787,19 @@ function placeValueTimesTenMove2(state, position, to) {
 }
 function placeValueTimesTenMoves(state, moves) {
   const steps = [];
+  const ignored = [];
   let current = [...state];
-  for (const move of moves) {
+  for (const [index, move] of moves.entries()) {
+    if (move.position >= 0 && move.position < TIMES_TEN_NUMBER.countedIn && move.to !== current[move.position]) {
+      ignored.push({ index, position: move.position, reason: "the amount, the target and the practice stay as written: the demonstration moves only counted in (the card's fifth lesson number)" });
+      continue;
+    }
     const result = placeValueTimesTenMove2(current, move.position, move.to);
     if (typeof result === "string") return { refused: { position: move.position, reason: result } };
     steps.push({ position: move.position, from: current, to: result });
     current = result;
   }
-  return { steps };
+  return { steps, ...ignored.length ? { ignored } : {} };
 }
 var FULL_WIDTH3 = /[０-９．，＝]/gu;
 var halfWidth2 = (text5) => text5.replace(FULL_WIDTH3, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
@@ -18085,7 +18098,7 @@ var MATH_RECIPES = {
     // text says how it is used.
     student_controls: [],
     required_features: ["count_in_another_unit"],
-    model_guidance: "\u6362\u4E00\u4E2A\u5355\u4F4D\u6765\u6570\uFF08\u6570\u4F4D\u8868\uFF1A\u5F80\u53F3\u4E00\u4F4D\u4E00\u4E2A\u62C6\u6210\u5341\u4E2A\uFF0C\u5F80\u5DE6\u4E00\u4F4D\u5341\u4E2A\u5408\u6210\u4E00\u4E2A\uFF09\uFF1A\u6570\u5355\u4F4D\uFF083\u4E2A\u5341\u5206\u4E4B\u4E00=?\u4E2A\u5343\u5206\u4E4B\u4E00\uFF1B30\u4E2A\u5341=?\u4E2A\u767E\uFF09\u6216\u500D\u6570\uFF08700\u662F70\u7684\u51E0\u500D\uFF1B0.3\u662F3\u7684\u5341\u5206\u4E4B\u4E00\uFF09\u3002\u6570\u53EA\u6709\u4E00\u4F4D\u4E0D\u662F\u96F6\uFF085550\u91CC\u7684\u4E24\u4E2A5\u5199500\u548C50\uFF09\uFF0C\u5355\u4F4D\u6700\u591A\u9694\u4E24\u4F4D\uFF0C\u500D\u6570\u662F\u76F8\u90BB\u4E24\u4F4D\u3002\u4E0D\u7528\u4E8E\u4E00\u4E2A\u6570\u5B57\u8868\u793A\u591A\u5C11\u3001\u6BD4\u8F83\u3001\u52A0\u51CF\u3001\u4E58\u9664\u4EE510\u3001\u9664\u4EE5\u5C0F\u6570\u3002outline \u7684 numbers \u4F9D\u6B21\u5199\uFF1A\u8981\u6570\u7684\u6570\uFF08\u5199\u503C\uFF0C3\u4E2A\u5341\u5206\u4E4B\u4E00\u51990.3\uFF09\u3001\u7528\u4EC0\u4E48\u6765\u6570\uFF080.001\uFF1B\u500D\u6570\u5199\u5C0F\u7684\u657070\uFF09\u3001\u7EC3\u4E60\u7684\u4E24\u4E2A\u6570\uFF08\u540C\u4E00\u79CD\u95EE\u6CD5\uFF0C\u9694\u540C\u6837\u51E0\u4F4D\u3001\u540C\u4E00\u65B9\u5411\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF09\u3001\u73B0\u5728\u7528\u4EC0\u4E48\u5355\u4F4D\u5728\u6570\uFF08\u5408\u8D77\u6765\u7684\u9898\u5199\u9898\u76EE\u8BF4\u7684\u5355\u4F4D\uFF0C\u598240\u4E2A\u767E\u5206\u4E4B\u4E00\u51990.01\uFF1B\u522B\u7684\u7A0B\u5E8F\u8865\uFF09\u3002\u6F14\u793A\u628A\u7B2C\u4E94\u4E2A\u6570\u52A8\u753B\u5230\u540E\u9762\u7684\u5355\u4F4D\uFF080.01\u30010.001\uFF1B\u500D\u6570\u523070\uFF09\uFF0C\u53EA\u5F80\u524D\u8D70\u3002\u7EC3\u4E60\uFF1A\u5BF9\u7B2C\u4E94\u4E2A\u6570\u5199\u6570\u503C\u76EE\u6807\u9898\uFF0C\u7A0B\u5E8F\u518D\u51FA\u7B54\u6848\u90A3\u4E00\u884C\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u7B54\u6848\u3002\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
+    model_guidance: "\u6362\u4E00\u4E2A\u5355\u4F4D\u6765\u6570\uFF08\u6570\u4F4D\u8868\uFF1A\u5F80\u53F3\u4E00\u4F4D\u4E00\u4E2A\u62C6\u6210\u5341\u4E2A\uFF0C\u5F80\u5DE6\u4E00\u4F4D\u5341\u4E2A\u5408\u6210\u4E00\u4E2A\uFF09\uFF1A\u6570\u5355\u4F4D\uFF083\u4E2A\u5341\u5206\u4E4B\u4E00=?\u4E2A\u5343\u5206\u4E4B\u4E00\uFF1B6\u4E2A\u5343=?\u4E2A\u767E\uFF1B\u4E00\u5343\u91CC\u6709\u51E0\u4E2A\u5341\uFF09\u6216\u500D\u6570\uFF08700\u662F70\u7684\u51E0\u500D\uFF1B0.3\u662F3\u7684\u5341\u5206\u4E4B\u4E00\uFF09\u3002\u8FD9\u4E9B\u9898\u7528\u8FD9\u5F20\u5361\uFF0C\u4E0D\u7528 trade_ten_for_one\uFF08\u5B83\u53EA\u628A\u5341\u4E2A\u5408\u6210\u4E00\u4E2A\uFF09\u3002\u6570\u53EA\u6709\u4E00\u4F4D\u4E0D\u662F\u96F6\uFF085550\u91CC\u7684\u4E24\u4E2A5\u5199500\u548C50\uFF09\uFF0C\u5355\u4F4D\u6700\u591A\u9694\u4E24\u4F4D\uFF0C\u500D\u6570\u662F\u76F8\u90BB\u4E24\u4F4D\u3002\u4E0D\u7528\u4E8E\u4E00\u4E2A\u6570\u5B57\u8868\u793A\u591A\u5C11\u3001\u6BD4\u8F83\u3001\u52A0\u51CF\u3001\u4E58\u9664\u4EE510\u6216100\u3001\u9664\u4EE5\u5C0F\u6570\u3002outline \u7684 numbers \u4F9D\u6B21\u5199\uFF1A\u8981\u6570\u7684\u6570\uFF08\u5199\u503C\uFF0C3\u4E2A\u5341\u5206\u4E4B\u4E00\u51990.3\uFF09\u3001\u95EE\u7684\u5355\u4F4D\uFF08?\u4E2A\u5343\u5206\u4E4B\u4E00\u51990.001\uFF1B\u500D\u6570\u5199\u5C0F\u7684\u657070\uFF09\u3001\u7EC3\u4E60\u7684\u4E24\u4E2A\u6570\uFF08\u540C\u4E00\u79CD\u95EE\u6CD5\uFF0C\u9694\u540C\u6837\u51E0\u4F4D\u3001\u540C\u4E00\u65B9\u5411\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF09\u3001\u9898\u76EE\u8BF4\u7684\u5355\u4F4D\uFF08\u5408\u8D77\u6765\u7684\u9898\u8981\u5199\uFF1B\u62C6\u5F00\u7684\u9898\u7A0B\u5E8F\u8865\uFF09\u3002\u4F8B\uFF1A40\u4E2A\u767E\u5206\u4E4B\u4E00=?\u4E2A\u5341\u5206\u4E4B\u4E00 \u51990.4\u30010.1\u3001\u7EC3\u4E60\u4E24\u4E2A\u6570\u30010.01\u3002\u7B2C\u4E94\u4E2A\u6570\u662F\u5355\u4F4D\uFF080.01\uFF09\uFF0C\u4E0D\u662F\u4E2A\u6570\u3002\u6F14\u793A\u628A\u7B2C\u4E94\u4E2A\u6570\u52A8\u753B\u5230\u540E\u9762\u7684\u5355\u4F4D\uFF080.01\u30010.001\uFF1B\u500D\u6570\u523070\uFF09\uFF0C\u53EA\u5F80\u524D\u8D70\uFF1B\u522B\u7684\u6570\u4E0D\u52A8\u753B\u3002\u7EC3\u4E60\uFF1A\u5BF9\u7B2C\u4E94\u4E2A\u6570\u5199\u6570\u503C\u76EE\u6807\u9898\uFF0C\u7A0B\u5E8F\u518D\u51FA\u7B54\u6848\u90A3\u4E00\u884C\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u7B54\u6848\u3002\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
@@ -18838,7 +18851,7 @@ var EN = {
   "\u6570\u4E00\u6570\u76EE\u6807\u90A3\u4E00\u5217\u3002": "Count the target column.",
   "\u5148\u6570\u4E00\u4E2A\u5C0F\u7684\u6570\u91CC\u6709\u51E0\u4E2A\uFF0C\u518D\u6570\u6709\u51E0\u4E2A\u5C0F\u7684\u6570\u3002": "Count what one copy of the smaller number holds, then how many copies there are.",
   "\u8981\u6570\u7684\u6570": "the amount",
-  "\u7528\u4EC0\u4E48\u6765\u6570": "the target",
+  "\u95EE\u7684\u5355\u4F4D": "the target",
   "\u73B0\u5728\u7528\u4EC0\u4E48\u5355\u4F4D\u5728\u6570": "counted in",
   "\u5148\u8BFB\u6EE1\u5341\u7684\u90A3\u4E00\u6846\uFF0C\u518D\u8BFB\u53E6\u4E00\u6846\u3002": "Read the full frame first, then the other one.",
   "\u5148\u8BFB\u53E6\u4E00\u6846\u5269\u4E0B\u7684\uFF0C\u518D\u8BFB\u6EE1\u5341\u7684\u90A3\u4E00\u6846\u3002": "Read what is left in the other frame first, then the full frame.",
@@ -20601,8 +20614,11 @@ var MATH_HOOKS = {
       });
       return /* @__PURE__ */ new Map();
     },
-    // Counted in moves along the problem's path toward the target; nothing else moves.
-    number_moves: { state: placeValueTimesTenState2, moves: placeValueTimesTenMoves }
+    // Counted in moves along the problem's path toward the target; nothing else moves (an animation of another
+    // number is left out and recorded).
+    number_moves: { state: placeValueTimesTenState2, moves: placeValueTimesTenMoves },
+    // Numbers the card cannot start on go with the outline, before any section is written for them.
+    outline_fault: timesTenOutlineFault
   },
   number_line: { fit_numbers: fitNumberLineNumbers },
   number_line_compare: { fit_numbers: fitComparedNumbers },
@@ -24509,7 +24525,7 @@ function compileMakeTen(base, content, role, placement, plan, path) {
 }
 var TIMES_TEN_TEXT = {
   "en-US": { amount: "the amount", target: "the target", counted_in: "counted in", moved_once: "rows moved once", moved_twice: "rows moved twice" },
-  "zh-CN": { amount: "\u8981\u6570\u7684\u6570", target: "\u7528\u4EC0\u4E48\u6765\u6570", counted_in: "\u73B0\u5728\u7528\u4EC0\u4E48\u5355\u4F4D\u5728\u6570", moved_once: "\u52A8\u8FC7\u4E00\u6B21\u7684\u884C", moved_twice: "\u52A8\u8FC7\u4E24\u6B21\u7684\u884C" }
+  "zh-CN": { amount: "\u8981\u6570\u7684\u6570", target: "\u95EE\u7684\u5355\u4F4D", counted_in: "\u73B0\u5728\u7528\u4EC0\u4E48\u5355\u4F4D\u5728\u6570", moved_once: "\u52A8\u8FC7\u4E00\u6B21\u7684\u884C", moved_twice: "\u52A8\u8FC7\u4E24\u6B21\u7684\u884C" }
 };
 function compilePlaceValueTimesTen(base, content, role, placement, plan, path) {
   allowParameterKeys(parameters(content), [], path);
@@ -25465,11 +25481,19 @@ function compileLessonPlan(value2, options = {}) {
           const at2 = animations.find((animation) => animation.position === result.refused.position);
           fail2("LESSON_PLAN_NUMBER_NOT_DRAWABLE", `${momentPath}.actions[${at2.offset}].end_value`, result.refused.reason, capability2);
         }
+        const left = /* @__PURE__ */ new Set();
+        for (const ignored of result.ignored ?? []) {
+          const at2 = ignored.index !== void 0 ? animations[ignored.index] : animations.find((animation) => animation.position === ignored.position);
+          left.add(at2.offset);
+          viewAdjustments.push({ section: sectionIndex, reason: "animation_left_out", detail: `${momentPath}.actions[${at2.offset}]: ${ignored.reason}; left out` });
+        }
+        const playing = animations.filter((animation) => !left.has(animation.offset));
+        const timed = playing[0] ?? animations[0];
         state.now = result.steps.at(-1)?.to ?? state.now;
         const PHASES2 = ["before_speech", "during_speech", "after_speech"];
         const phase = (timing) => PHASES2.indexOf(String(timing ?? "during_speech"));
         const written = writtenHere.has(visual) ? writtenHere.get(visual) : void 0;
-        const when = actionWhen(writtenHere.has(visual) && phase(written) > phase(animations[0].timing) ? written ?? "during_speech" : animations[0].timing);
+        const when = actionWhen(writtenHere.has(visual) && phase(written) > phase(timed.timing) ? written ?? "during_speech" : timed.timing);
         const first = animations[0].offset;
         const room = 24 - actions.length - moment.actions.slice(first + 1).filter((item) => !(item.action === "animate" && movers.get(item.number)?.visual === visual)).length;
         const played = visual.mover.play(result.steps, room).map((action) => ({ ...action, ...when }));
@@ -28853,17 +28877,35 @@ function supplyProgramNumbers(outline, language, recipe = registryProgramNumbers
   return supply;
 }
 var OUTLINE_NUMBERS_MISSING = "LESSON_PLAN_OUTLINE_NUMBERS_MISSING";
+var OUTLINE_NUMBERS_REFUSED = "LESSON_PLAN_OUTLINE_NUMBERS_REFUSED";
+var isOutlineNumbersFault = (error) => error instanceof LessonPlanError && (error.code === OUTLINE_NUMBERS_MISSING || error.code === OUTLINE_NUMBERS_REFUSED);
+var outlineNumbersReason = (error) => error.code === OUTLINE_NUMBERS_REFUSED ? "outline_numbers_refused" : "outline_numbers_missing";
 function outlineNumbersMissing(outline, section) {
   const declared = outline.numbers?.length ?? 0;
+  const firstNumbered = (outline.course_visuals ?? []).find((visual) => (LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[visual.capability] ?? 0) > 0);
   for (const [index, visual] of (outline.course_visuals ?? []).entries()) {
+    if (visual.create_section !== section) continue;
     const needed = recipeMinLessonNumbers(visual.capability);
-    if (visual.create_section !== section || declared >= needed) continue;
-    return new LessonPlanError(
-      OUTLINE_NUMBERS_MISSING,
-      `$lessonPlanOutline.course_visuals[${index}]`,
-      `the ${visual.capability} visual starts on ${needed} lesson numbers and the outline declares ${declared}; a section cannot add one`,
-      visual.capability
-    );
+    if (declared < needed) {
+      return new LessonPlanError(
+        OUTLINE_NUMBERS_MISSING,
+        `$lessonPlanOutline.course_visuals[${index}]`,
+        `the ${visual.capability} visual starts on ${needed} lesson numbers and the outline declares ${declared}; a section cannot add one`,
+        visual.capability
+      );
+    }
+    const check = RECIPE_HOOKS[visual.capability]?.outline_fault;
+    const limit = LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[visual.capability] ?? 0;
+    if (!check || visual !== firstNumbered || declared !== limit) continue;
+    const fault = check(outline.numbers.slice(0, limit).map((number) => number.initial));
+    if (fault) {
+      return new LessonPlanError(
+        OUTLINE_NUMBERS_REFUSED,
+        `$lessonPlanOutline.course_visuals[${index}]`,
+        `the ${visual.capability} visual cannot start on the outline's numbers: ${fault}; a section cannot change them`,
+        visual.capability
+      );
+    }
   }
   return void 0;
 }
@@ -29471,7 +29513,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
     let candidate = initialCandidate;
     const missing = outline ? outlineNumbersMissing(outline, section) : void 0;
     if (missing && section === 1) throw missing;
-    if (missing) await withdrawLaterSectionVisual(section, missing.capability, "outline_numbers_missing", missing.message);
+    if (missing) await withdrawLaterSectionVisual(section, missing.capability, outlineNumbersReason(missing), missing.message);
     while (true) {
       candidate ??= await generateSection(section);
       await dropUncheckedAnswerActivities(candidate, section);
@@ -29575,7 +29617,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
       await acceptSection(1, bootstrappedFirstSection);
       return void 0;
     } catch (error) {
-      const numbersMissing = error instanceof LessonPlanError && error.code === OUTLINE_NUMBERS_MISSING;
+      const numbersMissing = isOutlineNumbersFault(error);
       const sharesTapCard = error instanceof LessonPlanError && error.withdrawAtOnce === true;
       const dropCard = sharesTapCard && (sharedRestarts > 0 || excludedCapabilities.has(error.capability));
       const capability2 = dropCard ? error.tapCard : error instanceof LessonPlanError ? error.capability : void 0;
@@ -29604,7 +29646,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
           kind: "visual_removed",
           section: 1,
           capability: capability2,
-          reason: numbersMissing ? "outline_numbers_missing" : sharesTapCard ? "shares_tap_card_numbers" : "visual_limits_after_retries",
+          reason: numbersMissing ? outlineNumbersReason(error) : sharesTapCard ? "shares_tap_card_numbers" : "visual_limits_after_retries",
           detail: error instanceof Error ? error.message : String(error)
         });
       }

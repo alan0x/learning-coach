@@ -50,7 +50,7 @@ test("place_value_times_ten is a trial, off by default: built, not offered; its 
   assert.deepEqual(offered.range, [0, 1_000_000]);
   assert.deepEqual([offered.min, offered.many, offered.controls], [5, true, []]);
   // Short guidance (tracked, not capped): the numbers in order, the demonstration, the practice; no control named.
-  assert.equal(Buffer.byteLength(offered.guidance), 1003);
+  assert.equal(Buffer.byteLength(offered.guidance), 1235);
   assert.ok(!/滑块|slider|拖|按钮/u.test(offered.guidance), "the guidance names no control");
 });
 
@@ -81,8 +81,13 @@ test("counted in moves forward along the problem's path; nothing else moves", ()
   assert.deepEqual(to(moves.state([700, 70, 4000, 400, 0]), 70).steps.map((step) => step.to[4]), [70]);
   assert.deepEqual(moves.state([70, 700, 400, 4000, 0]), [70, 700, 400, 4000, 100, 100]);
   assert.match(to(moves.state([700, 70, 4000, 400, 0]), 10).refused.reason, /100 \(hundreds\) -> 70; 10 is not one of its values; from 100 the next values are 70/);
-  assert.match(moves.moves(start, [{ position: 0, to: 0.5 }]).refused.reason, /stay as written: the demonstration moves only counted in/);
-  assert.match(moves.moves(start, [{ position: 3, to: 0.1 }]).refused.reason, /stay as written/);
+  // The amount, the target and the practice never move: an animation of one is left out (the compiler records it),
+  // the rest of the moment plays (objective run 1, PF-02 and PF-10).
+  const fixed = moves.moves(start, [{ position: 0, to: 0.5 }, { position: 4, to: 0.01 }, { position: 3, to: 0.1 }]);
+  assert.deepEqual(fixed.steps.map((step) => step.to[4]), [0.01]);
+  assert.deepEqual(fixed.ignored.map((each) => each.position), [0, 3]);
+  assert.match(fixed.ignored[0].reason, /stay as written: the demonstration moves only counted in/);
+  assert.equal(moves.moves(start, [{ position: 4, to: 0.01 }]).ignored, undefined);
   assert.deepEqual(moves.moves(start, [{ position: 1, to: 0.001 }]).steps.at(-1).to, start, "a number animated to its own value is no change");
 });
 
@@ -266,7 +271,7 @@ test("refusals name their reason and the card, so only the picture can be lost; 
   const expect = {
     "two-digits": /the question: .*not_one_digit/,
     "too-far": /the question: .*too_far/,
-    "same-unit": /counted in \(the fifth number\) is the unit the question names, not the target/,
+    "same-unit": /the target \(the second number\) is the unit the question asks for and counted in \(the fifth number\) the unit it names: 40 hundredths = \? tenths is 0.4, 0.1, then the practice, then 0.01/,
     "no-start": /counted in \(the fifth number\) is the unit the question names/,
     "practice-same": /the practice is the learner's own: another amount or target than the question's/,
     "practice-swapped": /the practice is the learner's own/,
@@ -285,37 +290,50 @@ test("counted in written where the amount cannot start is read over, never refus
   const result = withTrial(compileScript([
     ["zero", { amount: 0.3, target: 0.001, start: 0, practice: [5, 0.01] }, "en-US"],
     ["on-the-path", { amount: 0.3, target: 0.001, start: 0.01, practice: [5, 0.01] }, "en-US"],
-    ["target", { amount: 0.3, target: 0.001, start: 0.001, practice: [5, 0.01] }, "en-US"],
     ["times", { amount: 700, target: 70, start: 70, practice: [4000, 400] }, "en-US"],
     // A unit the amount can start in decides the problem: 500 thousandths put together into tenths. (The two never
     // compete: a put-together's target is the amount's own place, where the amount's own count has nowhere to go.)
     ["together", { amount: 0.5, target: 0.1, start: 0.001, practice: [0.3, 0.1] }, "en-US"],
   ]));
   const card = (id) => { const content = result[id].lesson.steps[0].beats[0].actions[0].content; return [content.question, content.toward, content.apart, content.counted_in]; };
-  for (const id of ["zero", "on-the-path", "target"]) assert.deepEqual(card(id), ["count", "right", 2, 100], id);
+  for (const id of ["zero", "on-the-path"]) assert.deepEqual(card(id), ["count", "right", 2, 100], id);
   assert.deepEqual(card("times"), ["times", "right", 1, 100_000]);
   assert.deepEqual(card("together"), ["count", "left", 2, 1]);
 });
 
-test("a moment that animates the card's other numbers is refused with the card's tag, never at OLL", () => {
+test("a moment that animates the card's fixed numbers plays the rest and records the left-out one (PF-10)", () => {
+  // PF-10's second outline: 6,000 and 600 (a times pair); a section animated the amount to 60,000 with counted in
+  // to 600 in one moment, then counted in to 60,000.
   const result = withTrial(`
     const api = await import(${here("../lesson-plan.js")});
     const { timesTenPlan } = await import(${here("./sample-plans.mjs")});
     const out = {};
-    for (const [number, value] of [[1, 0.5], [2, 0.01], [3, 6], [4, 0.1]]) {
-      const plan = timesTenPlan({ amount: 0.3, target: 0.001, practice: [5, 0.01] });
-      plan.numbers[number - 1].max = Math.max(plan.numbers[number - 1].max, value);
-      plan.sections[0].moments.push({ narration: "Now another.", actions: [{ action: "animate", number, end_value: value, duration_intent: "brief", timing: "during_speech" }] });
-      try { api.compileAndValidateLessonPlan(plan, { language: "en-US" }); out[number] = { compiled: true }; }
-      catch (error) { out[number] = { code: error.code, capability: error.capability, message: error.message }; }
+    // [name, [number, value, timing]...]
+    for (const [name, animations] of [["amount", [[1, 60000], [5, 600]]], ["practice", [[3, 9000]]], ["off-path", [[5, 60000]]],
+      ["timing", [[1, 60000, "before_speech"], [5, 600, "after_speech"]]], ["twice", [[1, 60000], [1, 70000], [5, 600]]]]) {
+      const plan = timesTenPlan({ amount: 6000, target: 600, practice: [8000, 800], steps: [] });
+      for (const [number, value] of animations) plan.numbers[number - 1].max = Math.max(plan.numbers[number - 1].max, value);
+      plan.sections[0].moments.push({ narration: "Now watch.", actions: animations.map(([number, value, timing]) => ({ action: "animate", number, end_value: value, duration_intent: "brief", timing: timing ?? "during_speech" })) });
+      try {
+        const compiled = api.compileAndValidateLessonPlan(plan, { language: "zh-CN" });
+        const beat = compiled.lesson.steps[0].beats.at(-1).actions;
+        out[name] = { beat: beat.map((action) => action.do === "animate" ? action.value : action.do), when: beat.map((action) => action.when ?? "during_speech"), adjustments: compiled.view_adjustments.map((each) => each.reason + ": " + each.detail) };
+      } catch (error) { out[name] = { code: error.code, capability: error.capability, message: error.message }; }
     }
     console.log(JSON.stringify(out));
   `);
-  for (const number of ["1", "2", "3", "4"]) {
-    assert.equal(result[number].capability, "place_value_times_ten", number);
-    assert.notEqual(result[number].code, "LESSON_PLAN_OLL_SEMANTIC", number);
-    assert.match(result[number].message, /stay as written: the demonstration moves only counted in/, number);
-  }
+  assert.deepEqual(result.amount.beat, [600_000]);
+  assert.deepEqual(result.amount.adjustments, ["animation_left_out: $lessonPlan.sections[0].moments[1].actions[0]: the amount, the target and the practice stay as written: the demonstration moves only counted in (the card's fifth lesson number); left out"]);
+  // Only a fixed number: the moment still looks at the card.
+  assert.deepEqual([result.practice.beat, result.practice.adjustments.length], [["focus"], 1]);
+  // The moves play at the timing of the first animation that plays, not the left-out one's (review of #188).
+  assert.deepEqual([result.timing.beat, result.timing.when], [[600_000], ["after_speech"]]);
+  // Each left-out animation is recorded at its own offset.
+  assert.deepEqual(result.twice.adjustments.map((each) => /actions\[(\d+)\]/u.exec(each)[1]), ["0", "1"]);
+  assert.deepEqual(result.twice.beat, [600_000]);
+  // Counted in off its path is still refused, with the card's tag (a section can fix it).
+  assert.equal(result["off-path"].capability, "place_value_times_ten");
+  assert.match(result["off-path"].message, /1000 \(thousands\) -> 600; 60000 is not one of its values; from 1000 the next values are 600/);
 });
 
 test("a replay lays the card fresh again: its own variables only, counted in back at the question's unit", () => {
@@ -502,6 +520,72 @@ test("a put-together question whose outline leaves out counted in loses the card
   // asked for a number it cannot add; the program then asks for the outline again, as for any lost picture.
   assert.deepEqual(result.adjustments, [{ kind: "visual_removed", reason: "outline_numbers_missing", capability: "place_value_times_ten" }]);
   assert.deepEqual(result.requests.filter((label) => label === "lesson-plan-section"), []);
+});
+
+// An outline whose numbers the card cannot start on (objective run 1): [plan options, numbers the outline keeps, the
+// request]. The stub answers the first request and stops at the next, recording which parts were asked for.
+const outlineRun = (cases) => withTrial(`
+  const api = await import(${here("../lesson-plan.js")});
+  const { timesTenPlan, makeSamplePlanModelCompatible } = await import(${here("./sample-plans.mjs")});
+  const { modelResponseHelpers } = await import(${here("./model-responses.mjs")});
+  const { bootstrapModelResponse, bootstrapSectionFromExact, stagedOutline, toModelSectionDraft } = modelResponseHelpers(api.LESSON_PLAN_CAPABILITY_REGISTRY);
+  const out = {};
+  // A leading lesson number the card does not bind (written first), then the card's five (review of #188).
+  const shift = (plan) => {
+    plan.numbers = [{ initial: 2, min: 0, max: 9, label: "a number" }, ...plan.numbers];
+    for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
+      if (action.action === "animate") action.number += 1;
+      if (action.action === "create" && action.kind === "visual" && action.content.numbers) action.content.numbers = action.content.numbers.map((n) => n + 1);
+    }
+    for (const section of plan.sections) for (const activity of section.student_activities ?? []) for (const control of activity.number_controls ?? []) control.number += 1;
+    return plan;
+  };
+  for (const [name, options, keep, learnerRequest, shifted] of ${JSON.stringify(cases)}) {
+    const written = timesTenPlan(options);
+    const plan = makeSamplePlanModelCompatible(shifted ? shift(written) : written);
+    const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({ section: index + 1, version: plan.version, moments, student_activities }));
+    const outline = stagedOutline(plan, drafts);
+    outline.numbers = outline.numbers.slice(0, keep);
+    const requests = [], adjustments = [];
+    await api.generateLessonPlanWithModel(async (request) => {
+      requests.push(request.label);
+      if (request.label === "lesson-plan-bootstrap") return bootstrapModelResponse(request, outline, bootstrapSectionFromExact(outline, drafts[0]));
+      throw new Error("stop");
+    }, { turn_id: "times-ten-" + name, learner_request: learnerRequest, language: "zh-CN" }, {
+      max_attempts_per_part: 3, on_program_adjustment: (adjustment) => adjustments.push(adjustment),
+    }).catch(() => {});
+    out[name] = { requests, adjustments: adjustments.map(({ kind, reason, capability, detail }) => ({ kind, reason, capability, detail })) };
+  }
+  console.log(JSON.stringify(out));
+`);
+
+test("numbers the card cannot start on take it out as the outline is read, before any section call (PF-05, PF-15, PF-17)", () => {
+  const result = outlineRun([
+    // PF-05: the target written as the unit the question names (40 hundredths = ? tenths as 0.4, 0.01, ..., 0.01).
+    ["PF-05", { amount: 0.4, target: 0.01, start: 0.01, practice: [0.6, 0.01], steps: [0.1] }, 5, "40个百分之一合起来是几个十分之一？为什么？"],
+    // PF-15: the card chosen with no outline numbers at all.
+    ["PF-15", { amount: 0.4, target: 0.04, practice: [7, 0.7], steps: [0.04] }, 0, "0.4 里的 4 和 0.04 里的 4 差多少倍？哪个是哪个的十分之一？"],
+    // PF-17 (a near miss): a whole numeral, 4.37 and 437.
+    ["PF-17", { amount: 4.37, target: 437, start: 1, practice: [2.5, 250], steps: [437] }, 5, "4.37 乘 100 以后，孩子不明白为什么数字整体往左挪了两格。"],
+    // A put-together question written right: kept, and section 1 is asked for.
+    ["kept", { amount: 0.4, target: 0.1, start: 0.01, practice: [0.7, 0.1], steps: [0.1] }, 5, "40个百分之一合起来是几个十分之一？为什么？"],
+    // An outline with a number of its own before the card's five ([2, 0.3, 0.001, 5, 0.01, 0.1]): the card's numbers
+    // are not surely the first five, so it is not judged at the outline; it is kept (review of #188).
+    ["shifted", { amount: 0.3, target: 0.001, practice: [5, 0.01], steps: [0.01, 0.001] }, 6, "3个十分之一是几个千分之一？", true],
+  ]);
+  const removed = (name) => result[name].adjustments.map(({ kind, reason, capability }) => ({ kind, reason, capability }));
+  for (const name of ["PF-05", "PF-17"]) {
+    assert.deepEqual(removed(name), [{ kind: "visual_removed", reason: "outline_numbers_refused", capability: "place_value_times_ten" }], name);
+    assert.deepEqual(result[name].requests, ["lesson-plan-bootstrap", "lesson-plan-outline"], name);
+  }
+  assert.match(result["PF-05"].adjustments[0].detail, /cannot start on the outline's numbers: .*the target \(the second number\) is the unit the question asks for/);
+  assert.match(result["PF-17"].adjustments[0].detail, /not_one_digit/);
+  assert.deepEqual(removed("PF-15"), [{ kind: "visual_removed", reason: "outline_numbers_missing", capability: "place_value_times_ten" }]);
+  assert.deepEqual(result["PF-15"].requests, ["lesson-plan-bootstrap", "lesson-plan-outline"]);
+  for (const name of ["kept", "shifted"]) {
+    assert.deepEqual(result[name].adjustments, [], name);
+    assert.ok(!result[name].requests.includes("lesson-plan-outline"), `${name}: ${JSON.stringify(result[name].requests)}`);
+  }
 });
 
 test("the fixed sample (used for request hashes with the trial on) compiles through the full OLL validation", () => {
