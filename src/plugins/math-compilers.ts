@@ -2391,7 +2391,7 @@ function compilePlaceValueCompare(
     const sharing = plan.sections[sharingAt]!.moments.flatMap((moment) => moment.actions).find(sharesNumbers)!;
     const cardAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
     const sharingCapability = (sharing.content as LessonPlanVisualContent).capability;
-    failSharedTapCardNumbers(`${path}.numbers`, `the compare card needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the numbers on the card only, or in words`, "place_value_compare", sharingCapability, sharingAt, cardAt);
+    failSharedTapCardNumbers(`${path}.numbers`, sharedNumberFact("place_value_compare", "compare card", numbers, (sharing.content as LessonPlanVisualContent).numbers ?? [], sharingCapability), "place_value_compare", sharingCapability, sharingAt, cardAt);
   }
   const found = compareStartProblem(values, written);
   if ("fault" in found) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, found.fault, "place_value_compare");
@@ -2400,7 +2400,7 @@ function compilePlaceValueCompare(
   const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions)
     .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "place_value_compare");
   if (first && JSON.stringify((first.content as LessonPlanVisualContent).numbers ?? []) !== JSON.stringify(numbers)) {
-    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a lesson has one compare card: use the same lesson numbers each time, or write another pair in words", "place_value_compare");
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `a lesson has one compare card: this lesson's is on lesson numbers ${((first.content as LessonPlanVisualContent).numbers ?? []).join(", ")}`, "place_value_compare");
   }
   const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
   const text = COMPARE_TEXT[language];

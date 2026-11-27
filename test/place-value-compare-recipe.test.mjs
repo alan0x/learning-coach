@@ -177,7 +177,7 @@ test("refusals name their reason and the card, so only the picture can be lost; 
   assert.match(result.reversed.message, /the same two numbers in the other order are the same pair/);
   assert.match(result.rewritten.message, /not the same values written another way/);
   assert.match(result["same-numeral"].message, /the same numeral, 4530: there is nothing to compare/);
-  assert.match(result["lost-zero"].message, /write 0\.70 as mantissa 70, scale 2/);
+  assert.match(result["lost-zero"].message, /0\.7 and 0\.70 are a pair: 0\.70 is mantissa 70, scale 2/);
   assert.match(result["practice-numeral"].message, /the practice pair: .*same_numeral/);
   assert.match(result["too-wide"].message, /too_wide/);
   for (const id of Object.keys(result)) assert.equal(result[id].capability, "place_value_compare", id);

@@ -426,10 +426,11 @@ function defaultCoverageSection(
 /**
  * The outline's numbers with the decimals the model wrote them with (OLL 0029: 0.70 is not 0.7), read from the raw
  * reply's own mantissa and scale before they are divided away, kept only when more than the value needs and at most
- * three, and only while the compare card is offered: without it an outline is exactly as before.
+ * three, and only while a recipe that keeps them is offered (`keeps_written_decimals`: the compare card): without one
+ * an outline is exactly as before.
  */
 function withWrittenDecimals(raw: unknown, coerced: unknown): unknown {
-  if (!(LESSON_PLAN_CAPABILITY_NAMES as readonly string[]).includes("place_value_compare")) return coerced;
+  if (!LESSON_PLAN_CAPABILITY_NAMES.some((capability) => recipeDeclares(capability, "keeps_written_decimals"))) return coerced;
   const rawNumbers = (raw as { numbers?: unknown } | null)?.numbers;
   const numbers = (coerced as { numbers?: unknown } | null)?.numbers;
   if (!Array.isArray(rawNumbers) || !Array.isArray(numbers)) return coerced;

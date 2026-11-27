@@ -332,6 +332,7 @@ export const MATH_RECIPES = {
   place_value_compare: {
     parts: ["whole"],
     number_inputs: ["first", "second", "practice_first", "practice_second", "compared"],
+    number_roles: ["problem", "problem", "practice", "practice", "demonstration"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
     // Compared starts at 0 whatever the outline holds (the card opens with no column judged), so the program
     // supplies it: an outline that declares only the four numbers before it gets it, from 0 to the most any pair can
@@ -351,6 +352,8 @@ export const MATH_RECIPES = {
     // text says how it is used.
     student_controls: [],
     required_features: ["compare_by_place"],
+    // 0.7 and 0.70 are a pair (OLL 0029): the outline's numbers keep the decimals the model wrote them with.
+    keeps_written_decimals: true,
     model_guidance: "按数位比大小（数位表上两个数各占一行，按数位对齐，从最高位一位一位比，第一个不一样的数位决定，后面的数位不影响）：多位数比较（到百万位）和小数比较（到千分位），问哪个大、为什么、怎么比、相等吗（0.7和0.70）。不用于数轴上的位置、凑整、加减、展开式、分数比较、二年级用方块比。outline 的 numbers 依次是五个角色，每个数的 label 用课的语言写它的角色（如 first number、第一个数）：first、second 题目的两个数，照题目写，小数末尾写出来的0要保留（0.70 写 mantissa 70、scale 2；0.7 写 7、1，不要补0）；practice_first、practice_second 练习的两个数（另一对，不是题目的，换顺序也不算，也不是同样的值换个写法）；compared 写0：表一开始一位也没比。演示时把 compared 动画到 1、2……：每到一个值，程序从左边起判断一位（一样的标=，第一个不一样的标≠，后面的位不影响），最后一个值选好符号；演示一直比到选好符号（visuals_for_section 给出 demonstration_to）。别的数不动画。练习：对第五个数写一个数值目标题，孩子自己从左边起一位一位比，再选符号；题目和提示不写练习的答案（不写哪个大，不写 >、<、=）。说数位用名字（十位、十分位、tens），不说怎么点卡片",
   },
   rectangle_unit_square_array: {

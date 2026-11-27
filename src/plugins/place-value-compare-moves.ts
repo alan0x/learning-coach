@@ -59,7 +59,7 @@ export function compareStartProblem(values: readonly number[], written: Readonly
   const fault = placeValueCompareFault(a, b);
   if (fault) {
     return { fault: fault === "same_numeral"
-      ? `the two numbers are the same numeral, ${compareNumeral(a)}: there is nothing to compare; a number with a written zero keeps it (0.7 and 0.70: write 0.70 as mantissa 70, scale 2)`
+      ? `the two numbers are the same numeral, ${compareNumeral(a)}: there is nothing to compare (0.7 and 0.70 are a pair: 0.70 is mantissa 70, scale 2)`
       : `the question's pair: ${placeValueCompareFaultText(fault, a, b)}` };
   }
   const pair = placeValueComparePairOf(a, b);

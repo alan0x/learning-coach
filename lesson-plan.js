@@ -11142,6 +11142,12 @@ var PLACE_VALUE_COMPARE_SIGN_PLACES = ["greater", "equal", "less"];
 var PLACE_VALUE_COMPARE_TAP_PLACES = Object.freeze([...PLACE_VALUE_TAP_PLACES, ...PLACE_VALUE_COMPARE_SIGN_PLACES]);
 var placeValueCompareSignAt = (index) => Number.isInteger(index) && index >= PLACE_VALUE_TAP_PLACES.length ? PLACE_VALUE_COMPARE_SIGNS[index - PLACE_VALUE_TAP_PLACES.length] : void 0;
 var PLACE_VALUE_COMPARE_TAPS = ["same", "different", "sign", "column"];
+function placeValueCompareFromDecimal(mantissa, scale2) {
+  if (!Number.isSafeInteger(mantissa) || mantissa < 0 || !Number.isInteger(scale2) || scale2 < 0 || scale2 > PLACE_VALUE_COMPARE_MAX_DECIMALS)
+    return void 0;
+  const value2 = mantissa * 10 ** (PLACE_VALUE_COMPARE_MAX_DECIMALS - scale2);
+  return value2 <= PLACE_VALUE_COMPARE_MAX_VALUE ? { value: value2, dec: scale2 } : void 0;
+}
 var placeValueCompareOwnDecimals = (value2) => placeValueTradeDecimals(value2);
 var placeValueCompareNumeral = (value2, dec, language = "en-US") => placeValueTradeNumeralFixed(value2, dec, language);
 function placeValueCompareFault(a, b) {
@@ -11177,12 +11183,34 @@ function placeValueCompareMakePair(a, b) {
   const fault = placeValueCompareFault(a, b);
   return fault ? { fault } : placeValueComparePairOf(a, b);
 }
+function placeValueCompareSamePair(x, y) {
+  const same = (p, pd, q, qd) => p === q && pd === qd;
+  return same(x.a, x.aDec, y.a, y.aDec) && same(x.b, x.bDec, y.b, y.bDec) || same(x.a, x.aDec, y.b, y.bDec) && same(x.b, x.bDec, y.a, y.aDec);
+}
+function placeValueComparePracticeFault(shown, a, b) {
+  const fault = placeValueCompareFault(a, b);
+  if (fault)
+    return fault;
+  return placeValueCompareSamePair(shown, placeValueComparePairOf(a, b)) ? "same_pair" : void 0;
+}
 var placeValueCompareStart = (pair) => ({ pair, marked: 0, signed: false, compared: 0 });
 var placeValueCompareDecided = (state) => !state.fault && state.pair.columns.length > 0 && state.marked === state.pair.stop + 1;
 var placeValueCompareDemonstrating = (state) => state.compared > 0;
 var placeValueCompareSigned = (state) => placeValueCompareDecided(state) && state.signed;
 var placeValueCompareComplete = (state) => !placeValueCompareDemonstrating(state) && placeValueCompareSigned(state);
 var placeValueCompareDemoEnd = (pair) => pair.stop + 2;
+function placeValueCompareColumn(state, index) {
+  const { pair } = state;
+  const place5 = pair.columns[index], a = pair.da[index], b = pair.db[index];
+  let status = "open";
+  if (index < state.marked)
+    status = index === pair.stop && !pair.equal ? "decides" : "same";
+  else if (placeValueCompareDecided(state) && index > pair.stop)
+    status = "after";
+  const paired = status === "same" || status === "decides" ? Math.min(a, b) : 0;
+  const extra = status === "decides" ? { row: a > b ? "a" : "b", n: Math.abs(a - b) } : null;
+  return { place: place5, a, b, status, paired, extra };
+}
 function placeValueCompareMove(state, move) {
   if (placeValueCompareDemonstrating(state))
     return { ok: false, reason: "demonstrating" };
@@ -11499,6 +11527,22 @@ function placeValueCompareRefusalText(state, tap, language = "en-US") {
     default:
       return words.other;
   }
+}
+function placeValueCompareStepSentences(pair, from, to, language = "en-US") {
+  const dm = wordsOf2(language).demo;
+  const { steps } = placeValueCompareDemoSteps(pair);
+  const [x, y] = placeValueCompareNumerals(pair, language);
+  const sentences = [];
+  for (let k = Math.max(0, from); k < Math.min(to, steps.length); k += 1) {
+    const step = steps[k];
+    if (step.anim.kind === "sign") {
+      sentences.push(dm.sign(x, pair.relation, y, nameOf(pair.place, language), hasAfter(pair), pair.equal));
+      continue;
+    }
+    const name = nameOf(step.anim.place, language);
+    sentences.push(step.anim.kind === "decide" ? dm.decide(name, step.anim.a, step.anim.b) : step.anim.done ? dm.lastSame(name, step.anim.a, step.anim.b) : dm.same(name, step.anim.a, step.anim.b));
+  }
+  return sentences;
 }
 
 // node_modules/octos-lesson-language/dist/packages/core/src/cards.js
@@ -17368,6 +17412,43 @@ function buildPlaceValueTimesTen(input) {
   };
 }
 
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/place-value-compare-builder.js
+var driven8 = (value2) => typeof value2 === "object" && value2 !== null && typeof value2.expression === "string";
+function buildPlaceValueCompare(input) {
+  const bindings = [];
+  const value2 = (raw, target) => {
+    if (!driven8(raw))
+      return raw;
+    bindings.push({ target, expression: raw.expression });
+    return raw.initial;
+  };
+  const a = value2(input.a, "a");
+  const b = value2(input.b, "b");
+  const aDec = input.a_decimals === void 0 ? void 0 : value2(input.a_decimals, "a_decimals");
+  const bDec = input.b_decimals === void 0 ? void 0 : value2(input.b_decimals, "b_decimals");
+  const numbers = [{ value: a, dec: aDec ?? placeValueCompareOwnDecimals(a) }, { value: b, dec: bDec ?? placeValueCompareOwnDecimals(b) }];
+  const made = placeValueCompareMakePair(numbers[0], numbers[1]);
+  if ("fault" in made)
+    throw new Error(placeValueCompareFaultText(made.fault, numbers[0], numbers[1]));
+  const content = {
+    ...input.language !== void 0 ? { language: input.language } : {},
+    a,
+    b,
+    ...aDec !== void 0 ? { a_decimals: aDec } : {},
+    ...bDec !== void 0 ? { b_decimals: bDec } : {},
+    compared: value2(input.compared ?? 0, "compared"),
+    marked: value2(input.marked ?? 0, "marked"),
+    signed: value2(input.signed ?? 0, "signed"),
+    ...bindings.length ? { bindings } : {}
+  };
+  return {
+    actions: [{ do: "write", as: input.as, kind: PLACE_VALUE_COMPARE_KIND, role: input.role, content, place: input.place }],
+    whole: input.as,
+    parts: { whole: input.as },
+    pair: made
+  };
+}
+
 // node_modules/octos-lesson-language/dist/packages/plugin-math/src/number-line-form.js
 var NUMBER_LINE_FORM_LIMITS = { span: 40, subdivisions: NUMBER_LINE_LIMITS.subdivisions, moves: 3 };
 
@@ -18120,9 +18201,9 @@ function buildUnitCircle(input) {
 }
 function buildCirclePolygons(input) {
   const { radius } = input;
-  const driven8 = typeof input.sides === "number" ? void 0 : input.sides;
+  const driven9 = typeof input.sides === "number" ? void 0 : input.sides;
   const sides = typeof input.sides === "number" ? input.sides : input.sides.initial;
-  const extent = input.circumscribed ? radius / Math.cos(Math.PI / (driven8?.min ?? sides)) * 1.18 : radius * 1.3;
+  const extent = input.circumscribed ? radius / Math.cos(Math.PI / (driven9?.min ?? sides)) * 1.18 : radius * 1.3;
   const polygon = (as, label) => ({
     as,
     center: "center",
@@ -18143,9 +18224,9 @@ function buildCirclePolygons(input) {
       ...input.circumscribed ? [polygon("circumscribed", input.text.circumscribed_label)] : []
     ],
     ...input.text.caption !== void 0 ? { caption: input.text.caption } : {},
-    ...driven8 ? { bindings: [
-      { target: "inscribed.sides", expression: driven8.expression },
-      ...input.circumscribed ? [{ target: "circumscribed.sides", expression: driven8.expression }] : []
+    ...driven9 ? { bindings: [
+      { target: "inscribed.sides", expression: driven9.expression },
+      ...input.circumscribed ? [{ target: "circumscribed.sides", expression: driven9.expression }] : []
     ] } : {}
   };
   return {
@@ -18477,6 +18558,98 @@ function placeValueTimesTenWordsGiveAnswer(words, practice) {
   return false;
 }
 
+// src/plugins/place-value-compare-moves.ts
+var COMPARE_NUMBER = { first: 0, second: 1, practiceFirst: 2, practiceSecond: 3, compared: 4 };
+var COMPARE_MOST = PLACE_VALUE_COMPARE_MAX_COLUMNS + 1;
+function compareNumberOf(value2, written) {
+  if (!Number.isFinite(value2) || value2 < 0) return void 0;
+  const thousandths = Math.round(value2 * 1e3);
+  if (Math.abs(thousandths - value2 * 1e3) > 1e-6) return void 0;
+  const own = placeValueCompareOwnDecimals(thousandths);
+  const dec = written !== void 0 && Number.isInteger(written) && written >= own && written <= 3 ? written : own;
+  return placeValueCompareFromDecimal(thousandths, 3) ? { value: thousandths, dec } : void 0;
+}
+var compareNumeral = (n) => `${Math.floor(n.value / 1e3)}${n.dec ? `.${String(n.value % 1e3).padStart(3, "0").slice(0, n.dec)}` : ""}`;
+function compareStartProblem(values, written = [], { decimalsUnknown = false } = {}) {
+  if (values.length !== 5) {
+    return { fault: "the card takes five lesson numbers, in order: the two numbers to compare (as the question writes them: 0.70 keeps its zero), the practice pair (another pair, for the learner) and compared (0)" };
+  }
+  const numbers = values.slice(0, 4).map((value2, i) => compareNumberOf(value2, written[i]));
+  if (numbers.some((n) => n === void 0)) return { fault: "the two numbers and the practice pair are numbers from 0 to 9,999,999 with at most three decimal places (thousandths)" };
+  const [a, b, pa, pb] = numbers;
+  const sameNumeral = (x, y) => decimalsUnknown && x.value === y.value;
+  if (sameNumeral(a, b)) b.dec = Math.min(3, Math.max(a.dec, b.dec) + 1);
+  if (sameNumeral(pa, pb)) pb.dec = Math.min(3, Math.max(pa.dec, pb.dec) + 1);
+  const fault = placeValueCompareFault(a, b);
+  if (fault) {
+    return { fault: fault === "same_numeral" ? `the two numbers are the same numeral, ${compareNumeral(a)}: there is nothing to compare (0.7 and 0.70 are a pair: 0.70 is mantissa 70, scale 2)` : `the question's pair: ${placeValueCompareFaultText(fault, a, b)}` };
+  }
+  const pair = placeValueComparePairOf(a, b);
+  const practiceFault = placeValueComparePracticeFault(pair, pa, pb);
+  if (practiceFault) {
+    return { fault: practiceFault === "same_pair" ? "the practice pair is the learner's own: another pair than the question's (the same two numbers in the other order are the same pair), so the learner does not copy the demonstration" : `the practice pair: ${placeValueCompareFaultText(practiceFault, pa, pb)}` };
+  }
+  if ([[pa, pb], [pb, pa]].some(([x, y]) => x.value === a.value && y.value === b.value)) {
+    return { fault: "the practice pair is the learner's own: other numbers than the question's, not the same values written another way" };
+  }
+  if (values[COMPARE_NUMBER.compared] !== 0) return { fault: `compared starts at 0, not ${values[COMPARE_NUMBER.compared]}: the card opens with no column judged` };
+  return { pair, practice: placeValueComparePairOf(pa, pb), numbers: [a, b, pa, pb] };
+}
+var compareOutlineFault = (values) => {
+  const found = compareStartProblem(values.length === 4 ? [...values, 0] : values, [], { decimalsUnknown: true });
+  return "fault" in found ? found.fault : void 0;
+};
+function compareEndOf(values, written = []) {
+  const a = compareNumberOf(values[0] ?? Number.NaN, written[0]), b = compareNumberOf(values[1] ?? Number.NaN, written[1]);
+  if (!a || !b) return COMPARE_MOST;
+  if (a.value === b.value && written[0] === void 0 && written[1] === void 0) return COMPARE_MOST;
+  return placeValueCompareDemoEnd(placeValueComparePairOf(a, b));
+}
+function compareState(start) {
+  return [...start.slice(0, 4), 0];
+}
+function compareMove(state, position, to) {
+  if (position !== COMPARE_NUMBER.compared) return "the card has five lesson numbers; the demonstration moves only compared";
+  const from = state[COMPARE_NUMBER.compared];
+  if (!Number.isInteger(to) || to < 0) return `compared counts the columns judged from the left, then the sign: a whole number from 0, not ${to}; from ${from}, the next value is ${from + 1}`;
+  const end = compareEndOf(state);
+  const value2 = Math.min(to, end);
+  if (value2 < from) return `compared goes forward, never back: from ${from} it can be ${from} to ${end}`;
+  const moved = [...state];
+  moved[COMPARE_NUMBER.compared] = value2;
+  return moved;
+}
+function compareMoves(state, moves) {
+  const steps = [];
+  const ignored = [];
+  let current = [...state];
+  for (const [index, move] of moves.entries()) {
+    if (move.position >= 0 && move.position < COMPARE_NUMBER.compared && move.to !== current[move.position]) {
+      ignored.push({ index, position: move.position, reason: "the two numbers and the practice pair stay as written: the demonstration moves only compared (the card's fifth lesson number)" });
+      continue;
+    }
+    if (move.position < COMPARE_NUMBER.compared) {
+      steps.push({ position: move.position, from: current, to: [...current] });
+      continue;
+    }
+    const result = compareMove(current, move.position, move.to);
+    if (typeof result === "string") return { refused: { position: move.position, reason: result } };
+    steps.push({ position: move.position, from: current, to: result });
+    current = result;
+  }
+  return { steps, ...ignored.length ? { ignored } : {} };
+}
+var FULL_WIDTH4 = /[０-９．，＜＞＝]/gu;
+var halfWidth3 = (text5) => text5.replace(FULL_WIDTH4, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
+function compareWordsGiveAnswer(words, practice) {
+  const text5 = halfWidth3(String(words)).replace(/(\d),(?=\d{3})/gu, "$1");
+  const x = compareNumeral({ value: practice.a, dec: practice.aDec }), y = compareNumeral({ value: practice.b, dec: practice.bDec });
+  const flip = { ">": "<", "<": ">", "=": "=" };
+  const esc = (s) => s.replace(/\./gu, "\\.");
+  const said = (p, sign, q) => new RegExp(`(?<!\\d)(?<!\\d\\.)${esc(p)}\\s*${sign}\\s*${esc(q)}(?!\\d)(?!\\.\\d)`, "u").test(text5);
+  return said(x, practice.relation, y) || said(y, flip[practice.relation], x);
+}
+
 // src/plugins/math.ts
 var SIDE_COUNT = { min: 3, max: 384 };
 var UNIT_SQUARES_PER_SIDE = { min: 1, max: 8 };
@@ -18784,6 +18957,39 @@ var MATH_RECIPES = {
     required_features: ["count_in_another_unit"],
     model_guidance: "\u6362\u4E00\u4E2A\u5355\u4F4D\u6765\u6570\uFF08\u6570\u4F4D\u8868\uFF1A\u5F80\u53F3\u4E00\u4F4D\u4E00\u4E2A\u62C6\u6210\u5341\u4E2A\uFF0C\u5F80\u5DE6\u4E00\u4F4D\u5341\u4E2A\u5408\u6210\u4E00\u4E2A\uFF09\uFF1A\u6570\u5355\u4F4D\uFF083\u4E2A\u5341\u5206\u4E4B\u4E00=?\u4E2A\u5343\u5206\u4E4B\u4E00\uFF1B6\u4E2A\u5343=?\u4E2A\u767E\uFF1B\u4E00\u5343\u91CC\u6709\u51E0\u4E2A\u5341\uFF09\u6216\u500D\u6570\uFF08700\u662F70\u7684\u51E0\u500D\uFF1B0.3\u662F3\u7684\u5341\u5206\u4E4B\u4E00\uFF09\u3002\u8FD9\u4E9B\u9898\u7528\u8FD9\u5F20\u5361\uFF0C\u4E0D\u7528 trade_ten_for_one\uFF08\u5B83\u53EA\u628A\u5341\u4E2A\u5408\u6210\u4E00\u4E2A\uFF09\u3002\u6570\u53EA\u6709\u4E00\u4F4D\u4E0D\u662F\u96F6\uFF085550\u91CC\u7684\u4E24\u4E2A5\u5199500\u548C50\uFF09\uFF0C\u5355\u4F4D\u6700\u591A\u9694\u4E24\u4F4D\uFF0C\u500D\u6570\u662F\u76F8\u90BB\u4E24\u4F4D\u3002\u4E0D\u7528\u4E8E\u4E00\u4E2A\u6570\u5B57\u8868\u793A\u591A\u5C11\u3001\u6BD4\u8F83\u3001\u52A0\u51CF\u3001\u4E58\u9664\u4EE510\u6216100\u3001\u9664\u4EE5\u5C0F\u6570\u3002outline \u7684 numbers \u4F9D\u6B21\u662F\u4E94\u4E2A\u89D2\u8272\uFF0C\u6BCF\u4E2A\u6570\u7684 label \u7528\u8BFE\u7684\u8BED\u8A00\u5199\u5B83\u7684\u89D2\u8272\uFF08\u5982 unit asked\u3001\u95EE\u7684\u5355\u4F4D\uFF09\uFF1Aamount \u8981\u6570\u7684\u6570\uFF08\u5199\u503C\uFF0C3\u4E2A\u5341\u5206\u4E4B\u4E00\u51990.3\uFF09\uFF1Bunit_asked \u95EE\u7684\u5355\u4F4D\uFF08\u95EE\u201C\u662F\u51E0\u4E2A\u767E\u5206\u4E4B\u4E00\u201D\u51990.01\uFF1B\u500D\u6570\u5199\u5C0F\u7684\u657070\uFF09\uFF1Bpractice_amount\u3001practice_unit_asked \u7EC3\u4E60\u7684\u4E24\u4E2A\u6570\uFF08\u540C\u4E00\u79CD\u95EE\u6CD5\uFF0C\u9694\u540C\u6837\u51E0\u4F4D\u3001\u540C\u4E00\u65B9\u5411\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF09\uFF1Bstart_unit \u8981\u6570\u7684\u6570\u73B0\u5728\u7528\u4EC0\u4E48\u5355\u4F4D\u5728\u6570\uFF08\u9898\u76EE\u8BF4\u5B83\u65F6\u7528\u7684\u5355\u4F4D\uFF09\u3002\u62C6\u5F00\u7684\u9898\uFF08\u5F80\u5C0F\u7684\u5355\u4F4D\u6570\uFF09\u548C\u500D\u6570\u4E0D\u5199 start_unit\uFF0C\u7A0B\u5E8F\u8865\u6210\u8981\u6570\u7684\u6570\u81EA\u5DF1\u90A3\u4E00\u4F4D\uFF1A7\u4E2A\u5341\u5206\u4E4B\u4E00=?\u4E2A\u767E\u5206\u4E4B\u4E00 \u51990.7\u30010.01\u3001\u7EC3\u4E60\u4E24\u4E2A\u6570\uFF1B\u4E00\u5343\u91CC\u6709\u51E0\u4E2A\u5341 \u51991000\u300110\u3001\u7EC3\u4E60\u4E24\u4E2A\u6570\u3002\u5408\u8D77\u6765\u7684\u9898\uFF08\u5F80\u5927\u7684\u5355\u4F4D\u6570\uFF09\u8981\u5199\uFF1A70\u4E2A\u767E\u5206\u4E4B\u4E00=?\u4E2A\u5341\u5206\u4E4B\u4E00 \u51990.7\u30010.1\u3001\u7EC3\u4E60\u4E24\u4E2A\u6570\u30010.01\u3002start_unit \u548C unit_asked \u662F\u4E24\u4E2A\u4E0D\u540C\u7684\u5355\u4F4D\u3002\u6F14\u793A\u53EA\u52A8\u753B start_unit\uFF08\u7B2C\u4E94\u4E2A\u6570\uFF09\uFF1A\u4ECE\u5B83\u4E00\u6B65\u4E00\u6B65\u52A8\u753B\u5230 unit_asked \u7684\u503C\uFF080.1\u30010.01\u30010.001\uFF1B\u500D\u6570\u523070\uFF09\uFF0C\u53EA\u5F80\u524D\u8D70\uFF0C\u4E00\u76F4\u5230\u95EE\u7684\u5355\u4F4D\uFF1B\u522B\u7684\u6570\u4E0D\u52A8\u753B\u3002\u7EC3\u4E60\uFF1A\u5BF9\u7B2C\u4E94\u4E2A\u6570\u5199\u6570\u503C\u76EE\u6807\u9898\uFF0C\u7A0B\u5E8F\u518D\u51FA\u7B54\u6848\u90A3\u4E00\u884C\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u7B54\u6848\u3002\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
   },
+  // OLL decision 0029 (a trial): comparing two numbers by place, from the largest place down: two rows of one chart,
+  // lined up by place; the learner judges each place from the left ("Same" or "Different", the card's own buttons),
+  // then chooses >, = or <. The model writes the question's pair as written (0.70 keeps its zero) and a practice pair;
+  // the program supplies "compared" (0: no column judged), which the demonstration animates while the card judges one
+  // column at a time and then chooses the sign (owner, 2026-11-27: the demonstration reaches the sign; no check
+  // enforces it). The program makes the learner's task on the practice pair.
+  place_value_compare: {
+    parts: ["whole"],
+    number_inputs: ["first", "second", "practice_first", "practice_second", "compared"],
+    number_roles: ["problem", "problem", "practice", "practice", "demonstration"],
+    number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
+    // Compared starts at 0 whatever the outline holds (the card opens with no column judged), so the program
+    // supplies it: an outline that declares only the four numbers before it gets it, from 0 to the most any pair can
+    // reach (seven columns, then the sign).
+    program_number_inputs: [{ initial: 0, min: 0, max: COMPARE_MOST, label: "\u4ECE\u5DE6\u8FB9\u8D77\u6BD4\u4E86\u51E0\u4F4D" }],
+    // The card starts on no fewer: an outline that declares fewer loses it at once (a section cannot add one).
+    min_lesson_numbers: 5,
+    parameter_names: [],
+    model_parameter_names: [],
+    required_model_schema_parameters: [],
+    semantic_parameters: [],
+    output_kinds: ["place_value_compare"],
+    // Up to seven lesson variables (the pair, their written decimals, compared, the learner's two): when a lesson
+    // holds too many, the card is the picture that goes.
+    binds_many_variables: true,
+    // No control: the learner works the card by its own taps; the model never names one, and the card's own fixed
+    // text says how it is used.
+    student_controls: [],
+    required_features: ["compare_by_place"],
+    // 0.7 and 0.70 are a pair (OLL 0029): the outline's numbers keep the decimals the model wrote them with.
+    keeps_written_decimals: true,
+    model_guidance: "\u6309\u6570\u4F4D\u6BD4\u5927\u5C0F\uFF08\u6570\u4F4D\u8868\u4E0A\u4E24\u4E2A\u6570\u5404\u5360\u4E00\u884C\uFF0C\u6309\u6570\u4F4D\u5BF9\u9F50\uFF0C\u4ECE\u6700\u9AD8\u4F4D\u4E00\u4F4D\u4E00\u4F4D\u6BD4\uFF0C\u7B2C\u4E00\u4E2A\u4E0D\u4E00\u6837\u7684\u6570\u4F4D\u51B3\u5B9A\uFF0C\u540E\u9762\u7684\u6570\u4F4D\u4E0D\u5F71\u54CD\uFF09\uFF1A\u591A\u4F4D\u6570\u6BD4\u8F83\uFF08\u5230\u767E\u4E07\u4F4D\uFF09\u548C\u5C0F\u6570\u6BD4\u8F83\uFF08\u5230\u5343\u5206\u4F4D\uFF09\uFF0C\u95EE\u54EA\u4E2A\u5927\u3001\u4E3A\u4EC0\u4E48\u3001\u600E\u4E48\u6BD4\u3001\u76F8\u7B49\u5417\uFF080.7\u548C0.70\uFF09\u3002\u4E0D\u7528\u4E8E\u6570\u8F74\u4E0A\u7684\u4F4D\u7F6E\u3001\u51D1\u6574\u3001\u52A0\u51CF\u3001\u5C55\u5F00\u5F0F\u3001\u5206\u6570\u6BD4\u8F83\u3001\u4E8C\u5E74\u7EA7\u7528\u65B9\u5757\u6BD4\u3002outline \u7684 numbers \u4F9D\u6B21\u662F\u4E94\u4E2A\u89D2\u8272\uFF0C\u6BCF\u4E2A\u6570\u7684 label \u7528\u8BFE\u7684\u8BED\u8A00\u5199\u5B83\u7684\u89D2\u8272\uFF08\u5982 first number\u3001\u7B2C\u4E00\u4E2A\u6570\uFF09\uFF1Afirst\u3001second \u9898\u76EE\u7684\u4E24\u4E2A\u6570\uFF0C\u7167\u9898\u76EE\u5199\uFF0C\u5C0F\u6570\u672B\u5C3E\u5199\u51FA\u6765\u76840\u8981\u4FDD\u7559\uFF080.70 \u5199 mantissa 70\u3001scale 2\uFF1B0.7 \u5199 7\u30011\uFF0C\u4E0D\u8981\u88650\uFF09\uFF1Bpractice_first\u3001practice_second \u7EC3\u4E60\u7684\u4E24\u4E2A\u6570\uFF08\u53E6\u4E00\u5BF9\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u6362\u987A\u5E8F\u4E5F\u4E0D\u7B97\uFF0C\u4E5F\u4E0D\u662F\u540C\u6837\u7684\u503C\u6362\u4E2A\u5199\u6CD5\uFF09\uFF1Bcompared \u51990\uFF1A\u8868\u4E00\u5F00\u59CB\u4E00\u4F4D\u4E5F\u6CA1\u6BD4\u3002\u6F14\u793A\u65F6\u628A compared \u52A8\u753B\u5230 1\u30012\u2026\u2026\uFF1A\u6BCF\u5230\u4E00\u4E2A\u503C\uFF0C\u7A0B\u5E8F\u4ECE\u5DE6\u8FB9\u8D77\u5224\u65AD\u4E00\u4F4D\uFF08\u4E00\u6837\u7684\u6807=\uFF0C\u7B2C\u4E00\u4E2A\u4E0D\u4E00\u6837\u7684\u6807\u2260\uFF0C\u540E\u9762\u7684\u4F4D\u4E0D\u5F71\u54CD\uFF09\uFF0C\u6700\u540E\u4E00\u4E2A\u503C\u9009\u597D\u7B26\u53F7\uFF1B\u6F14\u793A\u4E00\u76F4\u6BD4\u5230\u9009\u597D\u7B26\u53F7\uFF08visuals_for_section \u7ED9\u51FA demonstration_to\uFF09\u3002\u522B\u7684\u6570\u4E0D\u52A8\u753B\u3002\u7EC3\u4E60\uFF1A\u5BF9\u7B2C\u4E94\u4E2A\u6570\u5199\u4E00\u4E2A\u6570\u503C\u76EE\u6807\u9898\uFF0C\u5B69\u5B50\u81EA\u5DF1\u4ECE\u5DE6\u8FB9\u8D77\u4E00\u4F4D\u4E00\u4F4D\u6BD4\uFF0C\u518D\u9009\u7B26\u53F7\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u7B54\u6848\uFF08\u4E0D\u5199\u54EA\u4E2A\u5927\uFF0C\u4E0D\u5199 >\u3001<\u3001=\uFF09\u3002\u8BF4\u6570\u4F4D\u7528\u540D\u5B57\uFF08\u5341\u4F4D\u3001\u5341\u5206\u4F4D\u3001tens\uFF09\uFF0C\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
+  },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
     number_inputs: ["columns_or_length", "rows_or_width"],
@@ -18858,7 +19064,10 @@ var MATH_RECIPES = {
     output_kinds: ["number_line"],
     student_controls: ["slider"],
     required_features: ["number_line", "number_comparison"],
-    model_guidance: "\u6570\u8F74\u6BD4\u8F83\u4E24\u4E2A\u6570\uFF1A\u4E24\u4E2A\u6570\u503C\u5404\u753B\u4E00\u70B9\uFF082/3 \u548C 3/5 \u4E5F\u80FD\u753B\uFF09"
+    model_guidance: "\u6570\u8F74\u6BD4\u8F83\u4E24\u4E2A\u6570\uFF1A\u4E24\u4E2A\u6570\u503C\u5404\u753B\u4E00\u70B9\uFF082/3 \u548C 3/5 \u4E5F\u80FD\u753B\uFF09",
+    // Beside the compare card (a trial, OLL 0029), the number line does not take "which is greater and why, by place":
+    // the card compares place by place. Without the trial its text is unchanged.
+    model_guidance_with: { place_value_compare: "\u6570\u8F74\u6BD4\u8F83\u4E24\u4E2A\u6570\uFF1A\u4E24\u4E2A\u6570\u503C\u5404\u753B\u4E00\u70B9\uFF082/3 \u548C 3/5 \u4E5F\u80FD\u753B\uFF09\uFF1B\u6309\u6570\u4F4D\u6BD4\u5927\u5C0F\uFF08\u54EA\u4E2A\u5927\u3001\u4E3A\u4EC0\u4E48\u3001\u4ECE\u6700\u9AD8\u4F4D\u6BD4\u30010.7\u548C0.70\u76F8\u7B49\u5417\uFF09\u4E0D\u7528\u6570\u8F74" }
   },
   // Decision 0016: a solution set. The model names the relation and gives the boundaries (solved first);
   // the program draws open or filled ends and the rays or interval.
@@ -19093,7 +19302,7 @@ function buildConstantSpeedMotion(input) {
   const distance = time.initial * speed.initial;
   const t = quantityValue(time);
   const v = quantityValue(speed);
-  const driven8 = Boolean(time.expression || speed.expression);
+  const driven9 = Boolean(time.expression || speed.expression);
   const lane = Number((0.08 * length2).toPrecision(12));
   const trackContent = {
     title: text5.title,
@@ -19101,13 +19310,13 @@ function buildConstantSpeedMotion(input) {
     points: [
       { as: "start", x: 0, y: lane, label: text5.start },
       { as: "finish", x: length2, y: lane, visible: false },
-      { as: "object", x: distance, y: lane, label: driven8 ? `${text5.distance_readout}${distance}${text5.distance_unit ? ` ${text5.distance_unit}` : ""}` : text5.object }
+      { as: "object", x: distance, y: lane, label: driven9 ? `${text5.distance_readout}${distance}${text5.distance_unit ? ` ${text5.distance_unit}` : ""}` : text5.object }
     ],
     segments: [
       { as: "track", from: "start", to: "finish", style: "dashed" },
       { as: "travelled", from: "start", to: "object", style: "solid" }
     ],
-    ...driven8 ? {
+    ...driven9 ? {
       bindings: [{
         target: "object.x",
         expression: `${v}*${t}`,
@@ -19120,7 +19329,7 @@ function buildConstantSpeedMotion(input) {
     axes: { x: { min: 0, max: time.max, label: text5.time_axis }, y: { min: 0, max: length2, label: text5.distance_axis } },
     curves: [{ as: "primary-curve", expression: `${v}*x`, label: text5.curve_label }],
     points: [{ as: "moving-point", x: time.initial, y: distance, label: text5.current_state }],
-    ...driven8 ? {
+    ...driven9 ? {
       bindings: [
         { target: "moving-point.x", expression: t },
         { target: "moving-point.y", expression: `${v}*${t}` }
@@ -19378,7 +19587,7 @@ var RECIPE_CATALOG_ORDER = [
   "place_value_chart"
 ];
 var RETIRED_RECIPES = ["cube_with_section"];
-var TRIAL_RECIPES = ["constant_speed_motion", "fraction_model", "place_value_trade", "make_ten", "place_value_times_ten"];
+var TRIAL_RECIPES = ["constant_speed_motion", "fraction_model", "place_value_trade", "make_ten", "place_value_times_ten", "place_value_compare"];
 function enabledTrialRecipes(list3) {
   const named = new Set((list3 ?? "").split(",").map((name) => name.trim()).filter(Boolean));
   return TRIAL_RECIPES.filter((name) => named.has(name));
@@ -20992,11 +21201,11 @@ function placeValueTradeNext(columns, k) {
   const place5 = columns[columns.length - 1 - k];
   return place5 === void 0 ? `every column is finished at ${columns.length}` : `the next value, ${k + 1}, finishes the ${placeValueColumnName(place5).toLowerCase()}`;
 }
-var FULL_WIDTH4 = /[０-９．，＝]/gu;
-var halfWidth3 = (text5) => text5.replace(FULL_WIDTH4, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
+var FULL_WIDTH5 = /[０-９．，＝]/gu;
+var halfWidth4 = (text5) => text5.replace(FULL_WIDTH5, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
 var STATES_ANSWER = /(?:=|\b(?:equals?|makes?|answer(?:\s+is)?|total(?:\s+is)?|difference(?:\s+is)?|result(?:\s+is)?|is\s+left)|等于|得数是?|答案是?|结果是?|一共是?|还剩)\s*$/iu;
 function placeValueTradeWordsGiveAnswer(words, answer, practice) {
-  const text5 = halfWidth3(String(words));
+  const text5 = halfWidth4(String(words));
   for (const match of text5.matchAll(/\d{1,3}(?:[,   ]\d{3})+(?:\.\d+)?|\d*\.\d+|\d+/gu)) {
     if (placeValueThousandths(Number(match[0].replace(/[,   ]/gu, ""))) !== answer) continue;
     if (!practice.includes(answer)) return true;
@@ -21105,10 +21314,10 @@ function makeTenMoves(state, moves) {
   }
   return { steps, ...ignored.length ? { ignored } : {} };
 }
-var FULL_WIDTH5 = /[０-９＝]/gu;
-var halfWidth4 = (text5) => text5.replace(FULL_WIDTH5, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
+var FULL_WIDTH6 = /[０-９＝]/gu;
+var halfWidth5 = (text5) => text5.replace(FULL_WIDTH6, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
 function makeTenWordsGiveAnswer(words, sum) {
-  for (const match of halfWidth4(String(words)).matchAll(/\d+/gu)) if (Number(match[0]) === sum) return true;
+  for (const match of halfWidth5(String(words)).matchAll(/\d+/gu)) if (Number(match[0]) === sum) return true;
   return false;
 }
 
@@ -21337,6 +21546,28 @@ var MATH_HOOKS = {
       const found = timesTenStartProblem(values.slice(0, 5));
       return "fault" in found ? 5 : 4 + (found.problem.g === 2 ? 1 : 0);
     }
+  },
+  place_value_compare: {
+    // The card's numbers have no control: the learner works it by its own taps (OLL 0029; the model never names a
+    // control). Each number's range is its own value, and compared runs from 0 to the most any pair reaches (seven
+    // columns, then the sign); the compiler checks every number and each step itself.
+    fit_numbers(content, plan) {
+      const numbers = content.numbers ?? [];
+      const definitions = numbers.map((number) => plan.numbers?.[number - 1]);
+      if (!definitions.length || definitions.some((definition) => !definition)) return /* @__PURE__ */ new Map();
+      definitions.forEach((definition, position) => {
+        definition.min = position === COMPARE_NUMBER.compared ? 0 : Math.min(0, definition.initial);
+        definition.max = position === COMPARE_NUMBER.compared ? COMPARE_MOST : Math.max(0, definition.initial);
+        delete definition.student_control;
+        delete definition.unit;
+      });
+      return /* @__PURE__ */ new Map();
+    },
+    // Compared moves forward from 0 to the sign; nothing else moves (an animation of another number is left out and
+    // recorded; a value past the end is the end).
+    number_moves: { state: compareState, moves: compareMoves },
+    // Numbers the card cannot start on go with the outline, before any section is written for them.
+    outline_fault: compareOutlineFault
   },
   number_line: { fit_numbers: fitNumberLineNumbers },
   number_line_compare: { fit_numbers: fitComparedNumbers },
@@ -22039,7 +22270,7 @@ function validateLessonPlanNumbers(value2, path) {
   numbers.forEach((entry, index) => {
     const numberPath = `${path}[${index}]`;
     const number = record9(entry, numberPath);
-    allowedKeys(number, ["initial", "min", "max", "label", "unit", "student_control"], numberPath);
+    allowedKeys(number, ["initial", "min", "max", "label", "unit", "student_control", "written_decimals"], numberPath);
     const initial = finiteNumber(number.initial, `${numberPath}.initial`);
     const min = finiteNumber(number.min, `${numberPath}.min`);
     const max = finiteNumber(number.max, `${numberPath}.max`);
@@ -22048,6 +22279,9 @@ function validateLessonPlanNumbers(value2, path) {
     }
     optionalString(number.label, `${numberPath}.label`, 80);
     optionalString(number.unit, `${numberPath}.unit`, 32);
+    if (number.written_decimals !== void 0 && (!Number.isInteger(number.written_decimals) || Number(number.written_decimals) < 1 || Number(number.written_decimals) > 3)) {
+      fail3("LESSON_PLAN_NUMBERS", `${numberPath}.written_decimals`, "expected the written decimals, 1 to 3");
+    }
     if (number.student_control === void 0) return;
     const controlPath = `${numberPath}.student_control`;
     const control = record9(number.student_control, controlPath);
@@ -23278,8 +23512,8 @@ function planPlotView(input) {
     const structural = features.filter((feature) => feature.kind !== "intercept");
     let region = hull((structural.length ? structural : features).map((feature) => feature.x));
     if (item.quadratic) {
-      const halfWidth5 = quadraticHalfWidth(item.quadratic.a);
-      region = union(region, { min: item.quadratic.vertex - halfWidth5, max: item.quadratic.vertex + halfWidth5 });
+      const halfWidth6 = quadraticHalfWidth(item.quadratic.a);
+      region = union(region, { min: item.quadratic.vertex - halfWidth6, max: item.quadratic.vertex + halfWidth6 });
     }
     return region;
   };
@@ -23345,8 +23579,8 @@ function planPlotView(input) {
     for (const item of items) {
       const features = item.features.filter((feature) => keptSet.has(feature) || inCluster(feature)).filter((feature) => feature.x >= window.min && feature.x <= window.max);
       if (item.quadratic) {
-        const halfWidth5 = quadraticHalfWidth(item.quadratic.a);
-        const own = { min: Math.max(window.min, item.quadratic.vertex - halfWidth5), max: Math.min(window.max, item.quadratic.vertex + halfWidth5) };
+        const halfWidth6 = quadraticHalfWidth(item.quadratic.a);
+        const own = { min: Math.max(window.min, item.quadratic.vertex - halfWidth6), max: Math.min(window.max, item.quadratic.vertex + halfWidth6) };
         sampled(item, span2(own) > 0 ? own : window);
       } else if (item.period === void 0 && features.some((feature) => feature.kind === "extremum") && !(undefinedBeyond([item], window.min, -1) && undefinedBeyond([item], window.max, 1))) {
         const levels = hull(features.filter((feature) => feature.y !== void 0 && feature.kind !== "intercept").map((feature) => feature.y));
@@ -25353,6 +25587,109 @@ function compilePlaceValueTimesTen(base, content, role, placement, plan, path) {
     }
   };
 }
+var COMPARE_TEXT = {
+  "en-US": { a: "the first number", b: "the second number", a_decimals: "the first number's written decimals", b_decimals: "the second number's written decimals", compared: "places compared", marked: "places judged", signed: "sign chosen" },
+  "zh-CN": { a: "\u7B2C\u4E00\u4E2A\u6570", b: "\u7B2C\u4E8C\u4E2A\u6570", a_decimals: "\u7B2C\u4E00\u4E2A\u6570\u5199\u51FA\u7684\u5C0F\u6570\u4F4D\u6570", b_decimals: "\u7B2C\u4E8C\u4E2A\u6570\u5199\u51FA\u7684\u5C0F\u6570\u4F4D\u6570", compared: "\u4ECE\u5DE6\u8FB9\u8D77\u6BD4\u4E86\u51E0\u4F4D", marked: "\u5224\u65AD\u4E86\u51E0\u4F4D", signed: "\u9009\u597D\u4E86\u7B26\u53F7" }
+};
+function compilePlaceValueCompare(base, content, role, placement, plan, path) {
+  allowParameterKeys(parameters(content), [], path);
+  const numbers = content.numbers ?? [];
+  const definitions = numbers.map((number, index) => numberDefinition(plan, number, `${path}.numbers[${index}]`));
+  const values = definitions.map((definition) => definition.initial);
+  const written = definitions.map((definition) => definition.written_decimals);
+  const sharesNumbers = (action) => action.action === "create" && action.kind === "visual" && action.content.capability !== "place_value_compare" && (action.content.numbers ?? []).some((number) => numbers.includes(number));
+  const sharingAt = plan.sections.findIndex((section) => section.moments.some((moment) => moment.actions.some(sharesNumbers)));
+  if (sharingAt >= 0) {
+    const sharing = plan.sections[sharingAt].moments.flatMap((moment) => moment.actions).find(sharesNumbers);
+    const cardAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
+    const sharingCapability = sharing.content.capability;
+    failSharedTapCardNumbers(`${path}.numbers`, sharedNumberFact("place_value_compare", "compare card", numbers, sharing.content.numbers ?? [], sharingCapability), "place_value_compare", sharingCapability, sharingAt, cardAt);
+  }
+  const found = compareStartProblem(values, written);
+  if ("fault" in found) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, found.fault, "place_value_compare");
+  const { pair, practice, numbers: [A, B, PA, PB] } = found;
+  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "place_value_compare");
+  if (first && JSON.stringify(first.content.numbers ?? []) !== JSON.stringify(numbers)) {
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `a lesson has one compare card: this lesson's is on lesson numbers ${(first.content.numbers ?? []).join(", ")}`, "place_value_compare");
+  }
+  const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
+  const text5 = COMPARE_TEXT[language];
+  const stem = base.replace(/[^A-Za-z0-9]+/gu, "_").toLowerCase();
+  const name = (field) => `${stem}_${field}`;
+  const own = (n) => placeValueCompareOwnDecimals(n.value) === n.dec;
+  const decimals = ![A, B, PA, PB].every(own);
+  const built = buildPlaceValueCompare({
+    as: base,
+    role,
+    place: placement,
+    ...language === "zh-CN" ? { language } : {},
+    a: { expression: name("a"), initial: A.value },
+    b: { expression: name("b"), initial: B.value },
+    ...decimals ? { a_decimals: { expression: name("a_decimals"), initial: A.dec }, b_decimals: { expression: name("b_decimals"), initial: B.dec } } : {},
+    compared: { expression: name("compared"), initial: 0 },
+    marked: { expression: name("marked"), initial: 0 },
+    signed: { expression: name("signed"), initial: 0 }
+  });
+  const end = placeValueCompareDemoEnd(pair);
+  const span3 = (...items) => ({ min: Math.min(...items), max: Math.max(...items) + (Math.min(...items) === Math.max(...items) ? 1 : 0) });
+  const variables = [
+    { as: name("a"), initial: A.value, ...span3(A.value, PA.value), label: text5.a },
+    { as: name("b"), initial: B.value, ...span3(B.value, PB.value), label: text5.b },
+    ...decimals ? [
+      { as: name("a_decimals"), initial: A.dec, min: 0, max: 3, label: text5.a_decimals },
+      { as: name("b_decimals"), initial: B.dec, min: 0, max: 3, label: text5.b_decimals }
+    ] : [],
+    { as: name("compared"), initial: 0, min: 0, max: Math.max(end, placeValueCompareDemoEnd(practice)), label: text5.compared },
+    { as: name("marked"), initial: 0, min: 0, max: PLACE_VALUE_COMPARE_MAX_COLUMNS, label: text5.marked },
+    { as: name("signed"), initial: 0, min: 0, max: 1, label: text5.signed }
+  ];
+  return {
+    actions: built.actions,
+    whole: built.whole,
+    parts: new Map(Object.entries(built.parts)),
+    variables,
+    mover: {
+      unbound: true,
+      numbers: [...numbers],
+      // A step moves compared forward: the card judges each column, then chooses the sign. A value past the end is
+      // the end (the demonstration runs to the sign). Nothing else moves.
+      play(steps) {
+        const actions = [];
+        for (const step of steps) {
+          if (step.position !== COMPARE_NUMBER.compared) continue;
+          const from = Math.min(end, step.from[step.position]), to = Math.min(end, step.to[step.position]);
+          if (to !== from) actions.push({ do: "animate", variable: name("compared"), value: to });
+        }
+        return actions;
+      },
+      // The model's practice is "the learner compares the practice pair": the card starts again, fresh, on that pair;
+      // the true sign ends the task (no "done"). The value the model wrote is not read. Words that write the practice's
+      // answer (its numbers with the true sign between them) give it away: that task is dropped and recorded, never
+      // the lesson.
+      task(_position, _value, _end, words = []) {
+        if (words.some((each) => compareWordsGiveAnswer(each, practice))) {
+          return { drop: "the task's words write the sign the learner is to find on the card", reason: "practice_answer_in_words" };
+        }
+        const start = {
+          [name("a")]: PA.value,
+          [name("b")]: PB.value,
+          ...decimals ? { [name("a_decimals")]: PA.dec, [name("b_decimals")]: PB.dec } : {},
+          [name("compared")]: 0,
+          [name("marked")]: 0,
+          [name("signed")]: 0
+        };
+        return {
+          task: {
+            start: { kind: "practice", variables: Object.keys(start), values: start },
+            allowed_operations: [{ kind: "card_tap", node: base }],
+            completion: { kind: "card_fact", node: base, fact: "complete" },
+            success_message: placeValueCompareDoneText(practice, language)
+          }
+        };
+      }
+    }
+  };
+}
 var MATH_COMPILERS = {
   number_line: compileNumberLine,
   number_line_compare: compileNumberLineCompare,
@@ -25376,7 +25713,8 @@ var MATH_COMPILERS = {
   place_value_chart: compilePlaceValueChart,
   place_value_trade: compilePlaceValueTrade,
   make_ten: compileMakeTen,
-  place_value_times_ten: compilePlaceValueTimesTen
+  place_value_times_ten: compilePlaceValueTimesTen,
+  place_value_compare: compilePlaceValueCompare
 };
 
 // src/plugins/physics-compilers.ts
@@ -27574,6 +27912,41 @@ var MATH_SECTION_FACTS = {
       practice: [timesTenDecimal(practice.amount), timesTenDecimal(practice.target)]
     } };
   },
+  // The compare card in its own terms (OLL 0029), once it is drawn: the pair as written (0.70 keeps its zero), its
+  // columns, the deciding place and the true sign (the lesson's own pair: the demonstration shows it), where the
+  // demonstration stands (compared now, and each column as judged so far), what the next value does in the card's own
+  // sentences, where the demonstration goes (compared to the sign: owner, 2026-11-27; information only, no check
+  // enforces it), and the practice pair as written (never its answer: the learner finds it on the card).
+  place_value_compare: ({ established, numbers, state, language }) => {
+    if (!numbers || !established?.numbers?.length) return {};
+    const lessonNumbers = established.numbers;
+    const definitions = lessonNumbers.map((number) => numbers[number - 1]);
+    const found = compareStartProblem(definitions.map((definition) => Number(definition?.initial ?? 0)), definitions.map((definition) => definition?.written_decimals));
+    if ("fault" in found) return {};
+    const { pair, numbers: [a, b, pa, pb] } = found;
+    const cardLanguage = /^en(?:-|$)/iu.test(language ?? "") ? "en-US" : "zh-CN";
+    const end = placeValueCompareDemoEnd(pair);
+    const now = Number(state.get(lessonNumbers[COMPARE_NUMBER.compared]) ?? 0);
+    const k = Number.isFinite(now) ? Math.min(end, Math.max(0, Math.floor(now + 1e-9))) : 0;
+    const shown = placeValueCompareDemoState(pair, k);
+    const name = (place5) => placeValueColumnName(place5, cardLanguage);
+    const says = placeValueCompareStepSentences(pair, 0, end, cardLanguage);
+    return { facts: {
+      numbers: lessonNumbers,
+      pair: [compareNumeral(a), compareNumeral(b)],
+      columns: pair.columns.map(name),
+      deciding_place: pair.equal ? null : name(pair.place),
+      relation: pair.relation,
+      compared_now: k,
+      chart_now: pair.columns.map((place5, index) => {
+        const column = placeValueCompareColumn(shown, index);
+        return { column: name(place5), first: column.a, second: column.b, ...column.status === "open" ? {} : { marked: column.status === "same" ? "=" : column.status === "decides" ? "\u2260" : "doesn't matter" } };
+      }),
+      ...k < end ? { next: Array.from({ length: end - k }, (_, i) => ({ value: k + i + 1, does: says[k + i] })) } : { sign_chosen: pair.relation },
+      demonstration_to: { compared: end },
+      practice_pair: [compareNumeral(pa), compareNumeral(pb)]
+    } };
+  },
   function_plot: ({ established }) => established && fixedLineSamples(established) ? { lead: { sample_slope: "constant" } } : {},
   geometric_rearrangement: ({ mode, established, numbers, state }) => {
     let facts = {};
@@ -27823,6 +28196,22 @@ function defaultCoverageSection(requestPart, requestPartCount, sectionCount) {
     sectionCount,
     Math.max(1, Math.ceil(requestPart * sectionCount / requestPartCount))
   );
+}
+function withWrittenDecimals(raw, coerced) {
+  if (!LESSON_PLAN_CAPABILITY_NAMES.some((capability2) => recipeDeclares(capability2, "keeps_written_decimals"))) return coerced;
+  const rawNumbers = raw?.numbers;
+  const numbers = coerced?.numbers;
+  if (!Array.isArray(rawNumbers) || !Array.isArray(numbers)) return coerced;
+  numbers.forEach((entry, index) => {
+    const written = rawNumbers[index]?.initial;
+    if (!entry || typeof entry !== "object" || !written || typeof written !== "object") return;
+    const { mantissa, scale: scale2 } = written;
+    if (!Number.isInteger(mantissa) || !Number.isInteger(scale2) || Number(scale2) < 1 || Number(scale2) > 3 || Number(mantissa) < 0) return;
+    let own = Number(scale2);
+    for (let m = Number(mantissa); own > 0 && m % 10 === 0; m /= 10) own -= 1;
+    if (Number(scale2) > own) entry.written_decimals = Number(scale2);
+  });
+  return coerced;
 }
 function lowerModelOutlineNumber(entry, index) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
@@ -30068,7 +30457,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     const bootstrap = course;
     outline = validateLessonPlanOutline(
       lowerModelOutline(
-        coerceLessonPlanOutlineModelNumbers(bootstrap.outline, fixedRequestParts.length),
+        withWrittenDecimals(bootstrap.outline, coerceLessonPlanOutlineModelNumbers(bootstrap.outline, fixedRequestParts.length)),
         fixedRequestParts.length
       ),
       fixedRequestParts.length
@@ -30139,7 +30528,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         try {
           outline = validateLessonPlanOutline(
             lowerModelOutline(
-              coerceLessonPlanOutlineModelNumbers(partialOutline, fixedRequestParts.length),
+              withWrittenDecimals(partialOutline, coerceLessonPlanOutlineModelNumbers(partialOutline, fixedRequestParts.length)),
               fixedRequestParts.length
             ),
             fixedRequestParts.length
@@ -30196,7 +30585,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         if (admitted.result) return admitted.result;
         const candidateOutline = validateLessonPlanOutline(
           lowerModelOutline(
-            coerceLessonPlanOutlineModelNumbers(admitted.course, fixedRequestParts.length),
+            withWrittenDecimals(admitted.course, coerceLessonPlanOutlineModelNumbers(admitted.course, fixedRequestParts.length)),
             fixedRequestParts.length
           ),
           fixedRequestParts.length
