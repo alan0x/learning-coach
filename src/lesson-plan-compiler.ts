@@ -643,16 +643,21 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
           // lesson (BT-31, check 4: two piles to compare, moved as one; Coach #170).
           fail("LESSON_PLAN_NUMBER_NOT_DRAWABLE", `${momentPath}.actions[${at.offset}].end_value`, result.refused.reason, capability);
         }
-        // An animation the card leaves out (a number it never moves) is recorded; the rest play.
+        // An animation the card leaves out (a number it never moves) is recorded, each at its own offset; the rest
+        // play, at the timing of the first that plays (review of #188).
+        const left = new Set<number>();
         for (const ignored of result.ignored ?? []) {
-          const at = animations.find((animation) => animation.position === ignored.position)!;
+          const at = ignored.index !== undefined ? animations[ignored.index]! : animations.find((animation) => animation.position === ignored.position)!;
+          left.add(at.offset);
           viewAdjustments.push({ section: sectionIndex, reason: "animation_left_out", detail: `${momentPath}.actions[${at.offset}]: ${ignored.reason}; left out` });
         }
+        const playing = animations.filter((animation) => !left.has(animation.offset));
+        const timed = playing[0] ?? animations[0]!;
         state.now = result.steps.at(-1)?.to ?? state.now;
         const PHASES = ["before_speech", "during_speech", "after_speech"];
         const phase = (timing: unknown) => PHASES.indexOf(String(timing ?? "during_speech"));
         const written = writtenHere.has(visual) ? writtenHere.get(visual) : undefined;
-        const when = actionWhen(writtenHere.has(visual) && phase(written) > phase(animations[0]!.timing) ? written ?? "during_speech" : animations[0]!.timing);
+        const when = actionWhen(writtenHere.has(visual) && phase(written) > phase(timed.timing) ? written ?? "during_speech" : timed.timing);
         // What the moment can still hold: OLL's 24 actions in a beat, less what it has and what is to come.
         const first = animations[0]!.offset;
         const room = 24 - actions.length - moment.actions.slice(first + 1).filter((item) => !(item.action === "animate" && movers.get(item.number)?.visual === visual)).length;

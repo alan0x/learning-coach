@@ -173,15 +173,15 @@ export function placeValueTimesTenMove(state: readonly number[], position: numbe
 
 /** Several animations of one card in one moment, applied in order; the states after each, or the first refusal. */
 export function placeValueTimesTenMoves(state: readonly number[], moves: ReadonlyArray<{ position: number; to: number }>):
-  { steps: Array<{ position: number; from: number[]; to: number[] }>; ignored?: Array<{ position: number; reason: string }> } | { refused: { position: number; reason: string } } {
+  { steps: Array<{ position: number; from: number[]; to: number[] }>; ignored?: Array<{ index: number; position: number; reason: string }> } | { refused: { position: number; reason: string } } {
   const steps: Array<{ position: number; from: number[]; to: number[] }> = [];
-  const ignored: Array<{ position: number; reason: string }> = [];
+  const ignored: Array<{ index: number; position: number; reason: string }> = [];
   let current = [...state];
-  for (const move of moves) {
+  for (const [index, move] of moves.entries()) {
     // The amount, the target and the practice never move: an animation of one is left out (and recorded by the
     // compiler), not refused, so a section's repairs are not spent on it (objective run 1, PF-02 and PF-10).
     if (move.position >= 0 && move.position < TIMES_TEN_NUMBER.countedIn && move.to !== current[move.position]) {
-      ignored.push({ position: move.position, reason: "the amount, the target and the practice stay as written: the demonstration moves only counted in (the card's fifth lesson number)" });
+      ignored.push({ index, position: move.position, reason: "the amount, the target and the practice stay as written: the demonstration moves only counted in (the card's fifth lesson number)" });
       continue;
     }
     const result = placeValueTimesTenMove(current, move.position, move.to);

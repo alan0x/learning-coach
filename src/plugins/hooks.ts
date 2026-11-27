@@ -54,10 +54,10 @@ export interface RecipeHooks {
    */
   number_moves?: {
     state(start: readonly number[], content?: LessonPlanVisualContent): number[];
-    // `ignored`: animations the card leaves out rather than refuses (a number it never moves), each with why; the
-    // compiler records them and plays the rest.
+    // `ignored`: animations the card leaves out rather than refuses (a number it never moves), each with its index
+    // in `moves` and why; the compiler records them and plays the rest.
     moves(state: readonly number[], moves: ReadonlyArray<{ position: number; to: number }>):
-      { steps: Array<{ position: number; from: number[]; to: number[] }>; ignored?: Array<{ position: number; reason: string }> } | { refused: { position: number; reason: string } };
+      { steps: Array<{ position: number; from: number[]; to: number[] }>; ignored?: Array<{ index?: number; position: number; reason: string }> } | { refused: { position: number; reason: string } };
   };
   /**
    * Why the visual cannot start on the outline's numbers, or undefined. `values` are its lesson numbers' starting

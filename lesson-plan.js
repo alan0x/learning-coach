@@ -17789,9 +17789,9 @@ function placeValueTimesTenMoves(state, moves) {
   const steps = [];
   const ignored = [];
   let current = [...state];
-  for (const move of moves) {
+  for (const [index, move] of moves.entries()) {
     if (move.position >= 0 && move.position < TIMES_TEN_NUMBER.countedIn && move.to !== current[move.position]) {
-      ignored.push({ position: move.position, reason: "the amount, the target and the practice stay as written: the demonstration moves only counted in (the card's fifth lesson number)" });
+      ignored.push({ index, position: move.position, reason: "the amount, the target and the practice stay as written: the demonstration moves only counted in (the card's fifth lesson number)" });
       continue;
     }
     const result = placeValueTimesTenMove2(current, move.position, move.to);
@@ -25478,15 +25478,19 @@ function compileLessonPlan(value2, options = {}) {
           const at2 = animations.find((animation) => animation.position === result.refused.position);
           fail2("LESSON_PLAN_NUMBER_NOT_DRAWABLE", `${momentPath}.actions[${at2.offset}].end_value`, result.refused.reason, capability2);
         }
+        const left = /* @__PURE__ */ new Set();
         for (const ignored of result.ignored ?? []) {
-          const at2 = animations.find((animation) => animation.position === ignored.position);
+          const at2 = ignored.index !== void 0 ? animations[ignored.index] : animations.find((animation) => animation.position === ignored.position);
+          left.add(at2.offset);
           viewAdjustments.push({ section: sectionIndex, reason: "animation_left_out", detail: `${momentPath}.actions[${at2.offset}]: ${ignored.reason}; left out` });
         }
+        const playing = animations.filter((animation) => !left.has(animation.offset));
+        const timed = playing[0] ?? animations[0];
         state.now = result.steps.at(-1)?.to ?? state.now;
         const PHASES2 = ["before_speech", "during_speech", "after_speech"];
         const phase = (timing) => PHASES2.indexOf(String(timing ?? "during_speech"));
         const written = writtenHere.has(visual) ? writtenHere.get(visual) : void 0;
-        const when = actionWhen(writtenHere.has(visual) && phase(written) > phase(animations[0].timing) ? written ?? "during_speech" : animations[0].timing);
+        const when = actionWhen(writtenHere.has(visual) && phase(written) > phase(timed.timing) ? written ?? "during_speech" : timed.timing);
         const first = animations[0].offset;
         const room = 24 - actions.length - moment.actions.slice(first + 1).filter((item) => !(item.action === "animate" && movers.get(item.number)?.visual === visual)).length;
         const played = visual.mover.play(result.steps, room).map((action) => ({ ...action, ...when }));
@@ -28850,7 +28854,7 @@ function outlineNumbersMissing(outline, section) {
     }
     const check = RECIPE_HOOKS[visual.capability]?.outline_fault;
     const limit = LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[visual.capability] ?? 0;
-    if (!check || visual !== firstNumbered || declared < limit) continue;
+    if (!check || visual !== firstNumbered || declared !== limit) continue;
     const fault = check(outline.numbers.slice(0, limit).map((number) => number.initial));
     if (fault) {
       return new LessonPlanError(

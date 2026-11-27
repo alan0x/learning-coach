@@ -308,13 +308,16 @@ test("a moment that animates the card's fixed numbers plays the rest and records
     const api = await import(${here("../lesson-plan.js")});
     const { timesTenPlan } = await import(${here("./sample-plans.mjs")});
     const out = {};
-    for (const [name, animations] of [["amount", [[1, 60000], [5, 600]]], ["practice", [[3, 9000]]], ["off-path", [[5, 60000]]]]) {
+    // [name, [number, value, timing]...]
+    for (const [name, animations] of [["amount", [[1, 60000], [5, 600]]], ["practice", [[3, 9000]]], ["off-path", [[5, 60000]]],
+      ["timing", [[1, 60000, "before_speech"], [5, 600, "after_speech"]]], ["twice", [[1, 60000], [1, 70000], [5, 600]]]]) {
       const plan = timesTenPlan({ amount: 6000, target: 600, practice: [8000, 800], steps: [] });
       for (const [number, value] of animations) plan.numbers[number - 1].max = Math.max(plan.numbers[number - 1].max, value);
-      plan.sections[0].moments.push({ narration: "Now watch.", actions: animations.map(([number, value]) => ({ action: "animate", number, end_value: value, duration_intent: "brief", timing: "during_speech" })) });
+      plan.sections[0].moments.push({ narration: "Now watch.", actions: animations.map(([number, value, timing]) => ({ action: "animate", number, end_value: value, duration_intent: "brief", timing: timing ?? "during_speech" })) });
       try {
         const compiled = api.compileAndValidateLessonPlan(plan, { language: "zh-CN" });
-        out[name] = { beat: compiled.lesson.steps[0].beats.at(-1).actions.map((action) => action.do === "animate" ? action.value : action.do), adjustments: compiled.view_adjustments.map((each) => each.reason + ": " + each.detail) };
+        const beat = compiled.lesson.steps[0].beats.at(-1).actions;
+        out[name] = { beat: beat.map((action) => action.do === "animate" ? action.value : action.do), when: beat.map((action) => action.when ?? "during_speech"), adjustments: compiled.view_adjustments.map((each) => each.reason + ": " + each.detail) };
       } catch (error) { out[name] = { code: error.code, capability: error.capability, message: error.message }; }
     }
     console.log(JSON.stringify(out));
@@ -323,6 +326,11 @@ test("a moment that animates the card's fixed numbers plays the rest and records
   assert.deepEqual(result.amount.adjustments, ["animation_left_out: $lessonPlan.sections[0].moments[1].actions[0]: the amount, the target and the practice stay as written: the demonstration moves only counted in (the card's fifth lesson number); left out"]);
   // Only a fixed number: the moment still looks at the card.
   assert.deepEqual([result.practice.beat, result.practice.adjustments.length], [["focus"], 1]);
+  // The moves play at the timing of the first animation that plays, not the left-out one's (review of #188).
+  assert.deepEqual([result.timing.beat, result.timing.when], [[600_000], ["after_speech"]]);
+  // Each left-out animation is recorded at its own offset.
+  assert.deepEqual(result.twice.adjustments.map((each) => /actions\[(\d+)\]/u.exec(each)[1]), ["0", "1"]);
+  assert.deepEqual(result.twice.beat, [600_000]);
   // Counted in off its path is still refused, with the card's tag (a section can fix it).
   assert.equal(result["off-path"].capability, "place_value_times_ten");
   assert.match(result["off-path"].message, /1000 \(thousands\) -> 600; 60000 is not one of its values; from 1000 the next values are 600/);
@@ -522,8 +530,19 @@ const outlineRun = (cases) => withTrial(`
   const { modelResponseHelpers } = await import(${here("./model-responses.mjs")});
   const { bootstrapModelResponse, bootstrapSectionFromExact, stagedOutline, toModelSectionDraft } = modelResponseHelpers(api.LESSON_PLAN_CAPABILITY_REGISTRY);
   const out = {};
-  for (const [name, options, keep, learnerRequest] of ${JSON.stringify(cases)}) {
-    const plan = makeSamplePlanModelCompatible(timesTenPlan(options));
+  // A leading lesson number the card does not bind (written first), then the card's five (review of #188).
+  const shift = (plan) => {
+    plan.numbers = [{ initial: 2, min: 0, max: 9, label: "a number" }, ...plan.numbers];
+    for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
+      if (action.action === "animate") action.number += 1;
+      if (action.action === "create" && action.kind === "visual" && action.content.numbers) action.content.numbers = action.content.numbers.map((n) => n + 1);
+    }
+    for (const section of plan.sections) for (const activity of section.student_activities ?? []) for (const control of activity.number_controls ?? []) control.number += 1;
+    return plan;
+  };
+  for (const [name, options, keep, learnerRequest, shifted] of ${JSON.stringify(cases)}) {
+    const written = timesTenPlan(options);
+    const plan = makeSamplePlanModelCompatible(shifted ? shift(written) : written);
     const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({ section: index + 1, version: plan.version, moments, student_activities }));
     const outline = stagedOutline(plan, drafts);
     outline.numbers = outline.numbers.slice(0, keep);
@@ -550,6 +569,9 @@ test("numbers the card cannot start on take it out as the outline is read, befor
     ["PF-17", { amount: 4.37, target: 437, start: 1, practice: [2.5, 250], steps: [437] }, 5, "4.37 乘 100 以后，孩子不明白为什么数字整体往左挪了两格。"],
     // A put-together question written right: kept, and section 1 is asked for.
     ["kept", { amount: 0.4, target: 0.1, start: 0.01, practice: [0.7, 0.1], steps: [0.1] }, 5, "40个百分之一合起来是几个十分之一？为什么？"],
+    // An outline with a number of its own before the card's five ([2, 0.3, 0.001, 5, 0.01, 0.1]): the card's numbers
+    // are not surely the first five, so it is not judged at the outline; it is kept (review of #188).
+    ["shifted", { amount: 0.3, target: 0.001, practice: [5, 0.01], steps: [0.01, 0.001] }, 6, "3个十分之一是几个千分之一？", true],
   ]);
   const removed = (name) => result[name].adjustments.map(({ kind, reason, capability }) => ({ kind, reason, capability }));
   for (const name of ["PF-05", "PF-17"]) {
@@ -560,8 +582,10 @@ test("numbers the card cannot start on take it out as the outline is read, befor
   assert.match(result["PF-17"].adjustments[0].detail, /not_one_digit/);
   assert.deepEqual(removed("PF-15"), [{ kind: "visual_removed", reason: "outline_numbers_missing", capability: "place_value_times_ten" }]);
   assert.deepEqual(result["PF-15"].requests, ["lesson-plan-bootstrap", "lesson-plan-outline"]);
-  assert.deepEqual(result.kept.adjustments, []);
-  assert.ok(!result.kept.requests.includes("lesson-plan-outline"), JSON.stringify(result.kept.requests));
+  for (const name of ["kept", "shifted"]) {
+    assert.deepEqual(result[name].adjustments, [], name);
+    assert.ok(!result[name].requests.includes("lesson-plan-outline"), `${name}: ${JSON.stringify(result[name].requests)}`);
+  }
 });
 
 test("the fixed sample (used for request hashes with the trial on) compiles through the full OLL validation", () => {

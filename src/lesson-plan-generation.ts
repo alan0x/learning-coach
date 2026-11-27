@@ -2773,9 +2773,11 @@ export function supplyProgramNumbers(
  */
 const OUTLINE_NUMBERS_MISSING = "LESSON_PLAN_OUTLINE_NUMBERS_MISSING";
 /**
- * Likewise a card that cannot start on the outline's numbers (recipe hook `outline_fault`): asked when the card is
- * the outline's first numbered picture, so its numbers lead (as `supplyProgramNumbers` places them). A section
- * cannot change an outline number, so its retries are sure to fail too.
+ * Likewise a card that cannot start on the outline's numbers (recipe hook `outline_fault`): asked only when the card
+ * is the outline's first numbered picture and the outline declares exactly as many numbers as the card takes, so
+ * the numbers are surely its own (an outline with a number of its own besides, [2, 0.3, 0.001, ...], keeps the
+ * section's retries: a section may bind the card to numbers 2 to 6; review of #188). A section cannot change an
+ * outline number, so its retries are sure to fail too.
  */
 const OUTLINE_NUMBERS_REFUSED = "LESSON_PLAN_OUTLINE_NUMBERS_REFUSED";
 const isOutlineNumbersFault = (error: unknown): error is LessonPlanError => error instanceof LessonPlanError
@@ -2793,7 +2795,7 @@ function outlineNumbersMissing(outline: LessonPlanOutline, section: number): Les
     }
     const check = RECIPE_HOOKS[visual.capability as keyof typeof RECIPE_HOOKS]?.outline_fault;
     const limit = LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[visual.capability as keyof typeof LESSON_PLAN_CAPABILITY_NUMBER_LIMITS] ?? 0;
-    if (!check || visual !== firstNumbered || declared < limit) continue;
+    if (!check || visual !== firstNumbered || declared !== limit) continue;
     const fault = check(outline.numbers!.slice(0, limit).map((number) => number.initial));
     if (fault) {
       return new LessonPlanError(OUTLINE_NUMBERS_REFUSED, `$lessonPlanOutline.course_visuals[${index}]`,
