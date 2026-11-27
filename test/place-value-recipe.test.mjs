@@ -50,7 +50,7 @@ test("place_value_chart is offered by default, last in the catalog (owner, 2026-
   assert.deepEqual(to(moves.state([26.075, 18.064], apart), 0.075).steps.at(-1).to[0], 0.075);
   assert.match(to(whole, 409).refused.reason, /what is still on the chart.* from 60408 it can be 408, 8, 0/);
   assert.match(to([408, 30705, 60408, 0], 60408).refused.reason, /takes whole places out/);
-  assert.match(moves.moves(built, [{ position: 1, to: 0 }]).refused.reason, /practice number is the learner's/);
+  assert.match(moves.moves(built, [{ position: 1, to: 0 }]).ignored[0].reason, /practice number is the learner's/);
 });
 
 /** Runs a script in its own process. (It named the trial when the chart was one; the chart is offered since 2026-11-26.) */

@@ -32,7 +32,7 @@ import { LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, LessonPlanError, type JsonValue, 
 import { buildImplicitSurfaceObject } from "../scene3d-surfaces.js";
 import { COARSE_UNITS, lessonValues, moveLandings } from "./number-line-fit.js";
 import { PLOT_MARKS, formulaBars, intervalOf, markParts, pieceBars, signOf, type AxisBar, type Interval, type MarkPart, type PlotMark } from "./plot-marks.js";
-import { fail, failSharedTapCardNumbers, pad, variableAlias, parameters, allowParameterKeys, optionalText, optionalNumber, optionalInteger, optionalStringArray, assertRange, replaceIdentifier, safeFunctionExpression, evaluate, mathExpressionToOll, place, numberDefinition, namedNumbers, displayNumberSymbols, formatMathExpressionDisplay, angleScaleForUnit, scaledAngleExpression, type VisualCompiler } from "../recipe-kit.js";
+import { fail, failSharedTapCardNumbers, sharedNumberFact, pad, variableAlias, parameters, allowParameterKeys, optionalText, optionalNumber, optionalInteger, optionalStringArray, assertRange, replaceIdentifier, safeFunctionExpression, evaluate, mathExpressionToOll, place, numberDefinition, namedNumbers, displayNumberSymbols, formatMathExpressionDisplay, angleScaleForUnit, scaledAngleExpression, type VisualCompiler } from "../recipe-kit.js";
 
 function compileFunctionPlot(
   base: string,
@@ -1714,7 +1714,7 @@ function compileBaseTenTrade(
     // number line in section 2 on the numbers of a mat section 1 already showed (BT-32, check 4).
     const matAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
     const sharingCapability = (sharing.content as LessonPlanVisualContent).capability;
-    failSharedTapCardNumbers(`${path}.numbers`, `the trading mat needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the pile on the mat only, or in words`, "base_ten_trade", sharingCapability, sharingAt, matAt);
+    failSharedTapCardNumbers(`${path}.numbers`, sharedNumberFact("base_ten_trade", "trading mat", numbers, (sharing.content as LessonPlanVisualContent).numbers ?? [], sharingCapability), "base_ten_trade", sharingCapability, sharingAt, matAt);
   }
   // Checked after sharing, so numbers borrowed from another visual are named as such, not as a pile too big
   // (BT-32, check 3: the number line's 46, 30 and 7 were refused three times as "at most 19 tens").
@@ -1725,7 +1725,7 @@ function compileBaseTenTrade(
   const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions)
     .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "base_ten_trade");
   if (first && JSON.stringify((first.content as LessonPlanVisualContent).numbers ?? []) !== JSON.stringify(numbers)) {
-    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a lesson has one trading mat: use the same lesson numbers each time, or show another pile in words", "base_ten_trade");
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `a lesson has one trading mat: this lesson's is on lesson numbers ${((first.content as LessonPlanVisualContent).numbers ?? []).join(", ")}`, "base_ten_trade");
   }
   const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
   const text = BASE_TEN_TEXT[language];
@@ -1849,7 +1849,7 @@ function compilePlaceValueChart(
     const sharing = plan.sections[sharingAt]!.moments.flatMap((moment) => moment.actions).find(sharesNumbers)!;
     const chartAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
     const sharingCapability = (sharing.content as LessonPlanVisualContent).capability;
-    failSharedTapCardNumbers(`${path}.numbers`, `the place-value chart needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the number on the chart only, or in words`, "place_value_chart", sharingCapability, sharingAt, chartAt);
+    failSharedTapCardNumbers(`${path}.numbers`, sharedNumberFact("place_value_chart", "place-value chart", numbers, (sharing.content as LessonPlanVisualContent).numbers ?? [], sharingCapability), "place_value_chart", sharingCapability, sharingAt, chartAt);
   }
   const fault = placeValueStartFault(values, given);
   if (fault) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault, "place_value_chart");
@@ -1858,7 +1858,7 @@ function compilePlaceValueChart(
     .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "place_value_chart");
   if (first && (JSON.stringify((first.content as LessonPlanVisualContent).numbers ?? []) !== JSON.stringify(numbers)
     || (first.content as LessonPlanVisualContent).parameters?.given !== given)) {
-    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a lesson has one place-value chart: use the same lesson numbers and given each time, or write another number in words", "place_value_chart");
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `a lesson has one place-value chart: this lesson's is on lesson numbers ${((first.content as LessonPlanVisualContent).numbers ?? []).join(", ")}`, "place_value_chart");
   }
   const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
   const text = PLACE_VALUE_TEXT[language];
@@ -2026,7 +2026,7 @@ function compilePlaceValueTrade(
     const sharing = plan.sections[sharingAt]!.moments.flatMap((moment) => moment.actions).find(sharesNumbers)!;
     const cardAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
     const sharingCapability = (sharing.content as LessonPlanVisualContent).capability;
-    failSharedTapCardNumbers(`${path}.numbers`, `the place-value trade card needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the numbers on the card only, or in words`, "place_value_trade", sharingCapability, sharingAt, cardAt);
+    failSharedTapCardNumbers(`${path}.numbers`, sharedNumberFact("place_value_trade", "place-value trade card", numbers, (sharing.content as LessonPlanVisualContent).numbers ?? [], sharingCapability), "place_value_trade", sharingCapability, sharingAt, cardAt);
   }
   const fault = placeValueTradeStartFault(values, operation);
   if (fault) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault, "place_value_trade");
@@ -2035,7 +2035,7 @@ function compilePlaceValueTrade(
     .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "place_value_trade");
   if (first && (JSON.stringify((first.content as LessonPlanVisualContent).numbers ?? []) !== JSON.stringify(numbers)
     || (first.content as LessonPlanVisualContent).parameters?.operation !== operation)) {
-    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a lesson has one place-value trade card: use the same lesson numbers and operation each time, or write another sum in words", "place_value_trade");
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `a lesson has one place-value trade card: this lesson's is on lesson numbers ${((first.content as LessonPlanVisualContent).numbers ?? []).join(", ")}`, "place_value_trade");
   }
   const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
   const text = PLACE_VALUE_TRADE_TEXT[language];
@@ -2148,7 +2148,7 @@ function compileMakeTen(
     const sharing = plan.sections[sharingAt]!.moments.flatMap((moment) => moment.actions).find(sharesNumbers)!;
     const cardAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
     const sharingCapability = (sharing.content as LessonPlanVisualContent).capability;
-    failSharedTapCardNumbers(`${path}.numbers`, `the make-ten card needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the numbers on the card only, or in words`, "make_ten", sharingCapability, sharingAt, cardAt);
+    failSharedTapCardNumbers(`${path}.numbers`, sharedNumberFact("make_ten", "make-ten card", numbers, (sharing.content as LessonPlanVisualContent).numbers ?? [], sharingCapability), "make_ten", sharingCapability, sharingAt, cardAt);
   }
   const fault = makeTenStartFault(values);
   if (fault) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault, "make_ten");
@@ -2156,7 +2156,7 @@ function compileMakeTen(
   const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions)
     .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "make_ten");
   if (first && JSON.stringify((first.content as LessonPlanVisualContent).numbers ?? []) !== JSON.stringify(numbers)) {
-    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a lesson has one make-ten card: use the same lesson numbers each time, or write another sum in words", "make_ten");
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `a lesson has one make-ten card: this lesson's is on lesson numbers ${((first.content as LessonPlanVisualContent).numbers ?? []).join(", ")}`, "make_ten");
   }
   const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
   const text = MAKE_TEN_TEXT[language];
@@ -2261,8 +2261,7 @@ function compilePlaceValueTimesTen(
     const sharing = plan.sections[sharingAt]!.moments.flatMap((moment) => moment.actions).find(sharesNumbers)!;
     const cardAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
     const sharingCapability = (sharing.content as LessonPlanVisualContent).capability;
-    fail("LESSON_PLAN_SHARED_NUMBER", `${path}.numbers`, `the times-ten card needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the numbers on the card only, or in words`,
-      sharingAt > cardAt ? sharingCapability : "place_value_times_ten");
+    failSharedTapCardNumbers(`${path}.numbers`, sharedNumberFact("place_value_times_ten", "times-ten card", numbers, (sharing.content as LessonPlanVisualContent).numbers ?? [], sharingCapability), "place_value_times_ten", sharingCapability, sharingAt, cardAt);
   }
   const found = timesTenStartProblem(values);
   if ("fault" in found) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, found.fault, "place_value_times_ten");
@@ -2271,7 +2270,7 @@ function compilePlaceValueTimesTen(
   const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions)
     .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "place_value_times_ten");
   if (first && JSON.stringify((first.content as LessonPlanVisualContent).numbers ?? []) !== JSON.stringify(numbers)) {
-    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a lesson has one times-ten card: use the same lesson numbers each time, or write another amount in words", "place_value_times_ten");
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `a lesson has one times-ten card: this lesson's is on lesson numbers ${((first.content as LessonPlanVisualContent).numbers ?? []).join(", ")}`, "place_value_times_ten");
   }
   const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
   const text = TIMES_TEN_TEXT[language];

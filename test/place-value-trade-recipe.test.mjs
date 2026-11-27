@@ -60,8 +60,8 @@ test("columns finished moves forward a whole column at a time; the numbers never
   assert.deepEqual(to(start, 4, 4).steps.map((step) => step.to[4]), [4, 4]);
   // The pair and the practice pair stay as written: animating one to its own value is no change, else refused.
   assert.deepEqual(moves.moves(start, [{ position: 0, to: 3486 }]).steps.at(-1).to, start);
-  assert.match(moves.moves(start, [{ position: 0, to: 6225 }]).refused.reason, /stay as written: the demonstration moves only columns finished.* from 0 up to 4/);
-  assert.match(moves.moves(start, [{ position: 3, to: 0 }]).refused.reason, /stay as written/);
+  assert.match(moves.moves(start, [{ position: 0, to: 6225 }]).ignored[0].reason, /stay as written: the demonstration moves only columns finished/);
+  assert.match(moves.moves(start, [{ position: 3, to: 0 }]).ignored[0].reason, /stay as written/);
 });
 
 // One lesson per entry: [id, placeValueTradePlan options, language, judge case or null]. Each compiles through
@@ -162,7 +162,7 @@ test("a practice pair that keeps one number compiles: that variable's range wide
   }
 });
 
-test("a moment that animates the pair is refused with the card's tag, never at OLL", () => {
+test("a moment that animates the pair or the practice pair is left out and recorded, never refused", () => {
   const result = withTrial(`
     const api = await import(${here("../lesson-plan.js")});
     const { placeValueTradePlan } = await import(${here("./sample-plans.mjs")});
@@ -170,15 +170,14 @@ test("a moment that animates the pair is refused with the card's tag, never at O
     for (const number of [1, 3]) {
       const plan = placeValueTradePlan({ operation: "add", numbers: [3486, 2739], practice: [4658, 1573] });
       plan.sections[0].moments.push({ narration: "Now another pair.", actions: [{ action: "animate", number, end_value: 5000, duration_intent: "brief", timing: "during_speech" }] });
-      try { api.compileAndValidateLessonPlan(plan, { language: "en-US" }); out[number] = { compiled: true }; }
+      try { out[number] = { compiled: true, left: api.compileAndValidateLessonPlan(plan, { language: "en-US" }).view_adjustments.filter((each) => each.reason === "animation_left_out").map((each) => each.detail) }; }
       catch (error) { out[number] = { code: error.code, capability: error.capability, message: error.message }; }
     }
     console.log(JSON.stringify(out));
   `);
   for (const number of ["1", "3"]) {
-    assert.equal(result[number].capability, "place_value_trade", number);
-    assert.notEqual(result[number].code, "LESSON_PLAN_OLL_SEMANTIC", number);
-    assert.match(result[number].message, /stay as written: the demonstration moves only columns finished/, number);
+    assert.equal(result[number].compiled, true, number);
+    assert.match(result[number].left[0] ?? "", /stay as written: the demonstration moves only columns finished/, number);
   }
 });
 

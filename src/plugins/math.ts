@@ -174,6 +174,9 @@ export const MATH_RECIPES = {
     // The pile is lesson numbers, as every earlier component's values are (owner, 2026-11-23): the model
     // declares them in the outline, moves them in its own moments and writes the practice.
     number_inputs: ["loose_ones", "tens", "hundreds"],
+    // What each number is to the card (design note "second example and copies", 2026-11-27): every count changes by
+    // trades, so another picture never shows one.
+    number_roles: ["demonstration", "demonstration", "demonstration"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
     parameter_names: [],
     model_parameter_names: [],
@@ -193,6 +196,8 @@ export const MATH_RECIPES = {
   place_value_chart: {
     parts: ["whole"],
     number_inputs: ["number", "practice"],
+    // The number is what the demonstration moves (the value on the chart); the practice is the learner's.
+    number_roles: ["demonstration", "practice"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }],
     parameter_names: ["given"],
     model_parameter_names: ["given"],
@@ -216,6 +221,8 @@ export const MATH_RECIPES = {
   place_value_trade: {
     parts: ["whole"],
     number_inputs: ["first", "second", "practice_first", "practice_second", "columns_finished"],
+    // The pair is the problem, which the card only reads: another picture may show it on a copy of its own.
+    number_roles: ["problem", "problem", "practice", "practice", "demonstration"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
     // Columns finished starts at 0 whatever the outline holds (the card is drawn with no column done), so the
     // program supplies it: an outline that declares only the four numbers before it gets it (0, from 0 to the
@@ -246,6 +253,8 @@ export const MATH_RECIPES = {
   make_ten: {
     parts: ["whole"],
     number_inputs: ["first", "second", "practice_first", "practice_second", "filled", "moved"],
+    // The pair is the problem, which the card only reads: another picture may show it on a copy of its own.
+    number_roles: ["problem", "problem", "practice", "practice", "demonstration", "program"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
     // The two counts start where the pair puts them (the frames apart, nothing moved), so the program supplies
     // them: an outline that declares the four numbers before them gets both, one that also declares the first
@@ -277,6 +286,8 @@ export const MATH_RECIPES = {
   place_value_times_ten: {
     parts: ["whole"],
     number_inputs: ["amount", "target", "practice_amount", "practice_target", "counted_in"],
+    // The amount and the target are the problem, which the card only reads: another picture may show them on a copy.
+    number_roles: ["problem", "problem", "practice", "practice", "demonstration"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
     // Counted in starts at the unit the question names: for a count that breaks and for a times pair it is the
     // amount's own place, so the program supplies it from the amount when the outline declares only the four numbers

@@ -472,7 +472,7 @@ test("a replay before a card is drawn is left out and recorded, never the lesson
   }
 });
 
-test("the card's numbers keep their own ranges, so a picture sharing one is refused with the card's tag (review of #187)", () => {
+test("the card's numbers keep their own ranges: a picture on its amount gets a copy, one on its practice is refused with a fact (review of #187)", () => {
   // The fit: each of the four numbers from 0 to its value; counted in over the problem's path.
   const fit = (values) => {
     const plan = { numbers: values.map((initial) => ({ initial, min: -5, max: 9_999_999, student_control: { kind: "slider", step: 1 } })) };
@@ -486,14 +486,26 @@ test("the card's numbers keep their own ranges, so a picture sharing one is refu
   const result = withTrial(`
     const api = await import(${here("../lesson-plan.js")});
     const { timesTenPlan } = await import(${here("./sample-plans.mjs")});
-    const plan = timesTenPlan({ amount: 0.3, target: 0.001, practice: [5, 0.01] });
-    plan.sections[0].moments.unshift({ narration: "A line first.", actions: [{ action: "create", kind: "visual", role: "main_visual", content: { capability: "number_line", parameters: {}, numbers: [1] }, placement: { relation: "new_region" } }] });
-    for (const action of plan.sections[0].moments[1].actions) for (const ref of action.references ?? []) if (ref.source === "local_board_item") ref.moment = 2;
-    try { api.compileAndValidateLessonPlan(plan, { language: "en-US" }); console.log(JSON.stringify({ compiled: true })); }
-    catch (error) { console.log(JSON.stringify({ code: error.code, capability: error.capability, message: error.message })); }
+    const out = {};
+    for (const number of [1, 3]) {
+      const plan = timesTenPlan({ amount: 0.3, target: 0.001, practice: [5, 0.01] });
+      plan.sections[0].moments.unshift({ narration: "A line first.", actions: [{ action: "create", kind: "visual", role: "main_visual", content: { capability: "number_line", parameters: {}, numbers: [number] }, placement: { relation: "new_region" } }] });
+      for (const action of plan.sections[0].moments[1].actions) for (const ref of action.references ?? []) if (ref.source === "local_board_item") ref.moment = 2;
+      try {
+        const compiled = api.compileAndValidateLessonPlan(plan, { language: "en-US" });
+        out[number] = { compiled: true, line: compiled.lesson.lesson.variables.find((variable) => variable.as === "number_01"), copied: compiled.view_adjustments.filter((each) => each.reason === "number_copied").length };
+      } catch (error) { out[number] = { code: error.code, capability: error.capability, message: error.message }; }
+    }
+    console.log(JSON.stringify(out));
   `);
-  assert.deepEqual([result.code, result.capability], ["LESSON_PLAN_SHARED_NUMBER", "place_value_times_ten"]);
-  assert.match(result.message, /the times-ten card needs lesson numbers of its own: the number_line visual shows one of them/);
+  // The line drew first and keeps number 1 with the outline's range; the card reads a copy of its own.
+  assert.equal(result[1].compiled, true, JSON.stringify(result[1]));
+  assert.equal(result[1].copied, 1);
+  assert.ok(result[1].line, "the line's number 1 is declared, for the line");
+  // The practice is the learner's: never copied, refused with a fact. The fault names the other picture (it is in the
+  // card's section), which goes at once, as on the other cards (failSharedTapCardNumbers).
+  assert.deepEqual([result[3].code, result[3].capability], ["LESSON_PLAN_SHARED_NUMBER", "number_line"]);
+  assert.match(result[3].message, /lesson number 3 is the times-ten card's practice number, which the learner works after class; the number_line visual shows it too/);
 });
 
 test("a put-together question whose outline leaves out counted in loses the card at once, never a section's attempts", () => {

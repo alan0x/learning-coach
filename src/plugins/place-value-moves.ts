@@ -156,16 +156,23 @@ export function placeValueMove(state: readonly number[], position: number, to: n
 
 /** Several animations of one chart in one moment, applied in order; the states after each, or the first refusal. */
 export function placeValueMoves(state: readonly number[], moves: ReadonlyArray<{ position: number; to: number }>):
-  { steps: Array<{ position: number; from: number[]; to: number[] }> } | { refused: { position: number; reason: string } } {
+  { steps: Array<{ position: number; from: number[]; to: number[] }>; ignored?: Array<{ index: number; position: number; reason: string }> } | { refused: { position: number; reason: string } } {
   const steps: Array<{ position: number; from: number[]; to: number[] }> = [];
+  const ignored: Array<{ index: number; position: number; reason: string }> = [];
   let current = [...state];
-  for (const move of moves) {
+  for (const [index, move] of moves.entries()) {
+    // The practice number never moves: an animation of it is left out (and recorded by the compiler), not refused, as
+    // the times-ten card's are (#188).
+    if (move.position === 1 && state.length === 4 && move.to !== current[1]) {
+      ignored.push({ index, position: move.position, reason: "the practice number is the learner's: it stays as written, and the demonstration moves only the question's number" });
+      continue;
+    }
     const result = placeValueMove(current, move.position, move.to);
     if (typeof result === "string") return { refused: { position: move.position, reason: result } };
     steps.push({ position: move.position, from: current, to: result });
     current = result;
   }
-  return { steps };
+  return { steps, ...(ignored.length ? { ignored } : {}) };
 }
 
 const FULL_WIDTH = /[０-９．，]/gu;

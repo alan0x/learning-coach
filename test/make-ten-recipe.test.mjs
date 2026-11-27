@@ -62,7 +62,8 @@ test("the count in the bigger frame moves forward from the bigger number to 10; 
   assert.match(to(start, 11).refused.reason, /a whole number from 8 to 10, not 11; from 8, the next value, 9, moves one of the 6 into the 8's frame/);
   assert.match(to(start, 9.5).refused.reason, /not 9.5/);
   assert.match(to(start, 7).refused.reason, /from 8 to 10, not 7/);
-  assert.match(moves.moves(start, [{ position: 0, to: 9 }]).refused.reason, /stay as written: the demonstration moves only the count in the bigger number's frame/);
+  // The pair and the practice pair are left out, not refused (as the times-ten card's are, #188).
+  assert.match(moves.moves(start, [{ position: 0, to: 9 }]).ignored[0].reason, /stay as written: the demonstration moves only the count in the bigger number's frame/);
   assert.match(moves.moves(start, [{ position: 5, to: 2 }]).refused.reason, /the count moved changes only by the learner's taps/);
   assert.deepEqual(moves.moves(start, [{ position: 1, to: 6 }]).steps.at(-1).to, start, "a number animated to its own value is no change");
 });
@@ -256,7 +257,7 @@ test("refusals name their reason and the card, so only the picture can be lost; 
   for (const [id, each] of Object.entries(declared)) assert.deepEqual(each, { card: [8, 0], beats: [["write", "focus"], [10]] }, id);
 });
 
-test("a moment that animates the pair or the count moved is refused with the card's tag, never at OLL", () => {
+test("a moment that animates the pair or the practice pair is left out and recorded; the count moved is refused with the card's tag, never at OLL", () => {
   const result = withTrial(`
     const api = await import(${here("../lesson-plan.js")});
     const { makeTenPlan } = await import(${here("./sample-plans.mjs")});
@@ -264,16 +265,18 @@ test("a moment that animates the pair or the count moved is refused with the car
     for (const [number, value] of [[1, 9], [3, 6], [6, 2]]) {
       const plan = makeTenPlan({ numbers: [8, 6], practice: [7, 5] });
       plan.sections[0].moments.push({ narration: "Now another.", actions: [{ action: "animate", number, end_value: value, duration_intent: "brief", timing: "during_speech" }] });
-      try { api.compileAndValidateLessonPlan(plan, { language: "en-US" }); out[number] = { compiled: true }; }
+      try { out[number] = { compiled: true, left: api.compileAndValidateLessonPlan(plan, { language: "en-US" }).view_adjustments.filter((each) => each.reason === "animation_left_out").map((each) => each.detail) }; }
       catch (error) { out[number] = { code: error.code, capability: error.capability, message: error.message }; }
     }
     console.log(JSON.stringify(out));
   `);
-  for (const number of ["1", "3", "6"]) {
-    assert.equal(result[number].capability, "make_ten", number);
-    assert.notEqual(result[number].code, "LESSON_PLAN_OLL_SEMANTIC", number);
+  for (const number of ["1", "3"]) {
+    assert.equal(result[number].compiled, true, number);
+    assert.equal(result[number].left.length, 1, number);
+    assert.match(result[number].left[0], /stay as written/, number);
   }
-  assert.match(result["1"].message, /stay as written/);
+  assert.equal(result["6"].capability, "make_ten");
+  assert.notEqual(result["6"].code, "LESSON_PLAN_OLL_SEMANTIC");
   assert.match(result["6"].message, /only by the learner's taps/);
 });
 

@@ -78,16 +78,24 @@ export function makeTenMove(state: readonly number[], position: number, to: numb
 
 /** Several animations of one card in one moment, applied in order; the states after each, or the first refusal. */
 export function makeTenMoves(state: readonly number[], moves: ReadonlyArray<{ position: number; to: number }>):
-  { steps: Array<{ position: number; from: number[]; to: number[] }> } | { refused: { position: number; reason: string } } {
+  { steps: Array<{ position: number; from: number[]; to: number[] }>; ignored?: Array<{ index: number; position: number; reason: string }> } | { refused: { position: number; reason: string } } {
   const steps: Array<{ position: number; from: number[]; to: number[] }> = [];
+  const ignored: Array<{ index: number; position: number; reason: string }> = [];
   let current = [...state];
-  for (const move of moves) {
+  for (const [index, move] of moves.entries()) {
+    // The pair and the practice pair never move: an animation of one is left out (and recorded by the compiler), not
+    // refused, so no section's repairs are spent on it, as the times-ten card's are not (#188). A picture that shows
+    // the pair has a copy of its own, and its moves are the copy's (design note "second example and copies", 2026-11-27).
+    if (move.position >= MAKE_TEN_NUMBER.first && move.position <= MAKE_TEN_NUMBER.practiceSecond && move.to !== current[move.position]) {
+      ignored.push({ index, position: move.position, reason: "the pair and the practice pair stay as written: the demonstration moves only the count in the bigger number's frame (the card's fifth lesson number)" });
+      continue;
+    }
     const result = makeTenMove(current, move.position, move.to);
     if (typeof result === "string") return { refused: { position: move.position, reason: result } };
     steps.push({ position: move.position, from: current, to: result });
     current = result;
   }
-  return { steps };
+  return { steps, ...(ignored.length ? { ignored } : {}) };
 }
 
 const FULL_WIDTH = /[０-９＝]/gu;

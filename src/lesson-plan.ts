@@ -74,6 +74,13 @@ export function recipeProgramNumbers(capability: string | undefined): ReadonlyAr
   return Array.isArray(declared) ? declared as ReadonlyArray<ProgramNumberInput> : [];
 }
 
+/** What a card's number at `position` is to it (`number_roles`): undefined for a recipe that declares none. */
+export type NumberRole = "problem" | "practice" | "demonstration" | "program";
+export function recipeNumberRole(capability: string | undefined, position: number): NumberRole | undefined {
+  const roles = recipeEntry(capability)?.number_roles;
+  return Array.isArray(roles) ? roles[position] as NumberRole | undefined : undefined;
+}
+
 /** The fewest lesson numbers a recipe's visual can start on (`min_lesson_numbers`), or 0 when it declares none. */
 export function recipeMinLessonNumbers(capability: string | undefined): number {
   const declared = recipeEntry(capability)?.min_lesson_numbers;

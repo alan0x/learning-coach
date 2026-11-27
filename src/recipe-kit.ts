@@ -1,13 +1,30 @@
 // Helpers shared by the Lesson Plan compiler and the plugins' recipe compilers.
 import { type CompiledVisual } from "./compiled-visual-reuse.js";
 import { compileMathExpression, type AuthoringAction, type Placement } from "octos-lesson-language";
-import { LessonPlanError, type JsonValue, type LessonPlan, type LessonPlanMathExpression, type LessonPlanPlacement, type LessonPlanVisualContent } from "./lesson-plan.js";
+import { LessonPlanError, recipeNumberRole, type JsonValue, type LessonPlan, type LessonPlanMathExpression, type LessonPlanPlacement, type LessonPlanVisualContent } from "./lesson-plan.js";
 
 export type Parameters = Record<string, JsonValue>;
 
 /** `capability` names the recipe whose own limits the plan broke, so generation can withdraw that picture. */
 export function fail(code: string, path: string, message: string, capability?: string): never {
   throw new LessonPlanError(code, path, message, capability);
+}
+
+/**
+ * The fact a tap card's refusal states when another picture shows one of its numbers (design note "second example and
+ * copies", 2026-11-27): what that number is to the card, never what to write instead. A problem number reaches here
+ * only for a third picture: the first other picture has its own copy (`separateCardProblemNumbers`).
+ */
+export function sharedNumberFact(capability: string, card: string, numbers: readonly number[], other: readonly number[], otherCapability: string): string {
+  const position = numbers.findIndex((number) => other.includes(number));
+  const number = numbers[position];
+  const role = recipeNumberRole(capability, position);
+  const what = role === "practice" ? `is the ${card}'s practice number, which the learner works after class`
+    : role === "program" ? `is a count on the ${card} that only the learner's taps change`
+    : role === "problem" ? `is the ${card}'s problem number, and another picture already shows it on a copy of its own`
+    : capability === "base_ten_trade" ? `is a count on the ${card}, which changes only by its trades`
+    : `is the number the ${card}'s demonstration moves`;
+  return `lesson number ${number} ${what}; the ${otherCapability} visual shows it too`;
 }
 
 /**
