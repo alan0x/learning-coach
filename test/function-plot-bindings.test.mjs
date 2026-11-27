@@ -140,7 +140,7 @@ test("numbers alone leave the plot static even with matching vertex values", asy
     assert.deepEqual(rejections, []);
     assert.equal(plot.points, undefined);
     assert.doesNotMatch(plot.curves[0].expression, /number_/u);
-    assert.ok(lesson.lesson.variables.every(variable => !variable.control));
+    assert.ok((lesson.lesson.variables ?? []).every(variable => !variable.control));
     assert.ok(adjustments.some(event => event.reason === "unused_plot_numbers"));
   }
 });

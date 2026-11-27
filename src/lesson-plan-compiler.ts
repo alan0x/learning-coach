@@ -989,6 +989,15 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
     fail("LESSON_PLAN_BOARD_CONTEXT", "$options.board_context", "host references require board context");
   }
   const closeFocus = plan.close.focus.map((_item, index) => reference(`$lessonPlan.close.focus[${index}]`));
+  // A lesson number is declared only once the lesson uses it: a picture binds it, a move or a replay names it, a task
+  // works it, or the learner has a control on it. A number declared in an earlier part and gone from a later one
+  // changes the lesson Learn holds, and the class starts over: a card first drawn in section 2 reads its numbers
+  // unbound, so section 1's part declared them for nothing (Coach design note runs/cross/second-example-design.md §1;
+  // the web runtime's lessonOpenCanExtend). Adding a variable later is allowed.
+  const used = new Set([...JSON.stringify({ steps: steps.map((step) => step.beats.map(({ actions, start }) => ({ actions, start }))), tasks })
+    .matchAll(/\bnumber_(\d{2,})\b/gu)].map((match) => Number(match[1])));
+  const declared = (index: number) => !unboundNumbers.has(index)
+    && (used.has(index) || plan.numbers?.[index - 1]?.student_control !== undefined);
   const lesson: AuthoringLesson = {
     dsl: "octos.lesson",
     version: "0.1",
@@ -1020,8 +1029,8 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
           ...(options.adaptation_context_refs?.length ? { context_refs: [...options.adaptation_context_refs] } : {}),
         },
       } : {}),
-      ...(plan.numbers?.length || visualVariables.size ? {
-        variables: [...(plan.numbers ?? []).flatMap((number, index) => (unboundNumbers.has(index + 1) ? [] : [number]).map((number) => ({
+      ...((plan.numbers ?? []).some((_number, index) => declared(index + 1)) || visualVariables.size ? {
+        variables: [...(plan.numbers ?? []).flatMap((number, index) => (declared(index + 1) ? [number] : []).map((number) => ({
           as: variableAlias(index + 1), initial: number.initial, min: number.min, max: number.max,
           ...(number.label ? { label: number.label } : {}),
           ...(number.unit ? { unit: number.unit } : {}),
@@ -1160,12 +1169,21 @@ export function compileAndValidateLessonPlan(value: unknown, options: CompileLes
     // Too many lesson variables: a picture whose recipe declares `binds_many_variables` (the place-value chart, two
     // a column) is the one that can go, and the lesson is kept without it (review of #174: a Chinese pull-apart
     // beside two other numbers was lost whole).
+    // The picture named is one the last section drew, the section being written: a lesson that a later section's
+    // pictures push over the limit loses one of them, never a card an earlier, published section drew (that one
+    // cannot be withdrawn, and the lesson would end there). Its heavy picture first; else its last picture of a
+    // recipe; else, as before, a heavy picture anywhere.
     const overVariables = first?.instancePath === "/lesson/variables" && first?.keyword === "maxItems";
-    const written = new Set(compiled.lesson.steps.flatMap((step) => step.beats.flatMap((beat) => beat.actions))
-      .filter((action) => action.do === "write").map((action) => (action as { kind?: string }).kind));
-    const heavy = overVariables ? Object.entries(LESSON_PLAN_CAPABILITY_REGISTRY as Record<string, { output_kinds?: readonly string[] }>)
-      .find(([name, recipe]) => recipeDeclares(name, "binds_many_variables") && (recipe.output_kinds ?? []).some((kind) => written.has(kind)))?.[0] : undefined;
-    fail("LESSON_PLAN_OLL_SCHEMA", first?.instancePath ?? "$lesson", first?.message ?? "compiled OLL failed schema validation", heavy);
+    const recipes = Object.entries(LESSON_PLAN_CAPABILITY_REGISTRY as Record<string, { output_kinds?: readonly string[] }>);
+    const kindsIn = (steps: typeof compiled.lesson.steps) => steps.flatMap((step) => step.beats.flatMap((beat) => beat.actions))
+      .filter((action) => action.do === "write").map((action) => (action as { kind?: string }).kind);
+    const recipeOf = (kind: string | undefined) => recipes.find(([, recipe]) => (recipe.output_kinds ?? []).includes(kind as string))?.[0];
+    const isHeavy = (name: string | undefined) => name !== undefined && recipeDeclares(name, "binds_many_variables");
+    const lastDrawn = kindsIn(compiled.lesson.steps.slice(-1)).map(recipeOf).filter((name): name is string => name !== undefined);
+    const anywhere = new Set(kindsIn(compiled.lesson.steps).map(recipeOf));
+    const blamed = !overVariables ? undefined
+      : lastDrawn.find(isHeavy) ?? lastDrawn.at(-1) ?? recipes.map(([name]) => name).find((name) => isHeavy(name) && anywhere.has(name));
+    fail("LESSON_PLAN_OLL_SCHEMA", first?.instancePath ?? "$lesson", first?.message ?? "compiled OLL failed schema validation", blamed);
   }
   const resourceContext: ResourceContext = {
     assets: (options.image_resources ?? []).map((resource) => ({ asset_id: resource.asset_id })),

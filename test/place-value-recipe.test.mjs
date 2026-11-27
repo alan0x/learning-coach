@@ -355,7 +355,9 @@ test("review of #174: too many variables costs the chart, not the lesson; a pull
     const out = {};
     // A Chinese pull apart with decimals binds 15 variables; two more lesson numbers make 17.
     const crowded = placeValuePlan({ number: 26.075, practice: 18.064, given: "numeral" });
+    // Each extra number is shown on a number line of its own: a lesson number no picture uses is not declared.
     for (let i = 0; i < 2; i += 1) crowded.numbers.push({ initial: 5 + i, min: 0, max: 10, label: "extra" + i });
+    crowded.sections[0].moments.push({ narration: "Two more numbers.", actions: [3, 4].map((number) => ({ action: "create", kind: "visual", role: "supporting_visual", content: { capability: "number_line", parameters: {}, numbers: [number] }, placement: { relation: "new_region" } })) });
     try { api.compileAndValidateLessonPlan(crowded, { language: "zh-CN" }); out.crowded = { compiled: true }; }
     catch (error) { out.crowded = { code: error.code, capability: error.capability }; }
     // Hints that write the practice number's parts give the row away.
