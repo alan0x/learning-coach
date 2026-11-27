@@ -289,3 +289,26 @@ test("a stubbed generation run: 0.7 and 0.70 as the model writes them, the progr
   assert.ok(!whole.error, whole.error);
   assert.deepEqual([whole.card.a, whole.card.b, "a_decimals" in whole.card], [4530000, 4503000, false]);
 });
+
+test("the fixed sample (used for request hashes with the trial on) compiles through the full OLL validation", () => {
+  const result = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    const { samplePlan, makeSamplePlanModelCompatible } = await import(${here("./sample-plans.mjs")});
+    const compiled = api.compileAndValidateLessonPlan(makeSamplePlanModelCompatible(samplePlan("place_value_compare")), { language: "en-US" });
+    console.log(JSON.stringify({ kinds: compiled.lesson.lesson.tasks.map((task) => task.completion.kind), adjustments: compiled.program_adjustments }));
+  `);
+  assert.deepEqual(result, { kinds: ["card_fact"], adjustments: [] });
+});
+
+test("written decimals are read only while a recipe that keeps them is offered: without the trial an outline is as before", () => {
+  const off = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    console.log(JSON.stringify(api.LESSON_PLAN_CAPABILITY_NAMES.some((name) => api.LESSON_PLAN_CAPABILITY_REGISTRY[name].keeps_written_decimals === true)));
+  `, "");
+  assert.equal(off, false);
+  const on = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    console.log(JSON.stringify(Object.entries(api.LESSON_PLAN_CAPABILITY_REGISTRY).filter(([, recipe]) => recipe.keeps_written_decimals === true).map(([name]) => name)));
+  `);
+  assert.deepEqual(on, ["place_value_compare"]);
+});
