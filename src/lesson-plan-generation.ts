@@ -818,6 +818,8 @@ function sanitizeNonessentialVisuals(
     number?: number;
     reason: string;
   }>;
+  /** Each kept reusable slot's new place, keyed "section:old slot" (a removed picture's later slots move up). */
+  reusable_item_map: ReadonlyMap<string, number>;
 } {
   const outline = structuredClone(outlineValue);
   const drafts = structuredClone(draftValues);
@@ -1186,7 +1188,7 @@ function sanitizeNonessentialVisuals(
       outline.close.focus = [{ source: "reusable", section, item }];
     }
   }
-  return { outline, drafts, adjustments };
+  return { outline, drafts, adjustments, reusable_item_map: reusableItemMap };
 }
 
 /**
@@ -1303,7 +1305,7 @@ function normalizeExecutableNumberInteractions(
     });
     if (section.student_activities.length === 0) delete section.student_activities;
   }
-  return { outline, drafts, adjustments: sanitized.adjustments };
+  return { outline, drafts, adjustments: sanitized.adjustments, reusable_item_map: sanitized.reusable_item_map };
 }
 
 function lowerModelActionReferences(
@@ -1811,15 +1813,18 @@ function earlierSectionsRecord(
   outline: LessonPlanOutline,
   drafts: readonly LessonPlanSectionDraft[],
   dropped: (section: number) => ReadonlySet<number> | undefined,
+  /** The compiled sections' reusable slots ("section:old slot" to new slot), as `prefixSections` renumbered them. */
+  slots: ReadonlyMap<string, number>,
 ): EarlierSectionsRecord {
-  // The outline's picture: by its slot, else the section's only picture of that kind (the prefix's clean-up
-  // renumbers the slots after a picture it takes out).
+  // The outline's picture, by the slot the section wrote it in: the prefix's clean-up renumbers the slots after a
+  // picture it takes out (review of #191, B1), and the outline keeps the slots as written.
+  const writtenSlot = new Map([...slots].map(([key, slot]) => [`${key.split(":")[0]}:${slot}`, Number(key.split(":")[1])]));
   const courseVisual = (section: number, action: LessonPlanAction) => {
-    if (action.action !== "create" || action.kind !== "visual") return 0;
+    if (action.action !== "create" || action.kind !== "visual" || !Number.isInteger(action.reusable_item)) return 0;
     const capability = (action.content as LessonPlanVisualContent).capability;
-    const visuals = (outline.course_visuals ?? []).map((visual, index) => ({ ...visual, position: index + 1 }))
-      .filter((visual) => visual.create_section === section && visual.capability === capability);
-    return (visuals.find((visual) => visual.reusable_item === action.reusable_item) ?? (visuals.length === 1 ? visuals[0] : undefined))?.position ?? 0;
+    const slot = writtenSlot.get(`${section}:${action.reusable_item}`) ?? action.reusable_item;
+    return (outline.course_visuals ?? []).findIndex((visual) => visual.create_section === section
+      && visual.reusable_item === slot && visual.capability === capability) + 1;
   };
   const values = (numbers: readonly number[] | undefined, state: ReadonlyMap<number, number>) =>
     (numbers ?? []).map((number) => ({ number, value: state.get(number) }));
@@ -3735,6 +3740,10 @@ export async function generateLessonPlanWithModel(
   // A first section written here (the bootstrap's was rejected or not written)
   // still gets everything the planning call had.
   const laterSectionContext = { ...context, current_lesson: null, teacher_experiences: null };
+  const earlierRecord = (section: number) => {
+    const compiled = prefixSections(outline, drafts.slice(0, section - 1), options.compile);
+    return earlierSectionsRecord(outline, compiled.drafts, (earlier) => compileDroppedActivities.get(drafts[earlier - 1]!), compiled.reusable_item_map);
+  };
   const generateSection = async (section: number): Promise<LessonPlanSectionDraft> => {
     const attempt = (sectionAttempts.get(section) ?? 0) + 1;
     sectionAttempts.set(section, attempt);
@@ -3756,8 +3765,7 @@ export async function generateLessonPlanWithModel(
         prompt: JSON.stringify({
           course_context: compactModelContext(section === 1 ? context : laterSectionContext),
           course_and_section: sectionPromptContext(outline, section, allowedNumberIndexes, currentNumbers,
-            section > 1 ? earlierSectionsRecord(outline, prefixSections(outline, drafts.slice(0, section - 1), options.compile).drafts,
-              (earlier) => compileDroppedActivities.get(drafts[earlier - 1]!)) : undefined),
+            section > 1 ? earlierRecord(section) : undefined),
           visuals_for_section: visualsForSection(section, currentNumbers),
           assigned_request_parts: assignedRequestParts(section),
           // The note stays for later sections too: their purposes may also name the picture (review of this change).
