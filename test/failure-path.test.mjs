@@ -378,3 +378,94 @@ test("PF-09 on a card the outline's numbers refuse (too few, or #188's outline_f
     assert.ok(result.error, `${variant}: the stub's one call faults, and no further call is made`);
   }
 });
+
+/**
+ * 35P-04 run 2's PF-19 and 35P-07 run 1's PT-16: section 1 draws a number line (a line in steps, a rounding line);
+ * section 2 moves its number to `end`, which the line cannot mark ("choose another visual", a fault the outline owns
+ * that names no recipe). Section 1's line cannot be withdrawn, so the lesson ends at section 1.
+ */
+const lineThenMove = (capability, end) => run(`
+  const plan = sp.samplePlan(${JSON.stringify(capability)});
+  delete plan.sections[0].student_activities;
+  for (const number of plan.numbers) delete number.student_control;
+  plan.sections[1].moments[0].actions.push(animate(1, ${end}));
+  const stage = staged(plan);
+  const log = await generate((request) => request.label === "lesson-plan-bootstrap" ? bootstrap(request, stage) : JSON.stringify(stage.drafts[request.section - 1]),
+    "Round 47 to the nearest ten.");
+  console.log(JSON.stringify(log));
+`);
+
+for (const [trace, capability, bad, good] of [["PT-16", "number_line_rounding", 49.99, 49.5], ["PF-19", "number_line_steps", 7.03, 7]]) {
+  test(`${trace}: a later section's repairs spent on section 1's ${capability} (a fault naming no recipe) end the lesson at section 1`, () => {
+    const passing = lineThenMove(capability, good);
+    const failing = lineThenMove(capability, bad);
+    assert.equal(passing.error, undefined, JSON.stringify(passing.error));
+    assert.deepEqual([passing.requests, passing.sections], [["lesson-plan-bootstrap", "lesson-plan-section2"], 2]);
+    assert.deepEqual(sectionPrompt(failing, "lesson-plan-section2"), sectionPrompt(passing, "lesson-plan-section2"));
+    assert.equal(failing.error, undefined, JSON.stringify(failing.error));
+    assert.deepEqual(failing.requests, ["lesson-plan-bootstrap", "lesson-plan-section2", "lesson-plan-section2", "lesson-plan-section2"]);
+    assert.ok(failing.rejected.every((error) => error.code === "LESSON_PLAN_OUTLINE_VISUAL" && /sections\[0\]/u.test(error.path)), JSON.stringify(failing.rejected));
+    assert.deepEqual([failing.sections, failing.steps], [1, 1]);
+    assert.deepEqual(failing.adjustments.filter(([kind]) => kind === "sections_removed"), [["sections_removed", 2, capability, "visual_limits_after_retries", "left_out"]]);
+    assert.ok(failing.written.includes("number_line"), JSON.stringify(failing.written));
+    assert.equal(failing.oll_valid, true);
+  });
+}
+
+test("a rounding line section 2 draws, with a number it cannot mark: the line is withdrawn and section 2 written once more", () => {
+  const result = run(`
+    const plan = sp.samplePlan("number_line_rounding");
+    delete plan.sections[0].student_activities;
+    for (const number of plan.numbers) delete number.student_control;
+    const line = plan.sections[0].moments[0].actions[0];
+    const note = (text) => ({ action: "create", kind: "note", role: "explanation", content: { title: "Rounding", items: [text] }, placement: { relation: "new_region" }, reusable_item: 1 });
+    plan.sections[0] = { purpose: "Introduce rounding", reusable_items: [{ kind: "board_item", board_kind: "note" }], moments: [{ narration: "Rounding to tens.", actions: [note("47 is between 40 and 50.")] }] };
+    const drawn = { purpose: "Round on a line", reusable_items: [{ kind: "board_item", board_kind: "visual", capability: "number_line_rounding" }], moments: [
+      { narration: "A rounding line.", actions: [line] }, { narration: "Move it.", actions: [animate(1, 49.99)] }] };
+    const written = { purpose: "Round on a line", reusable_items: [], moments: [{ narration: "Halfway is 45.",
+      actions: [{ action: "create", kind: "text", role: "follow_up_explanation", content: { text: "47 rounds to 50." }, placement: { relation: "new_region" } }] }] };
+    plan.close = { summary: "Review.", focus: [{ source: "reusable", section: 1, item: 1 }] };
+    const withLine = staged({ ...plan, sections: [plan.sections[0], drawn] });
+    const without = staged({ ...plan, sections: [plan.sections[0], written] });
+    const log = await generate((request) => {
+      if (request.label === "lesson-plan-bootstrap") return bootstrap(request, withLine);
+      return JSON.stringify((JSON.parse(request.prompt).removed_picture ? without : withLine).drafts[request.section - 1]);
+    }, "Round 47 to the nearest ten.");
+    console.log(JSON.stringify(log));
+  `);
+  assert.equal(result.error, undefined, JSON.stringify(result.error));
+  assert.deepEqual(result.requests, ["lesson-plan-bootstrap", "lesson-plan-section2", "lesson-plan-section2", "lesson-plan-section2", "lesson-plan-section2"]);
+  assert.deepEqual(result.adjustments.filter(([kind]) => kind === "visual_removed" || kind === "sections_removed"), [["visual_removed", 2, "number_line_rounding", "visual_limits_after_retries"]]);
+  assert.equal(result.sections, 2);
+  assert.equal(result.written.includes("number_line"), false);
+});
+
+test("section 1 with both outline restarts spent, on a line fault naming no recipe: written once more without the line", () => {
+  const result = run(`
+    const one = (plan) => { plan.sections = [plan.sections[0]]; plan.close = { summary: "Review.", focus: [{ source: "reusable", section: 1, item: 1 }] }; return plan; };
+    const mat = one(sp.samplePlan("base_ten_trade"));
+    mat.numbers[1] = { initial: 33, min: 0, max: 40, label: "tens" };
+    const chart = one(sp.placeValuePlan({ number: 300, practice: 73, given: "numeral" }));
+    const line = one(sp.samplePlan("number_line_rounding"));
+    delete line.sections[0].student_activities;
+    for (const number of line.numbers) delete number.student_control;
+    line.sections[0].moments[0].actions.push(animate(1, 49.99));
+    const stages = [mat, chart, line].map(staged);
+    const note = staged({ ...structuredClone(line), sections: [{ purpose: "Explain", reusable_items: [{ kind: "board_item", board_kind: "note" }], moments: [{ narration: "47 is nearer 50.",
+      actions: [{ action: "create", kind: "note", role: "explanation", content: { title: "Rounding", items: ["47 rounds to 50."] }, placement: { relation: "new_region" }, reusable_item: 1 }] }] }] });
+    let stage = 0;
+    const log = await generate((request) => {
+      if (request.label === "lesson-plan-bootstrap") return bootstrap(request, stages[0]);
+      if (request.label === "lesson-plan-outline") { stage += 1; return JSON.stringify(stages[stage].outline); }
+      if (request.part === "practice") return JSON.stringify({ answer_activities: [] });
+      return JSON.stringify((JSON.parse(request.prompt).removed_picture ? note : stages[stage]).drafts[0]);
+    }, "Round 47 to the nearest ten.");
+    console.log(JSON.stringify(log));
+  `);
+  assert.equal(result.error, undefined, JSON.stringify(result.error));
+  // The line's fault is not retried in section 1 (the outline owns it): one try, then one more without the line.
+  assert.deepEqual(result.requests.slice(result.requests.lastIndexOf("lesson-plan-outline")), ["lesson-plan-outline", "lesson-plan-section1", "lesson-plan-section1", "lesson-plan-section1-practice"]);
+  assert.deepEqual(result.adjustments.filter(([kind]) => kind === "visual_removed").at(-1), ["visual_removed", 1, "number_line_rounding", "outline_visual_fault"]);
+  assert.match(sectionPrompt(result, "lesson-plan-section1", 7).removed_picture, /rounding/u);
+  assert.ok(result.written.includes("note") && !result.written.includes("number_line"), JSON.stringify(result.written));
+});

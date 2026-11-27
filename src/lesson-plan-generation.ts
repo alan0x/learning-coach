@@ -3314,6 +3314,18 @@ export async function generateLessonPlanWithModel(
   return undefined;
   };
   const drafts: LessonPlanSectionDraft[] = [];
+  // The picture a fault is about: the recipe it names, or, for a fault the outline owns that names none (a number
+  // line's tick limits: "choose another visual"), the course visual the section's create at its path draws. 35P-04
+  // run 2's PF-19 and 35P-07's PT-16 lost their lessons to such a fault on section 1's line in section 2's repairs.
+  const faultingPicture = (error: unknown): string | undefined => {
+    if (!(error instanceof LessonPlanError)) return undefined;
+    if (error.capability) return error.capability;
+    if (!isOutlineOwnedFault(error)) return undefined;
+    const at = /^\$lessonPlan\.sections\[(\d+)\]\.moments\[(\d+)\]\.actions\[(\d+)\]/u.exec(error.path);
+    const action = at ? drafts[Number(at[1])]?.moments[Number(at[2])]?.actions[Number(at[3])] : undefined;
+    const capability = action?.action === "create" && action.kind === "visual" ? (action.content as LessonPlanVisualContent).capability : undefined;
+    return capability !== undefined && outline && outlineCapabilities(outline).has(capability) ? capability : undefined;
+  };
   // A later section's picture is taken out of the outline, and the section is written without it, told why.
   const withdrawLaterSectionVisual = async (section: number, capability: string, reason: string, detail: string, reported?: () => Promise<void>): Promise<boolean> => {
     const withdrawn = section > 1 && !withdrawnNotes.has(section) && outline
@@ -3652,7 +3664,7 @@ export async function generateLessonPlanWithModel(
           // The repairs are spent on a picture's own limits: a later section is written once more without
           // that picture, outside the repair budget, so the lesson keeps its published sections. Section 1
           // is handled by acceptFirstSection, which asks for a new outline without it.
-          const capability = error instanceof LessonPlanError ? error.capability : undefined;
+          const capability = faultingPicture(error);
           const withdrawn = capability !== undefined && await withdrawLaterSectionVisual(
             section, capability, "visual_limits_after_retries", error instanceof Error ? error.message : String(error),
             async () => { await options.on_rejected_part?.({ label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error) }); },
@@ -3726,15 +3738,19 @@ export async function generateLessonPlanWithModel(
       const capability = dropCard ? (error as LessonPlanError).tapCard : error instanceof LessonPlanError ? error.capability : undefined;
       const spentOnPicture = capability !== undefined && !excludedCapabilities.has(capability)
         && (numbersMissing || sharesTapCard || (sectionAttempts.get(1) ?? 0) >= maxAttempts);
-      if (outlineRestarts >= 2 && capability !== undefined && !withdrawnNotes.has(1) && outline
+      // A fault the outline owns that names no recipe (a number line's tick limits) is about the picture at its path:
+      // restarts still exclude the whole number-line family, as before; the rewrite takes out that picture.
+      const picture = capability ?? faultingPicture(error);
+      if (outlineRestarts >= 2 && picture !== undefined && !withdrawnNotes.has(1) && outline
         && (isOutlineOwnedFault(error) || numbersMissing || sharesTapCard || (sectionAttempts.get(1) ?? 0) >= maxAttempts)) {
         // Both restarts spent and section 1 still faults on a picture (35P-04 objective run, PF-09: the mat, then the
         // chart, then the times-ten card): section 1 is written once more without it, as a later section is, so a
         // lesson is never lost to a picture. A supporting picture goes with it, as in a later section.
-        const withdrawn = withdrawSectionVisual(outline, 1, capability, fixedRequestParts.length, true);
+        const withdrawn = withdrawSectionVisual(outline, 1, picture, fixedRequestParts.length, true);
         if (!withdrawn) throw error;
-        await withdrawBeforePublishing(1, capability, withdrawn,
-          numbersMissing ? outlineNumbersReason(error as LessonPlanError) : sharesTapCard ? "shares_tap_card_numbers" : "visual_limits_after_retries",
+        await withdrawBeforePublishing(1, picture, withdrawn,
+          numbersMissing ? outlineNumbersReason(error as LessonPlanError) : sharesTapCard ? "shares_tap_card_numbers"
+            : isOutlineOwnedFault(error) ? "outline_visual_fault" : "visual_limits_after_retries",
           error instanceof Error ? error.message : String(error),
           async () => { await options.on_rejected_part?.({ label: "lesson-plan-section", section: 1, attempt: sectionAttempts.get(1) ?? 1, error: rejectionDetails(error) }); });
         // Exactly once more, outside the repair budget, whatever the fault (review of #189).

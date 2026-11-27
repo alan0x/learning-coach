@@ -29269,6 +29269,15 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     return void 0;
   };
   const drafts = [];
+  const faultingPicture = (error) => {
+    if (!(error instanceof LessonPlanError)) return void 0;
+    if (error.capability) return error.capability;
+    if (!isOutlineOwnedFault(error)) return void 0;
+    const at2 = /^\$lessonPlan\.sections\[(\d+)\]\.moments\[(\d+)\]\.actions\[(\d+)\]/u.exec(error.path);
+    const action = at2 ? drafts[Number(at2[1])]?.moments[Number(at2[2])]?.actions[Number(at2[3])] : void 0;
+    const capability2 = action?.action === "create" && action.kind === "visual" ? action.content.capability : void 0;
+    return capability2 !== void 0 && outline && outlineCapabilities(outline).has(capability2) ? capability2 : void 0;
+  };
   const withdrawLaterSectionVisual = async (section, capability2, reason, detail, reported2) => {
     const withdrawn = section > 1 && !withdrawnNotes.has(section) && outline ? withdrawSectionVisual(outline, section, capability2, fixedRequestParts.length) : void 0;
     if (!withdrawn) return false;
@@ -29561,7 +29570,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
         const previousError = sectionErrors.get(section);
         if (unsupportedSectionResponse(error, previousError, input.language)) throw error;
         if ((sectionAttempts.get(section) ?? 0) >= maxAttempts) {
-          const capability2 = error instanceof LessonPlanError ? error.capability : void 0;
+          const capability2 = faultingPicture(error);
           const withdrawn = capability2 !== void 0 && await withdrawLaterSectionVisual(
             section,
             capability2,
@@ -29622,14 +29631,15 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
       const dropCard = sharesTapCard && (sharedRestarts > 0 || excludedCapabilities.has(error.capability));
       const capability2 = dropCard ? error.tapCard : error instanceof LessonPlanError ? error.capability : void 0;
       const spentOnPicture = capability2 !== void 0 && !excludedCapabilities.has(capability2) && (numbersMissing || sharesTapCard || (sectionAttempts.get(1) ?? 0) >= maxAttempts);
-      if (outlineRestarts >= 2 && capability2 !== void 0 && !withdrawnNotes.has(1) && outline && (isOutlineOwnedFault(error) || numbersMissing || sharesTapCard || (sectionAttempts.get(1) ?? 0) >= maxAttempts)) {
-        const withdrawn = withdrawSectionVisual(outline, 1, capability2, fixedRequestParts.length, true);
+      const picture = capability2 ?? faultingPicture(error);
+      if (outlineRestarts >= 2 && picture !== void 0 && !withdrawnNotes.has(1) && outline && (isOutlineOwnedFault(error) || numbersMissing || sharesTapCard || (sectionAttempts.get(1) ?? 0) >= maxAttempts)) {
+        const withdrawn = withdrawSectionVisual(outline, 1, picture, fixedRequestParts.length, true);
         if (!withdrawn) throw error;
         await withdrawBeforePublishing(
           1,
-          capability2,
+          picture,
           withdrawn,
-          numbersMissing ? outlineNumbersReason(error) : sharesTapCard ? "shares_tap_card_numbers" : "visual_limits_after_retries",
+          numbersMissing ? outlineNumbersReason(error) : sharesTapCard ? "shares_tap_card_numbers" : isOutlineOwnedFault(error) ? "outline_visual_fault" : "visual_limits_after_retries",
           error instanceof Error ? error.message : String(error),
           async () => {
             await options.on_rejected_part?.({ label: "lesson-plan-section", section: 1, attempt: sectionAttempts.get(1) ?? 1, error: rejectionDetails(error) });
