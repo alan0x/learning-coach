@@ -29289,7 +29289,8 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       return { kind: "create", section: sectionAt + 1, capability: content.capability, numbers: [...content.numbers ?? []], in: sectionAt + 1, moment: momentAt, action: actionAt };
     }
     if (at2[4] === ".end_value" && action?.action === "animate") {
-      const drawn = creates(sectionAt).filter((each) => (each.content.numbers ?? []).includes(action.number)).at(-1);
+      const named = error.capability;
+      const drawn = creates(sectionAt).filter((each) => (each.content.numbers ?? []).includes(action.number) && (!named || each.content.capability === named)).at(-1);
       return drawn ? {
         kind: "animate",
         section: drawn.section,
@@ -29348,7 +29349,11 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     leftOutMoves = [...removed].map((key) => {
       const [momentAt, actionAt] = key.split(":").map(Number);
       const action = draft.moments[momentAt].actions[actionAt];
-      return `$lessonPlan.sections[${section - 1}].moments[${momentAt}].actions[${actionAt}]: the ${site.capability} visual cannot show lesson number ${action.action === "animate" ? action.number : "?"} at ${action.action === "animate" ? action.end_value : "?"}; left out`;
+      const narrationOnly = draft.moments[momentAt].actions.every((_each, offset) => removed.has(keyOf(momentAt, offset)));
+      return {
+        detail: `$lessonPlan.sections[${section - 1}].moments[${momentAt}].actions[${actionAt}]: the ${site.capability} visual cannot show lesson number ${action.action === "animate" ? action.number : "?"} at ${action.action === "animate" ? action.end_value : "?"}; left out`,
+        ...narrationOnly ? { narration_only_moment: true } : {}
+      };
     });
     draft.moments.forEach((moment, momentAt) => {
       moment.actions = moment.actions.filter((_action, actionAt) => !removed.has(keyOf(momentAt, actionAt)));
@@ -29649,7 +29654,9 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
         if (unsupportedSectionResponse(error, previousError, input.language)) throw error;
         if ((sectionAttempts.get(section) ?? 0) >= maxAttempts) {
           const capability2 = faultingPicture(error, section);
-          const withdrawn = capability2 !== void 0 && await withdrawLaterSectionVisual(
+          const site = faultSite(error, section);
+          const withdrawable = site ? site.section === section : error instanceof LessonPlanError && error.capability !== void 0;
+          const withdrawn = withdrawable && capability2 !== void 0 && await withdrawLaterSectionVisual(
             section,
             capability2,
             "visual_limits_after_retries",
@@ -29663,7 +29670,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
             if (kept) {
               await options.on_rejected_part?.({ label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error) });
               sectionErrors.delete(section);
-              for (const detail of leftOutMoves) await options.on_program_adjustment?.({ kind: "plot_view_adjusted", section, reason: "animation_left_out", detail });
+              for (const left of leftOutMoves) await options.on_program_adjustment?.({ kind: "plot_view_adjusted", section, reason: "animation_left_out", ...left });
               await reportDraftAdjustments(drafts[section - 1]);
               await options.on_playable_prefix?.({ completed_sections: section, compiled: kept });
               return;

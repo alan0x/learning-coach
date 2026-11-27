@@ -128,6 +128,8 @@ export interface GenerateLessonPlanOptions {
     number?: number;
     reason: string;
     detail?: string;
+    /** Trace only: a move left out (`animation_left_out`) was its moment's only action, so the moment keeps its narration alone. */
+    narration_only_moment?: true;
     /** A lesson ended early (`sections_removed`): its close summary is left out of the lesson. */
     close_summary?: "left_out";
     /** The task a success-message record is about. */
@@ -3344,8 +3346,11 @@ export async function generateLessonPlanWithModel(
       return { kind: "create", section: sectionAt + 1, capability: content.capability, numbers: [...(content.numbers ?? [])], in: sectionAt + 1, moment: momentAt, action: actionAt };
     }
     if (at[4] === ".end_value" && action?.action === "animate") {
-      // The picture whose number it moves: the latest drawn on that number, up to this section.
-      const drawn = creates(sectionAt).filter((each) => (each.content.numbers ?? []).includes(action.number)).at(-1);
+      // The picture whose number it moves: the latest drawn on that number, up to this section, of the recipe the
+      // fault names when it names one (review of #190).
+      const named = error.capability;
+      const drawn = creates(sectionAt).filter((each) => (each.content.numbers ?? []).includes(action.number)
+        && (!named || each.content.capability === named)).at(-1);
       return drawn ? {
         kind: "animate", section: drawn.section, capability: drawn.content.capability, numbers: [...(drawn.content.numbers ?? [])],
         in: sectionAt + 1, moment: momentAt, action: actionAt, move: { number: action.number, end_value: action.end_value },
@@ -3404,13 +3409,18 @@ export async function generateLessonPlanWithModel(
     leftOutMoves = [...removed].map((key) => {
       const [momentAt, actionAt] = key.split(":").map(Number) as [number, number];
       const action = draft.moments[momentAt]!.actions[actionAt]!;
-      return `$lessonPlan.sections[${section - 1}].moments[${momentAt}].actions[${actionAt}]: the ${site.capability} visual cannot show lesson number ${action.action === "animate" ? action.number : "?"} at ${action.action === "animate" ? action.end_value : "?"}; left out`;
+      // Trace only: a moment left with its narration alone (every action it had was a move left out).
+      const narrationOnly = draft.moments[momentAt]!.actions.every((_each, offset) => removed.has(keyOf(momentAt, offset)));
+      return {
+        detail: `$lessonPlan.sections[${section - 1}].moments[${momentAt}].actions[${actionAt}]: the ${site.capability} visual cannot show lesson number ${action.action === "animate" ? action.number : "?"} at ${action.action === "animate" ? action.end_value : "?"}; left out`,
+        ...(narrationOnly ? { narration_only_moment: true as const } : {}),
+      };
     });
     // The draft itself loses them, so its program adjustments stay attached to it.
     draft.moments.forEach((moment, momentAt) => { moment.actions = moment.actions.filter((_action, actionAt) => !removed.has(keyOf(momentAt, actionAt))); });
     return compiled;
   };
-  let leftOutMoves: string[] = [];
+  let leftOutMoves: Array<{ detail: string; narration_only_moment?: true }> = [];
   // A later section's picture is taken out of the outline, and the section is written without it, told why.
   const withdrawLaterSectionVisual = async (section: number, capability: string, reason: string, detail: string, reported?: () => Promise<void>): Promise<boolean> => {
     const withdrawn = section > 1 && !withdrawnNotes.has(section) && outline
@@ -3750,7 +3760,13 @@ export async function generateLessonPlanWithModel(
           // that picture, outside the repair budget, so the lesson keeps its published sections. Section 1
           // is handled by acceptFirstSection, which asks for a new outline without it.
           const capability = faultingPicture(error, section);
-          const withdrawn = capability !== undefined && await withdrawLaterSectionVisual(
+          // Only a picture this section drew can go: when the fault's site is known it must be in this section, so a
+          // fault on an earlier picture never withdraws this section's own picture of the same kind (review of #190).
+          // With no known site, the recipe the fault names decides, as before. The capability still names the
+          // picture when the lesson ends early (below).
+          const site = faultSite(error, section);
+          const withdrawable = site ? site.section === section : error instanceof LessonPlanError && error.capability !== undefined;
+          const withdrawn = withdrawable && capability !== undefined && await withdrawLaterSectionVisual(
             section, capability, "visual_limits_after_retries", error instanceof Error ? error.message : String(error),
             async () => { await options.on_rejected_part?.({ label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error) }); },
           );
@@ -3761,7 +3777,7 @@ export async function generateLessonPlanWithModel(
             if (kept) {
               await options.on_rejected_part?.({ label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error) });
               sectionErrors.delete(section);
-              for (const detail of leftOutMoves) await options.on_program_adjustment?.({ kind: "plot_view_adjusted", section, reason: "animation_left_out", detail });
+              for (const left of leftOutMoves) await options.on_program_adjustment?.({ kind: "plot_view_adjusted", section, reason: "animation_left_out", ...left });
               await reportDraftAdjustments(drafts[section - 1]!);
               await options.on_playable_prefix?.({ completed_sections: section, compiled: kept });
               return;

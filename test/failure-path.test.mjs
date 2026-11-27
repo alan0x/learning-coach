@@ -34,7 +34,11 @@ const run = (body) => JSON.parse(execFileSync(process.execPath, ["--input-type=m
       }, { turn_id: "failure-path", learner_request, language: "en-US" }, {
         max_attempts_per_part: 3,
         on_rejected_part: (part) => log.rejected.push(part.error),
-        on_program_adjustment: (adjustment) => log.adjustments.push([adjustment.kind, adjustment.section, adjustment.capability, adjustment.reason, ...(adjustment.close_summary ? [adjustment.close_summary] : [])]),
+        on_program_adjustment: (adjustment) => {
+          log.adjustments.push([adjustment.kind, adjustment.section, adjustment.capability, adjustment.reason, ...(adjustment.close_summary ? [adjustment.close_summary] : [])]);
+          if (adjustment.reason === "animation_left_out" && !/^\$lessonPlan\.sections\[\d+\]\.moments\[\d+\]\.actions\[\d+\]: .*; left out$/u.test(adjustment.detail ?? "")) log.leftBad = true;
+          if (adjustment.reason === "animation_left_out" && /visual cannot show/u.test(adjustment.detail)) (log.left ??= []).push({ section: adjustment.section, ...(adjustment.narration_only_moment ? { narration_only_moment: true } : {}) });
+        },
       });
       log.sections = generated.outline.sections.length;
       log.drafts = generated.drafts.length;
@@ -491,4 +495,34 @@ test("a lesson ended early compiles with a lesson number only the removed sectio
   assert.deepEqual([failing.sections, failing.steps, failing.numbers], [1, 1, 4]);
   assert.deepEqual(failing.adjustments.filter(([kind]) => kind === "sections_removed"), [["sections_removed", 2, "number_line_steps", "visual_limits_after_retries", "left_out"]]);
   assert.equal(failing.oll_valid, true);
+});
+
+test("a fault on section 1's line never withdraws the line section 2 draws of the same kind (review of #190, B1)", () => {
+  // Section 1: a line in steps on [1, 2, 3]. Section 2: a second line in steps on [4, 5, 6], and a move of number 1 to
+  // 7.03, which section 1's line cannot mark. Only the move goes; section 2's own line stays.
+  const result = run(`
+    const plan = sp.samplePlan("number_line_steps");
+    delete plan.sections[0].student_activities;
+    for (const number of plan.numbers) delete number.student_control;
+    plan.numbers.push(...structuredClone(plan.numbers));
+    const line = plan.sections[0].moments[0].actions[0];
+    plan.sections[1].reusable_items = [{ kind: "board_item", board_kind: "visual", capability: "number_line_steps" }];
+    plan.sections[1].moments.unshift({ narration: "Another line.", actions: [{ ...structuredClone(line), content: { ...structuredClone(line.content), numbers: [4, 5, 6] }, placement: { relation: "new_region" }, reusable_item: 1 }] });
+    plan.sections[1].moments.push({ narration: "Move the first start.", actions: [animate(1, 7.03)] });
+    const stage = staged(plan);
+    const visuals = stage.outline.course_visuals;
+    visuals[1] = { ...visuals[1], relation: "comparison", related_visual: 1 };
+    const log = await generate((request) => request.label === "lesson-plan-bootstrap" ? bootstrap(request, stage) : JSON.stringify(stage.drafts[request.section - 1]),
+      "Compare two jumps on a number line.");
+    log.visuals = visuals.length;
+    console.log(JSON.stringify(log));
+  `);
+  assert.equal(result.visuals, 2, "two course visuals of number_line_steps");
+  assert.equal(result.error, undefined, JSON.stringify(result.error));
+  assert.deepEqual(result.requests, ["lesson-plan-bootstrap", "lesson-plan-section2", "lesson-plan-section2", "lesson-plan-section2"]);
+  assert.deepEqual(result.adjustments.filter(([kind]) => kind === "visual_removed" || kind === "sections_removed"), []);
+  // The move was its moment's only action: the moment keeps its narration alone, flagged for the trace.
+  assert.deepEqual(result.left, [{ section: 2, narration_only_moment: true }]);
+  assert.equal(result.sections, 2);
+  assert.equal(result.written.filter((kind) => kind === "number_line").length, 2, JSON.stringify(result.written));
 });
