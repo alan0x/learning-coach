@@ -5,6 +5,7 @@ import { REARRANGEMENT_MODEL_GUIDANCE } from "../rearrangement.js";
 import { MATH_PLUGIN_MANIFEST, MATH_SUBJECT_DESCRIPTION, MAKE_TEN_MAX_MOVED, MAKE_TEN_PLACES, PLACE_VALUE_TRADE_MAX_COLUMNS, makeTenFreshCount } from "octos-lesson-language/plugin-math";
 import type { CoachSubjectPlugin } from "./types.js";
 import { PLOT_MARKS } from "./plot-mark-names.js";
+import { timesTenStartOf } from "./place-value-times-ten-moves.js";
 
 // Counts a recipe draws, as whole numbers from min to max. The compiler fits slider ranges to them and
 // refuses a stated count outside them (Coach #78); the card text quotes the same numbers.
@@ -264,6 +265,35 @@ export const MATH_RECIPES = {
     student_controls: [],
     required_features: ["make_ten_to_add"],
     model_guidance: "凑十（两个十格框）：两个一位数相加、和大于10（如8+6），小数分出一部分把大数补成十。不用于和正好是10、接着数、破十减、两位数加一位数、三个数相加。这道加法只画这张卡片，不再画数轴。outline 的 numbers 依次写四个数：题目的两个数、练习的两个数（另一对，也是一位数、和大于10，不是题目的，换顺序也不算）。程序再补两个数：大数那一框里有几个（开始就是大数）、移过去几个（0）。演示时把第五个数动画到10（可以只到9），程序一个一个地移圆片；别的数不动画。练习：对第五个数写一个数值目标题（数值写10），孩子自己补满十，程序再出一行空（8+6=8+__+__=10+__=__）；题目和提示不写练习的和。不说怎么点卡片",
+  },
+  // OLL decision 0028 (a trial): the same amount counted in another unit on the place-value chart, a count (3 tenths =
+  // ? thousandths) or a times pair (700 is ? times 70). The model writes the amount, the target and a practice of
+  // the same kind; the program supplies "counted in" (its start is the amount's own place; a put-together question
+  // writes the unit it names), and the demonstration animates it along the problem's path while the card moves one
+  // row at a time. The program makes the learner's task on the practice and the card's answer row after it.
+  place_value_times_ten: {
+    parts: ["whole"],
+    number_inputs: ["amount", "target", "practice_amount", "practice_target", "counted_in"],
+    number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
+    // Counted in starts at the unit the question names: for a count that breaks and for a times pair it is the
+    // amount's own place, so the program supplies it from the amount when the outline declares only the four numbers
+    // before it; a put-together question declares its own (40 hundredths: 0.01), which is kept.
+    program_number_inputs: [{ initial: ([amount, target]: readonly number[]) => timesTenStartOf(amount ?? 0, target ?? 0), min: 0, max: 1_000_000, label: "现在用什么单位在数" }],
+    // The card starts on no fewer: an outline that declares fewer loses it at once (a section cannot add one).
+    min_lesson_numbers: 5,
+    parameter_names: [],
+    model_parameter_names: [],
+    required_model_schema_parameters: [],
+    semantic_parameters: [],
+    output_kinds: ["place_value_times_ten"],
+    // Up to five lesson variables (the amount, the target, counted in, one or two row sets): when a lesson holds too
+    // many, the card is the picture that goes.
+    binds_many_variables: true,
+    // No control: the learner works the card by its own taps; the model never names one, and the card's own fixed
+    // text says how it is used.
+    student_controls: [],
+    required_features: ["count_in_another_unit"],
+    model_guidance: "换一个单位来数（数位表：往右一位一个拆成十个，往左一位十个合成一个）：数单位（3个十分之一=?个千分之一；30个十=?个百）或倍数（700是70的几倍；0.3是3的十分之一）。数只有一位不是零（5550里的两个5写500和50），单位最多隔两位，倍数是相邻两位。不用于一个数字表示多少、比较、加减、乘除以10、除以小数。outline 的 numbers 依次写：要数的数（写值，3个十分之一写0.3）、用什么来数（0.001；倍数写小的数70）、练习的两个数（同一种问法，隔同样几位、同一方向，不是题目的）、现在用什么单位在数（合起来的题写题目说的单位，如40个百分之一写0.01；别的程序补）。演示把第五个数动画到后面的单位（0.01、0.001；倍数到70），只往前走。练习：对第五个数写数值目标题，程序再出答案那一行；题目和提示不写练习的答案。不说怎么点卡片",
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],

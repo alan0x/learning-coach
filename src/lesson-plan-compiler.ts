@@ -606,6 +606,14 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
       for (const number of moment.restart_numbers ?? []) {
         const mover = movers.get(number);
         const state = mover && moverStates.get(mover.visual);
+        if (!mover && cardNumbers.has(number)) {
+          // The card that moves this number is not drawn yet: there is nothing to restart (a card that reads its
+          // numbers unbound has no variable for it, and OLL would refuse the lesson). Left out and recorded, as an
+          // animation before its card is.
+          replayed.delete(variableAlias(number));
+          viewAdjustments.push({ section: sectionIndex, reason: "restart_before_card", detail: `${momentPath}.restart_numbers: number ${number} is replayed before the card that moves it is drawn; left out` });
+          continue;
+        }
         if (!mover || !state) continue;
         state.now = [...state.start];
         // A card that binds none of its numbers replays its own variables only (they are not declared).

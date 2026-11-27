@@ -22,9 +22,11 @@
 //   the target (a lesson may stop partway: no hard rule); the learner has a task on the card; a row follows,
 //   anchored to the card; the task's words name no control.
 //
-// The card is read from the lesson as written, its bound fields at the variables' values. The rules are 0028's
-// (the accepted sketch's), written here until Coach pins an OLL that has the card; then the lesson is also played
-// through OLL ("the lesson plays") and the card's own rules replace these. Narration is not judged.
+// The lesson plays through OLL itself (normalized and reduced, as the player plays it: "the lesson plays"), so every
+// rule of the card OLL keeps is checked by OLL. The card is read from the lesson as written, its bound fields at the
+// variables' values, by 0028's rules (the accepted sketch's), so each fault is also named. Narration is not judged.
+
+import { normalizeAuthoringLesson, reduceCanonicalEvents } from "octos-lesson-language";
 
 const KIND = "place_value_times_ten";
 /** Cards a served case may draw instead, named in its failure. */
@@ -145,7 +147,14 @@ export function timesTenIn(lesson) {
   const writes = written.filter((action) => action.kind === KIND);
   const instead = [...new Set(written.map((action) => INSTEAD[action.kind]).filter(Boolean))];
   const tasks = lesson?.lesson?.tasks ?? [];
-  if (!writes.length) return { cards: 0, instead, tasks };
+  // The lesson plays as the player plays it. A lesson OLL refuses is still read, so each fault is named too.
+  let error;
+  try {
+    reduceCanonicalEvents(normalizeAuthoringLesson(lesson, { lessonId: "judge", boardId: "judge", baseRevision: 0, regionIntent: "new_topic" }));
+  } catch (caught) {
+    error = `${caught.code ?? "error"}: ${String(caught.message).slice(0, 160)}`;
+  }
+  if (!writes.length) return { cards: 0, instead, tasks, ...(error ? { error } : {}) };
   const write = writes[0];
   const declared = Object.fromEntries((lesson.lesson?.variables ?? []).map((variable) => [variable.as, variable.initial]));
   const start = cardAt(write.content, declared);
@@ -154,7 +163,7 @@ export function timesTenIn(lesson) {
   if (start.countedVariable !== undefined) {
     for (const action of actions) if (action.do === "animate" && action.variable === start.countedVariable && typeof action.value === "number") shown.push(action.value);
   }
-  return { cards: writes.length, instead, as: write.as, content: write.content, shape: shapeOf(write.content), declared, start, shown, tasks };
+  return { cards: writes.length, instead, as: write.as, content: write.content, shape: shapeOf(write.content), declared, start, shown, tasks, ...(error ? { error } : {}) };
 }
 
 /** Judges one case's lesson. Returns { pass, checks: [{ check, pass, detail? }], notes: [...] }. */
@@ -165,6 +174,7 @@ export function judgePlaceValueTimesTen(item, lesson) {
   const note = (name, holds, detail) => notes.push({ check: name, pass: Boolean(holds), ...(holds ? {} : { detail }) });
   const done = () => ({ pass: checks.every((each) => each.pass), checks, notes });
   const card = timesTenIn(lesson);
+  check("the lesson plays", !card.error, card.error);
   if (item.expect?.forbid) {
     if (item.expect.forbid.includes(KIND)) check("no times-ten card for this question", card.cards === 0, `${card.cards} times-ten card(s) drawn`);
     return done();

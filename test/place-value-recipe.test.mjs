@@ -286,7 +286,7 @@ test("a stubbed generation run: the chart, its steps and the practice reach the 
   `);
   assert.deepEqual(result.beats, [["write", "focus"], ["animate"], ["animate"], ["animate"]]);
   assert.deepEqual(result.tasks.map((task) => [task.completion.kind, task.completion.fact, task.start.values.section_01_moment_01_item_01_number]), [["card_fact", "built", 30705000]]);
-  assert.deepEqual(result.plugins, { math: "0.10.0", shared: "0.1.0" });
+  assert.deepEqual(result.plugins, { math: "0.11.0", shared: "0.1.0" });
   // Section 2 is told the chart in its own terms, with what the demonstration left to do.
   const facts = JSON.stringify(result.later);
   for (const fact of ['"number":60408', '"given":"name"', '"on_chart_now":60408', '"still_to_place":0', '"practice_number":30705', '"Ten thousands"']) assert.ok(facts.includes(fact), fact);
