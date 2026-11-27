@@ -3130,7 +3130,9 @@ function outlineNumbersMissing(outline: LessonPlanOutline, section: number): Les
     }
     const check = RECIPE_HOOKS[visual.capability as keyof typeof RECIPE_HOOKS]?.outline_fault;
     const limit = LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[visual.capability as keyof typeof LESSON_PLAN_CAPABILITY_NUMBER_LIMITS] ?? 0;
-    if (!check || visual !== firstNumbered || declared !== limit) continue;
+    // A visual whose later numbers are optional (the chart's practice number) owns the outline's numbers when the
+    // outline declares no more than it takes.
+    if (!check || visual !== firstNumbered || declared > limit) continue;
     const fault = check(outline.numbers!.slice(0, limit).map((number) => number.initial), outline.numbers!.slice(0, limit));
     if (fault) {
       return new LessonPlanError(OUTLINE_NUMBERS_REFUSED, `$lessonPlanOutline.course_visuals[${index}]`,
@@ -4270,6 +4272,8 @@ export async function generateLessonPlanWithModel(
   let endedEarly = false;
   // Restarts for a picture on a tap card's numbers: after the first, the card goes instead.
   let sharedRestarts = 0;
+  // Visuals whose outline numbers were asked for again once (`outline_rewrite`): a second fault takes the visual out.
+  const rewrittenNumbers = new Set<string>();
   const acceptFirstSection = async (): Promise<LessonPlanGenerationResult | undefined> => {
     try {
       await acceptSection(1, bootstrappedFirstSection);
@@ -4283,7 +4287,12 @@ export async function generateLessonPlanWithModel(
       // never a lost lesson (review of #186).
       const dropCard = sharesTapCard && (sharedRestarts > 0 || excludedCapabilities.has((error as LessonPlanError).capability!));
       const capability = dropCard ? (error as LessonPlanError).tapCard : error instanceof LessonPlanError ? error.capability : undefined;
-      const spentOnPicture = capability !== undefined && !excludedCapabilities.has(capability)
+      // A value the outline can write again (the chart's question number declared as 0): the outline is asked once
+      // more with the fact and the visual still offered, before any section repair is spent on it (review 2).
+      const rewriteNumbers = numbersMissing && (error as LessonPlanError).code === OUTLINE_NUMBERS_REFUSED && capability !== undefined
+        && RECIPE_HOOKS[capability as keyof typeof RECIPE_HOOKS]?.outline_rewrite === true && !rewrittenNumbers.has(capability) && outlineRestarts < 2;
+      if (rewriteNumbers) rewrittenNumbers.add(capability!);
+      const spentOnPicture = !rewriteNumbers && capability !== undefined && !excludedCapabilities.has(capability)
         && (numbersMissing || sharesTapCard || (sectionAttempts.get(1) ?? 0) >= maxAttempts);
       // A fault the outline owns that names no recipe (a number line's tick limits) is about the picture at its path:
       // restarts still exclude the whole number-line family, as before; the rewrite takes out that picture.
@@ -4304,7 +4313,7 @@ export async function generateLessonPlanWithModel(
         sectionAttempts.set(1, maxAttempts - 1);
         return acceptFirstSection();
       }
-      if (!(isOutlineOwnedFault(error) || spentOnPicture) || outlineRestarts >= 2) throw error;
+      if (!(isOutlineOwnedFault(error) || spentOnPicture || rewriteNumbers) || outlineRestarts >= 2) throw error;
       outlineRestarts += 1;
       await options.on_rejected_part?.({ label: "lesson-plan-section", section: 1, attempt: sectionAttempts.get(1) ?? 1, error: rejectionDetails(error) });
       if (spentOnPicture) {
@@ -4318,7 +4327,7 @@ export async function generateLessonPlanWithModel(
         if (dropCard) excludedCapabilities.add(capability!);
         else if (isNumberLineCapability(capability!)) { for (const name of LESSON_PLAN_CAPABILITY_NAMES) if (isNumberLineCapability(name)) excludedCapabilities.add(name); }
         else excludedCapabilities.add(capability!);
-      } else if (outline) excludeFaulting(outline, error);
+      } else if (outline && !rewriteNumbers) excludeFaulting(outline, error);
       outlineError = error;
       outline = undefined;
       // A note on a picture the discarded outline lost (one dropped as it was accepted) is not the new outline's.

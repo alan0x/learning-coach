@@ -9,7 +9,7 @@ import { fitComparedNumbers, fitNumberLineNumbers, fitRoundingNumbers, fitSoluti
 import { normalizePlotInputInstructions, validateTeachingClaims } from "./math-teaching-contracts.js";
 import { formulaError, formulaFunctions, parseModelFormula } from "./math-formulas.js";
 import { BASE_TEN_DRAWN, baseTenColumns, baseTenMoves, baseTenState } from "./base-ten-moves.js";
-import { placeValueMoves, placeValueState } from "./place-value-moves.js";
+import { placeValueChartOutlineFault, placeValueMoves, placeValueState } from "./place-value-moves.js";
 import { TRADE_NUMBER, placeValueTradeColumnsOf, placeValueTradeMoves, placeValueTradeStartFault, placeValueTradeState, placeValueTradeThousandths } from "./place-value-trade-moves.js";
 import { MAKE_TEN_NUMBER, makeTenMoves, makeTenState } from "./make-ten-moves.js";
 import { TIMES_TEN_NUMBER, placeValueTimesTenMoves, placeValueTimesTenState, timesTenDecimal, timesTenOutlineFault, timesTenStartProblem } from "./place-value-times-ten-moves.js";
@@ -183,6 +183,10 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
     },
     // Building, the chart's number is the value on the chart, from 0; pulling apart, what is still on it.
     number_moves: { state: placeValueState, moves: placeValueMoves },
+    // The question's number declared as 0 (the chart's empty start) is the outline's to fix: the outline is written
+    // once more with the fact, the chart still offered; only if it is 0 again does the chart go.
+    outline_fault: placeValueChartOutlineFault,
+    outline_rewrite: true,
   },
   place_value_trade: {
     // The card's numbers have no control: the learner works it by its own taps (OLL 0026; owner, 2026-11-24:

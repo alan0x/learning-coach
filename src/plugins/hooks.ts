@@ -69,6 +69,12 @@ export interface RecipeHooks {
    */
   outline_fault?(values: readonly number[], definitions?: readonly LessonPlanNumber[]): string | undefined;
   /**
+   * With `outline_fault`: the outline can write the numbers again (the fault is a value, not the visual's fit to the
+   * request), so the first time it is asked once more with the fact and the visual still offered; a second fault
+   * takes the visual out, as for any other recipe.
+   */
+  outline_rewrite?: true;
+  /**
    * The lesson variables the card will bind on these starting values (its lesson numbers, in its order, as the outline
    * declares them with the program's own), at most: the worst case of what its create decides later (the column card's
    * operation). Read when the lesson's first section compiles, so a lesson that cannot hold its planned cards loses the
