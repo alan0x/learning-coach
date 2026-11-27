@@ -386,7 +386,7 @@ test("a stubbed generation run: the outline's four numbers, the program's two, t
     assert.deepEqual(result.beats, [["write", "focus"], [10]], `${outlineNumbers}`);
     assert.deepEqual([result.card.a, result.card.b, result.card.filled, result.card.moved], [3, 8, 8, 0], `${outlineNumbers}`);
     assert.deepEqual(result.tasks.map((task) => [task.completion.kind, task.completion.fact]), [["card_fact", "complete"], ["numeric_row", undefined]], `${outlineNumbers}`);
-    assert.deepEqual(result.plugins, { math: "0.11.0", shared: "0.1.0" });
+    assert.deepEqual(result.plugins, { math: "0.12.0", shared: "0.1.0" });
     assert.deepEqual(result.verdict.checks.filter((check) => !check.pass), [], `${outlineNumbers}`);
     assert.deepEqual(result.verdict.notes.filter((note) => !note.pass), [], `${outlineNumbers}`);
     // Section 2 is told where the demonstration stands.

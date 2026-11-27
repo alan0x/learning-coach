@@ -7633,7 +7633,7 @@ var v0_1_schema_default = {
         do: { enum: ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate", "hide", "view", "tap"] },
         when: { enum: ["before_speech", "during_speech", "after_speech"] },
         as: { $ref: "#/$defs/alias" },
-        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model", "base_ten_trade", "place_value_chart", "place_value_trade", "make_ten", "place_value_times_ten"] },
+        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model", "base_ten_trade", "place_value_chart", "place_value_trade", "make_ten", "place_value_times_ten", "place_value_compare"] },
         role: { type: "string" },
         content: { type: "object" },
         place: { $ref: "#/$defs/placement" },
@@ -7754,6 +7754,13 @@ var v0_1_schema_default = {
             properties: { do: { const: "write" }, kind: { const: "place_value_times_ten" } }
           },
           then: { properties: { content: { $ref: "#/$defs/placeValueTimesTenContent" } } }
+        },
+        {
+          if: {
+            required: ["do", "kind"],
+            properties: { do: { const: "write" }, kind: { const: "place_value_compare" } }
+          },
+          then: { properties: { content: { $ref: "#/$defs/placeValueCompareContent" } } }
         },
         {
           if: { properties: { do: { const: "revise" } } },
@@ -8136,6 +8143,27 @@ var v0_1_schema_default = {
         }
       }
     },
+    placeValueCompareContent: {
+      type: "object",
+      required: ["a", "b", "compared", "marked", "signed"],
+      additionalProperties: false,
+      properties: {
+        language: { enum: ["en-US", "zh-CN"] },
+        a: { type: "integer", minimum: 0, maximum: 9999999999 },
+        b: { type: "integer", minimum: 0, maximum: 9999999999 },
+        a_decimals: { type: "integer", minimum: 0, maximum: 3 },
+        b_decimals: { type: "integer", minimum: 0, maximum: 3 },
+        compared: { type: "integer", minimum: 0, maximum: 8 },
+        marked: { type: "integer", minimum: 0, maximum: 7 },
+        signed: { type: "integer", minimum: 0, maximum: 1 },
+        bindings: {
+          type: "array",
+          minItems: 1,
+          maxItems: 64,
+          items: { $ref: "#/$defs/valueBinding" }
+        }
+      }
+    },
     scene3dContent: {
       type: "object",
       required: ["objects", "camera", "fallback"],
@@ -8287,7 +8315,7 @@ var v0_1_schema_default = {
       required: ["target", "expression"],
       additionalProperties: false,
       properties: {
-        target: { type: "string", pattern: "^(?:[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*|target|a|b|finished|filled|moved|amount|counted_in|moved_once|moved_twice)$" },
+        target: { type: "string", pattern: "^(?:[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*|target|a|b|finished|filled|moved|amount|counted_in|moved_once|moved_twice|a_decimals|b_decimals|compared|marked|signed)$" },
         expression: { type: "string", minLength: 1, maxLength: 256 },
         allow_zero: { const: true },
         hide_when_undefined: { const: true },
@@ -9686,6 +9714,11 @@ function placeValueTradeDecimals(value2) {
   const frac = value2 % 1e3;
   return !frac ? 0 : frac % 100 === 0 ? 1 : frac % 10 === 0 ? 2 : 3;
 }
+function placeValueTradeNumeralFixed(value2, dec, language = "en-US") {
+  const whole2 = Math.floor(value2 / 1e3), frac = value2 % 1e3;
+  const wholeText = placeValueNumeral(whole2 * 1e3, language);
+  return dec ? `${wholeText}.${String(frac).padStart(3, "0").slice(0, dec)}` : wholeText;
+}
 var placeValueTradeUnitWord = (place5, language = "en-US") => placeValueUnitName(place5, language);
 var OP = { add: "+", subtract: "-" };
 var readable = (value2) => typeof value2 === "number" && Number.isInteger(value2) && value2 >= 0 && value2 <= PLACE_VALUE_TRADE_MAX_VALUE;
@@ -9948,6 +9981,35 @@ function placeValueTradeDemoState(problem, k) {
     throw new Error(`columns finished must be 0..${problem.columns.length}`);
   return k === 0 ? placeValueTradeStart(problem) : placeValueTradeDemoSteps(problem).steps[k - 1].after;
 }
+function placeValueTradeDemoAt(problem, finished) {
+  const steps = placeValueTradeDemoSteps(problem).steps;
+  const n = problem.columns.length;
+  const v = Number.isFinite(finished) ? Math.min(n, Math.max(0, finished)) : 0;
+  const k = Math.min(n, Math.floor(v + 1e-9));
+  const before = steps.slice(0, k).reduce((sum, step) => sum + step.actions.length, 0);
+  if (k >= n)
+    return { k, j: 0, value: k, index: before };
+  const m = steps[k].actions.length;
+  const j = Math.min(m - 1, Math.max(0, Math.floor((v - k) * m + 1e-6)));
+  return { k, j, value: j === 0 ? k : k + j / m, index: before + j };
+}
+function placeValueTradeDemoValues(problem, from, to) {
+  const steps = placeValueTradeDemoSteps(problem).steps;
+  const start = placeValueTradeDemoAt(problem, from), end = placeValueTradeDemoAt(problem, to);
+  const values = [];
+  for (let k = start.k; k < Math.min(end.k + (end.j > 0 ? 1 : 0), steps.length); k += 1) {
+    const m = steps[k].actions.length;
+    for (let j = k === start.k ? start.j + 1 : 1; j <= m; j += 1) {
+      if (k === end.k && j > end.j)
+        break;
+      values.push(j === m ? k + 1 : k + j / m);
+    }
+  }
+  return values;
+}
+function placeValueTradeDemoStateAt(problem, at2) {
+  return at2.j === 0 ? placeValueTradeDemoState(problem, at2.k) : placeValueTradeDemoSteps(problem).steps[at2.k].states[at2.j];
+}
 function record5(value2, path, fail4) {
   if (!value2 || typeof value2 !== "object" || Array.isArray(value2))
     fail4(path, "Expected an object");
@@ -10053,14 +10115,16 @@ function placeValueTradeState(raw) {
   const places = Array.isArray(content.places) ? content.places : [];
   const max = placeValueTradeMaxStatus(operation);
   const status = Object.fromEntries(columns.map((place5) => [place5, Math.min(max, Math.max(0, Math.round(Number(places.find((item) => item?.place === place5)?.status) || 0)))]));
-  const finished = int(content.finished, 0, columns.length);
-  if (finished > 0) {
+  const asked = typeof content.finished === "number" && Number.isFinite(content.finished) ? Math.min(columns.length, Math.max(0, content.finished)) : 0;
+  if (asked > 0) {
     try {
-      return { ...placeValueTradeDemoState(problem, finished), finished };
+      const at2 = placeValueTradeDemoAt(problem, asked);
+      if (at2.value > 0)
+        return { ...placeValueTradeDemoStateAt(problem, at2), finished: at2.value };
     } catch {
     }
   }
-  return { problem, status, finished };
+  return { problem, status, finished: Math.floor(asked + 1e-9) };
 }
 function placeValueTradeChanges(before, after) {
   return after.problem.columns.filter((place5) => after.status[place5] !== before.status[place5]).map((place5) => ({ place: place5, field: "status", before: before.status[place5], after: after.status[place5] }));
@@ -10442,7 +10506,9 @@ var MAKE_TEN_WORDS = {
     cardLabel: "Making ten on two ten frames",
     howto: {
       start: "Make a ten: tap a {c} counter to fill the empty places.",
-      going: "Keep tapping {c} counters until the frame is full.",
+      // Once a counter has crossed, the line also says it can go back: hosts that draw the card's own line skip the
+      // fixed how-to, which said so (Learn #259).
+      going: "Keep tapping {c} counters until the frame is full. A counter that crossed goes back when tapped.",
       done: "The frame is a ten. Fill in the blanks.",
       shown: "The frame is a ten."
     },
@@ -10468,7 +10534,7 @@ var MAKE_TEN_WORDS = {
     cardLabel: "\u4E24\u4E2A\u5341\u683C\u6846\u51D1\u5341",
     howto: {
       start: "\u51D1\u6210\u5341\uFF1A\u70B9{c}\u7684\u5706\u7247\uFF0C\u628A\u7A7A\u4F4D\u586B\u6EE1\u3002",
-      going: "\u63A5\u7740\u70B9{c}\u7684\u5706\u7247\uFF0C\u76F4\u5230\u6846\u6EE1\u4E86\u3002",
+      going: "\u63A5\u7740\u70B9{c}\u7684\u5706\u7247\uFF0C\u76F4\u5230\u6846\u6EE1\u4E86\u3002\u79FB\u8FC7\u53BB\u7684\u5706\u7247\uFF0C\u70B9\u4E00\u4E0B\u5C31\u56DE\u53BB\u3002",
       done: "\u6846\u6EE1\u5341\u4E86\u3002\u5728\u4E0B\u9762\u586B\u7A7A\u3002",
       shown: "\u6846\u6EE1\u5341\u4E86\u3002"
     },
@@ -10730,6 +10796,17 @@ function placeValueTimesTenDemoState(problem, position) {
   const whole2 = Math.floor(at2 + 1e-9), part = at2 - whole2;
   const moved = Math.floor(part * problem.n + 1e-9);
   return { problem, stages: Array.from({ length: problem.n }, (_, i) => Math.min(problem.g, whole2 + (i < moved ? 1 : 0))), demo: at2 };
+}
+function placeValueTimesTenDemoValues(problem, from, to) {
+  const path = placeValueTimesTenPath(problem);
+  const n = Math.max(1, problem.n);
+  const index = (value2) => Math.floor(placeValueTimesTenPosition(problem, value2) * n + 1e-6);
+  const values = [];
+  for (let t = index(from) + 1; t <= index(to); t += 1) {
+    const k = Math.floor(t / n), r = t - k * n;
+    values.push(r === 0 ? path[k] : path[k] + (path[k + 1] - path[k]) * r / n);
+  }
+  return values;
 }
 function countedInText(problem, value2, language = "en-US") {
   const place5 = placeValueTimesTenPlaceOfUnit(value2);
@@ -11047,11 +11124,438 @@ var placeValueTimesTenRowWidth = (k) => k * (GEO.D + GEO.G) - GEO.G + 2 * GEO.RP
 var ROW_W = placeValueTimesTenRowWidth(10);
 var WIDE = ROW_W + 2 * GEO.CP;
 
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/place-value-compare.js
+var PLACE_VALUE_COMPARE_KIND = "place_value_compare";
+var PLACE_VALUE_COMPARE_FEATURE = "plugin:math/place-value-compare@1";
+var PLACE_VALUE_COMPARE_PLUGIN_VERSION = "0.12.0";
+var PLACE_VALUE_COMPARE_LANGUAGES = PLACE_VALUE_CHART_LANGUAGES;
+var PLACE_VALUE_COMPARE_MAX_COLUMNS = 7;
+var PLACE_VALUE_COMPARE_MAX_DECIMALS = 3;
+var PLACE_VALUE_COMPARE_MAX_VALUE = PLACE_VALUE_MAX_VALUE;
+var PLACE_VALUE_COMPARE_CARD_BINDINGS = ["a", "b", "a_decimals", "b_decimals", "compared"];
+var PLACE_VALUE_COMPARE_PROBLEM_FIELDS = ["a", "b"];
+var PLACE_VALUE_COMPARE_DEMONSTRATION_FIELD = "compared";
+var PLACE_VALUE_COMPARE_TAP_FIELDS = ["marked", "signed"];
+var PLACE_VALUE_COMPARE_BINDINGS = [...PLACE_VALUE_COMPARE_CARD_BINDINGS, ...PLACE_VALUE_COMPARE_TAP_FIELDS];
+var PLACE_VALUE_COMPARE_SIGNS = [">", "=", "<"];
+var PLACE_VALUE_COMPARE_SIGN_PLACES = ["greater", "equal", "less"];
+var PLACE_VALUE_COMPARE_TAP_PLACES = Object.freeze([...PLACE_VALUE_TAP_PLACES, ...PLACE_VALUE_COMPARE_SIGN_PLACES]);
+var placeValueCompareSignAt = (index) => Number.isInteger(index) && index >= PLACE_VALUE_TAP_PLACES.length ? PLACE_VALUE_COMPARE_SIGNS[index - PLACE_VALUE_TAP_PLACES.length] : void 0;
+var PLACE_VALUE_COMPARE_TAPS = ["same", "different", "sign", "column"];
+function placeValueCompareFromDecimal(mantissa, scale2) {
+  if (!Number.isSafeInteger(mantissa) || mantissa < 0 || !Number.isInteger(scale2) || scale2 < 0 || scale2 > PLACE_VALUE_COMPARE_MAX_DECIMALS)
+    return void 0;
+  const value2 = mantissa * 10 ** (PLACE_VALUE_COMPARE_MAX_DECIMALS - scale2);
+  return value2 <= PLACE_VALUE_COMPARE_MAX_VALUE ? { value: value2, dec: scale2 } : void 0;
+}
+var placeValueCompareOwnDecimals = (value2) => placeValueTradeDecimals(value2);
+var placeValueCompareNumeral = (value2, dec, language = "en-US") => placeValueTradeNumeralFixed(value2, dec, language);
+function placeValueCompareFault(a, b) {
+  for (const n of [a, b]) {
+    if (!Number.isSafeInteger(n.value) || n.value < 0 || n.value > PLACE_VALUE_COMPARE_MAX_VALUE)
+      return "unreadable";
+    if (!Number.isInteger(n.dec) || n.dec < placeValueCompareOwnDecimals(n.value) || n.dec > PLACE_VALUE_COMPARE_MAX_DECIMALS)
+      return "decimals";
+  }
+  const low = -Math.max(a.dec, b.dec);
+  const high = Math.max(placeValueTopPlace(a.value), placeValueTopPlace(b.value), 0);
+  if (high - low + 1 > PLACE_VALUE_COMPARE_MAX_COLUMNS)
+    return "too_wide";
+  if (a.value === b.value && a.dec === b.dec)
+    return "same_numeral";
+  return void 0;
+}
+function placeValueComparePairOf(a, b) {
+  const low = -Math.max(a.dec, b.dec);
+  const high = Math.max(placeValueTopPlace(a.value), placeValueTopPlace(b.value), 0);
+  const columns = [];
+  for (let place5 = high; place5 >= low; place5 -= 1)
+    columns.push(place5);
+  const da = columns.map((place5) => placeValueDigitAt(a.value, place5));
+  const db = columns.map((place5) => placeValueDigitAt(b.value, place5));
+  const first = columns.findIndex((_, k) => da[k] !== db[k]);
+  const equal = first === -1;
+  const stop = equal ? columns.length - 1 : first;
+  const relation = equal ? "=" : da[stop] > db[stop] ? ">" : "<";
+  return { a: a.value, b: b.value, aDec: a.dec, bDec: b.dec, columns, da, db, stop, place: columns[stop] ?? 0, equal, relation };
+}
+function placeValueCompareMakePair(a, b) {
+  const fault = placeValueCompareFault(a, b);
+  return fault ? { fault } : placeValueComparePairOf(a, b);
+}
+function placeValueCompareSamePair(x, y) {
+  const same = (p, pd, q, qd) => p === q && pd === qd;
+  return same(x.a, x.aDec, y.a, y.aDec) && same(x.b, x.bDec, y.b, y.bDec) || same(x.a, x.aDec, y.b, y.bDec) && same(x.b, x.bDec, y.a, y.aDec);
+}
+function placeValueComparePracticeFault(shown, a, b) {
+  const fault = placeValueCompareFault(a, b);
+  if (fault)
+    return fault;
+  return placeValueCompareSamePair(shown, placeValueComparePairOf(a, b)) ? "same_pair" : void 0;
+}
+var placeValueCompareStart = (pair) => ({ pair, marked: 0, signed: false, compared: 0 });
+var placeValueCompareDecided = (state) => !state.fault && state.pair.columns.length > 0 && state.marked === state.pair.stop + 1;
+var placeValueCompareDemonstrating = (state) => state.compared > 0;
+var placeValueCompareSigned = (state) => placeValueCompareDecided(state) && state.signed;
+var placeValueCompareComplete = (state) => !placeValueCompareDemonstrating(state) && placeValueCompareSigned(state);
+var placeValueCompareDemoEnd = (pair) => pair.stop + 2;
+function placeValueCompareColumn(state, index) {
+  const { pair } = state;
+  const place5 = pair.columns[index], a = pair.da[index], b = pair.db[index];
+  let status = "open";
+  if (index < state.marked)
+    status = index === pair.stop && !pair.equal ? "decides" : "same";
+  else if (placeValueCompareDecided(state) && index > pair.stop)
+    status = "after";
+  const paired = status === "same" || status === "decides" ? Math.min(a, b) : 0;
+  const extra = status === "decides" ? { row: a > b ? "a" : "b", n: Math.abs(a - b) } : null;
+  return { place: place5, a, b, status, paired, extra };
+}
+function placeValueCompareMove(state, move) {
+  if (placeValueCompareDemonstrating(state))
+    return { ok: false, reason: "demonstrating" };
+  const { pair } = state;
+  if (move.tap === "sign") {
+    if (!PLACE_VALUE_COMPARE_SIGNS.includes(move.sign))
+      return { ok: false, reason: "no_sign" };
+    if (!placeValueCompareDecided(state))
+      return { ok: false, reason: "not_decided" };
+    if (state.signed)
+      return { ok: false, reason: "already_signed" };
+    if (move.sign !== pair.relation)
+      return { ok: false, reason: "not_true" };
+    return { ok: true, state: { ...state, signed: true }, anim: { kind: "sign", sign: move.sign } };
+  }
+  if (move.tap !== "same" && move.tap !== "different" && move.tap !== "column")
+    return { ok: false, reason: "no_judgement" };
+  const k = move.index;
+  if (state.fault || !Number.isInteger(k) || k < 0 || k >= pair.columns.length)
+    return { ok: false, reason: "no_place" };
+  if (placeValueCompareDecided(state))
+    return { ok: false, reason: k > pair.stop ? "after_decided" : k === pair.stop && !pair.equal ? "already_decides" : "already_same" };
+  if (move.tap === "column")
+    return { ok: false, reason: "no_judgement" };
+  if (k < state.marked)
+    return { ok: false, reason: "already_same" };
+  if (k > state.marked)
+    return { ok: false, reason: "left_unjudged" };
+  const a = pair.da[k], b = pair.db[k];
+  if (move.tap === "same" && a !== b)
+    return { ok: false, reason: "not_same" };
+  if (move.tap === "different" && a === b)
+    return { ok: false, reason: "not_different" };
+  const next = { ...state, marked: k + 1 };
+  return { ok: true, state: next, anim: { kind: move.tap === "different" ? "decide" : "same", index: k, place: pair.columns[k], a, b, done: placeValueCompareDecided(next) } };
+}
+function applyPlaceValueCompareTap(state, tap) {
+  if (placeValueCompareDemonstrating(state))
+    return { ok: false, reason: "demonstrating" };
+  if (tap.tap === "sign") {
+    const sign = placeValueCompareSignAt(tap.place);
+    return sign ? placeValueCompareMove(state, { tap: "sign", sign }) : { ok: false, reason: "no_sign" };
+  }
+  if (tap.tap !== "same" && tap.tap !== "different" && tap.tap !== "column")
+    return { ok: false, reason: "no_place" };
+  if (!Number.isInteger(tap.place) || tap.place < 0 || tap.place >= PLACE_VALUE_TAP_PLACES.length)
+    return { ok: false, reason: "no_place" };
+  const index = state.pair.columns.indexOf(placeValueTapPlace(tap.place));
+  return index < 0 ? { ok: false, reason: "no_place" } : placeValueCompareMove(state, { tap: tap.tap, index });
+}
+var placeValueCompareTapColumn = (state, tap) => tap.tap === "sign" || !Number.isInteger(tap.place) || tap.place < 0 || tap.place >= PLACE_VALUE_TAP_PLACES.length ? -1 : state.pair.columns.indexOf(placeValueTapPlace(tap.place));
+function placeValueCompareDemoSteps(pair) {
+  let state = placeValueCompareStart(pair);
+  const steps = [];
+  for (let index = 0; index <= pair.stop; index += 1) {
+    const tap = index === pair.stop && !pair.equal ? "different" : "same";
+    const result = placeValueCompareMove(state, { tap, index });
+    if (!result.ok)
+      throw new Error(`demonstration step refused: ${result.reason}`);
+    state = result.state;
+    steps.push({ index, tap, anim: result.anim, after: state });
+  }
+  const signed = placeValueCompareMove(state, { tap: "sign", sign: pair.relation });
+  if (!signed.ok)
+    throw new Error(`demonstration sign refused: ${signed.reason}`);
+  state = signed.state;
+  steps.push({ index: pair.stop + 1, tap: "sign", anim: signed.anim, after: state });
+  return { steps, final: state };
+}
+function placeValueCompareDemoState(pair, k) {
+  const end = placeValueCompareDemoEnd(pair);
+  if (!Number.isInteger(k) || k < 0 || k > end)
+    throw new Error(`compared must be 0..${end}`);
+  return { pair, marked: Math.min(k, pair.stop + 1), signed: k === end, compared: k };
+}
+function placeValueCompareComparedMeaning(pair) {
+  return `counts the columns a ${PLACE_VALUE_COMPARE_KIND} card's demonstration has judged from the left, then one more for the sign: 0 to ${placeValueCompareDemoEnd(pair)} on this pair`;
+}
+function placeValueCompareComparedNext(pair, value2) {
+  const end = placeValueCompareDemoEnd(pair);
+  const k = Math.max(0, Math.floor(value2));
+  if (k >= end)
+    return `the sign is chosen at ${end}, the last value`;
+  if (k === end - 1)
+    return `the next value, ${end}, chooses the sign`;
+  const place5 = pair.columns[k];
+  return `the next value, ${k + 1}, judges the ${placeValueColumnName(place5).toLowerCase()}`;
+}
+function record8(value2, path, fail4) {
+  if (!value2 || typeof value2 !== "object" || Array.isArray(value2))
+    fail4(path, "Expected an object");
+  return value2;
+}
+function wholeNumber7(raw, path, low, high, fail4, what) {
+  if (typeof raw !== "number" || !Number.isInteger(raw) || raw < low || raw > high)
+    fail4(path, `${what} is a whole number from ${low} to ${high}`);
+  return raw;
+}
+function numberOf(content, field) {
+  const value2 = Number(content[field]);
+  const written = content[`${field}_decimals`];
+  return { value: value2, dec: written === void 0 ? Number.isSafeInteger(value2) && value2 >= 0 ? placeValueCompareOwnDecimals(value2) : 0 : Number(written) };
+}
+function placeValueCompareFaultText(fault, a, b) {
+  const ok = (n) => !!n && Number.isSafeInteger(n.value) && n.value >= 0 && n.value <= PLACE_VALUE_COMPARE_MAX_VALUE && Number.isInteger(n.dec) && n.dec >= 0 && n.dec <= 3;
+  const show = (n) => placeValueCompareNumeral(n.value, Math.max(n.dec, placeValueCompareOwnDecimals(n.value)));
+  const pair = ok(a) && ok(b) ? `${show(a)} and ${show(b)}` : "This pair";
+  switch (fault) {
+    case "decimals":
+      return `${pair}: a number has at most three decimals, and is written with at least the decimals it has (0.625 writes three) (decimals)`;
+    case "too_wide":
+      return `${pair}: the two numbers need more than seven columns (the highest place to the lowest written) (too_wide)`;
+    case "same_numeral":
+      return `${pair}: the same numeral twice; there is nothing to compare (0.7 and 0.70 are a pair) (same_numeral)`;
+    case "same_pair":
+      return `${pair}: a practice pair is not the shown pair, in either order (same_pair)`;
+    default:
+      return "The numbers are whole numbers of thousandths from 0 to 9,999,999.999 (unreadable)";
+  }
+}
+function placeValueCompareContentPair(raw) {
+  const content = raw ?? {};
+  if (typeof content.a !== "number" || typeof content.b !== "number")
+    return { fault: "unreadable" };
+  return placeValueCompareMakePair(numberOf(content, "a"), numberOf(content, "b"));
+}
+function validatePlaceValueCompareContent(raw, path, fail4, options = {}) {
+  const content = record8(raw, path, fail4);
+  for (const key of Object.keys(content)) {
+    if (!["language", ...PLACE_VALUE_COMPARE_BINDINGS, "bindings"].includes(key))
+      fail4(`${path}/${key}`, `Unknown place-value compare field '${key}'`);
+  }
+  if (content.language !== void 0 && !PLACE_VALUE_COMPARE_LANGUAGES.includes(content.language)) {
+    fail4(`${path}/language`, `The card speaks ${PLACE_VALUE_COMPARE_LANGUAGES.join(" or ")}`);
+  }
+  wholeNumber7(content.a, `${path}/a`, 0, PLACE_VALUE_COMPARE_MAX_VALUE, fail4, "The first number (in thousandths)");
+  wholeNumber7(content.b, `${path}/b`, 0, PLACE_VALUE_COMPARE_MAX_VALUE, fail4, "The second number (in thousandths)");
+  for (const field of ["a_decimals", "b_decimals"]) {
+    if (content[field] !== void 0)
+      wholeNumber7(content[field], `${path}/${field}`, 0, PLACE_VALUE_COMPARE_MAX_DECIMALS, fail4, `The decimals the ${field === "a_decimals" ? "first" : "second"} number is written with`);
+  }
+  const compared = wholeNumber7(content.compared, `${path}/compared`, 0, PLACE_VALUE_COMPARE_MAX_COLUMNS + 1, fail4, "Compared (the columns the demonstration judged, then the sign)");
+  const marked = wholeNumber7(content.marked, `${path}/marked`, 0, PLACE_VALUE_COMPARE_MAX_COLUMNS, fail4, "Marked (the columns the learner judged)");
+  const signed = wholeNumber7(content.signed, `${path}/signed`, 0, 1, fail4, "Signed (the true sign chosen)");
+  if (options.boundValues)
+    return;
+  const a = numberOf(content, "a"), b = numberOf(content, "b");
+  const fault = placeValueCompareFault(a, b);
+  if (fault) {
+    const at2 = fault === "decimals" ? a.dec < placeValueCompareOwnDecimals(a.value) ? "a_decimals" : "b_decimals" : "b";
+    fail4(`${path}/${at2}`, placeValueCompareFaultText(fault, a, b));
+  }
+  const pair = placeValueComparePairOf(a, b);
+  const end = placeValueCompareDemoEnd(pair);
+  if (marked > pair.stop + 1) {
+    fail4(`${path}/marked`, `${placeValueCompareNumeral(a.value, a.dec)} and ${placeValueCompareNumeral(b.value, b.dec)} are decided at ${pair.stop + 1} column${pair.stop ? "s" : ""} judged; ${marked} cannot be`);
+  }
+  if (signed && marked !== pair.stop + 1)
+    fail4(`${path}/signed`, "The sign is chosen only once the comparing is done (marked is the deciding column plus one)");
+  if (compared > end)
+    fail4(`${path}/compared`, `'compared' ${placeValueCompareComparedMeaning(pair)}, not ${compared}`);
+  if (compared > 0 && (marked !== 0 || signed !== 0))
+    fail4(`${path}/compared`, "A demonstration (compared past 0) plays on an unjudged chart: marked and signed are 0");
+  if (options.start && compared !== 0)
+    fail4(`${path}/compared`, `A card opens fresh: nothing compared, not ${compared}`);
+  if (options.start && marked !== 0)
+    fail4(`${path}/marked`, `A card opens fresh: nothing judged, not ${marked}`);
+  if (options.start && signed !== 0)
+    fail4(`${path}/signed`, "A card opens fresh: no sign chosen");
+}
+var placeValueCompareLanguage = (raw) => placeValueLanguage(raw);
+var EMPTY_PAIR = { a: 0, b: 0, aDec: 0, bDec: 0, columns: [], da: [], db: [], stop: -1, place: 0, equal: false, relation: "=" };
+function placeValueCompareState(raw) {
+  const content = raw ?? {};
+  const int = (value2, low, high) => typeof value2 === "number" && Number.isFinite(value2) ? Math.min(high, Math.max(low, Math.floor(value2 + 1e-9))) : low;
+  const made = placeValueCompareContentPair(content);
+  if ("fault" in made)
+    return { pair: EMPTY_PAIR, fault: made.fault, marked: 0, signed: false, compared: 0 };
+  const compared = int(content.compared, 0, placeValueCompareDemoEnd(made));
+  if (compared > 0)
+    return placeValueCompareDemoState(made, compared);
+  const marked = int(content.marked, 0, made.stop + 1);
+  return { pair: made, marked, signed: marked === made.stop + 1 && int(content.signed, 0, 1) === 1, compared: 0 };
+}
+var placeValueCompareTapValues = (state) => ({ marked: placeValueCompareDemonstrating(state) ? 0 : state.marked, signed: placeValueCompareDemonstrating(state) ? 0 : state.signed ? 1 : 0 });
+function placeValueCompareChanges(before, after) {
+  const from = placeValueCompareTapValues(before), to = placeValueCompareTapValues(after);
+  return PLACE_VALUE_COMPARE_TAP_FIELDS.filter((field) => from[field] !== to[field]).map((field) => ({ field, before: from[field], after: to[field] }));
+}
+function placeValueCompareStartFault(state) {
+  if (state.fault)
+    return placeValueCompareFaultText(state.fault);
+  if (state.compared !== 0)
+    return `A practice card starts with nothing demonstrated: compared is ${state.compared}, not 0`;
+  if (state.marked !== 0)
+    return `A practice card starts fresh: marked is ${state.marked}, not 0`;
+  if (state.signed)
+    return "A practice card starts fresh: no sign chosen";
+  return void 0;
+}
+var PLACE_VALUE_COMPARE_WORDS = {
+  "en-US": {
+    chartLabel: "Two numbers on a place-value chart, lined up by place",
+    sentenceLabel: "The two numbers, with a sign to choose between them",
+    point: "Decimal point",
+    howto: "From the left, judge each place until one is different.",
+    howtoSign: "Choose >, = or < between the two numbers below.",
+    lock: "Opens when a place differs, or every place is the same.",
+    button: { same: "Same", different: "Different" },
+    ask: (name, judgement) => `${name}: ${judgement === "same" ? "the same" : "different"}`,
+    signLabel: { ">": "is greater than", "=": "is equal to", "<": "is less than" },
+    caption: "Doesn't matter",
+    same: (name, a, b) => `${name}: ${a} and ${b}, the same.`,
+    allSame: "Every place is the same.",
+    decide: (name, a, b, more, unit4) => `${name}: ${a} and ${b}, the first place that differs. ${more} has more ${unit4}.`,
+    refusal: {
+      left_unjudged: (name, a, b, first) => `${name}: ${a} and ${b}. The ${first.toLowerCase()} haven't been compared yet.`,
+      not_judged: (name, a, b) => `${name}: ${a} and ${b}.`,
+      after_decided: (deciding, name) => `The ${deciding.toLowerCase()} decide; the ${name.toLowerCase()} come after and don't matter.`,
+      already_same: (name, a, b) => `${name}: ${a} and ${b}, the same.`,
+      already_decides: (name, a, b) => `${name}: ${a} and ${b}, the first place that differs.`,
+      not_true: (x, s, y) => `\u201C${x} ${s} ${y}\u201D is not true.`,
+      demonstrating: "This chart shows the demonstration."
+    },
+    result: (x, s, y, name, after, equal) => equal ? `\u2713 ${x} = ${y}: every place is the same.` : `\u2713 ${x} ${s} ${y}: the ${name.toLowerCase()} decide${after ? "; the places after them don't matter." : "."}`,
+    demo: {
+      same: (name, a, b) => `${name}: ${a} and ${b}, the same. Look at the next place.`,
+      decide: (name, a, b) => `${name}: ${a} and ${b}, the first place that differs, so the ${name.toLowerCase()} decide.`,
+      lastSame: (name, a, b) => `${name}: ${a} and ${b}, the same. Every place is the same.`,
+      sign: (x, s, y, name, after, equal) => equal ? `So ${x} = ${y}.` : `So ${x} ${s} ${y}.${after ? ` The places after the ${name.toLowerCase()} don't matter.` : ""}`
+    },
+    other: "That can't be done here.",
+    fixedHowTo: "From the left, tap Same or Different under each place, one place at a time, until one is different. Then choose >, = or < between the two numbers."
+  },
+  "zh-CN": {
+    chartLabel: "\u6570\u4F4D\u8868\u4E0A\u7684\u4E24\u4E2A\u6570\uFF0C\u6309\u6570\u4F4D\u5BF9\u9F50",
+    sentenceLabel: "\u4E24\u4E2A\u6570\uFF0C\u4E2D\u95F4\u9009\u4E00\u4E2A\u7B26\u53F7",
+    point: "\u5C0F\u6570\u70B9",
+    howto: "\u4ECE\u5DE6\u8FB9\u8D77\uFF0C\u4E00\u4F4D\u4E00\u4F4D\u5224\u65AD\uFF0C\u76F4\u5230\u6709\u4E00\u4F4D\u4E0D\u4E00\u6837\u3002",
+    howtoSign: "\u5728\u4E0B\u9762\u4E24\u4E2A\u6570\u4E2D\u95F4\u9009 >\u3001= \u6216 <\u3002",
+    lock: "\u627E\u5230\u4E0D\u4E00\u6837\u7684\u4E00\u4F4D\uFF0C\u6216\u6BCF\u4E00\u4F4D\u90FD\u4E00\u6837\u540E\u624D\u80FD\u9009\u3002",
+    button: { same: "\u4E00\u6837", different: "\u4E0D\u4E00\u6837" },
+    ask: (name, judgement) => `${name}\uFF1A${judgement === "same" ? "\u4E00\u6837" : "\u4E0D\u4E00\u6837"}`,
+    signLabel: { ">": "\u5927\u4E8E", "=": "\u7B49\u4E8E", "<": "\u5C0F\u4E8E" },
+    caption: "\u4E0D\u5F71\u54CD",
+    same: (name, a, b) => `${name}\uFF1A${a} \u548C ${b}\uFF0C\u4E00\u6837\u3002`,
+    allSame: "\u6BCF\u4E00\u4F4D\u90FD\u4E00\u6837\u3002",
+    decide: (name, a, b, more, unit4) => `${name}\uFF1A${a} \u548C ${b}\uFF0C\u7B2C\u4E00\u4F4D\u4E0D\u540C\u3002${more} \u7684${/^\d/u.test(unit4) ? ` ${unit4} ` : unit4}\u591A\u3002`,
+    refusal: {
+      left_unjudged: (name, a, b, first) => `${name}\uFF1A${a} \u548C ${b}\u3002${first}\u8FD8\u6CA1\u6709\u6BD4\u3002`,
+      not_judged: (name, a, b) => `${name}\uFF1A${a} \u548C ${b}\u3002`,
+      after_decided: (deciding, name) => `\u5DF2\u7ECF\u7531${deciding}\u51B3\u5B9A\u4E86\uFF1B${name}\u5728\u540E\u9762\uFF0C\u4E0D\u5F71\u54CD\u3002`,
+      already_same: (name, a, b) => `${name}\uFF1A${a} \u548C ${b}\uFF0C\u4E00\u6837\u3002`,
+      already_decides: (name, a, b) => `${name}\uFF1A${a} \u548C ${b}\uFF0C\u7B2C\u4E00\u4E2A\u4E0D\u4E00\u6837\u7684\u6570\u4F4D\u3002`,
+      not_true: (x, s, y) => `\u300C${x} ${s} ${y}\u300D\u4E0D\u6210\u7ACB\u3002`,
+      demonstrating: "\u8FD9\u662F\u6F14\u793A\u3002"
+    },
+    result: (x, s, y, name, after, equal) => equal ? `\u2713 ${x} = ${y}\uFF1A\u6BCF\u4E00\u4F4D\u90FD\u4E00\u6837\u3002` : `\u2713 ${x} ${s} ${y}\uFF1A\u7531${name}\u51B3\u5B9A${after ? "\uFF0C\u540E\u9762\u7684\u6570\u4F4D\u4E0D\u5F71\u54CD\u3002" : "\u3002"}`,
+    demo: {
+      same: (name, a, b) => `${name}\uFF1A${a} \u548C ${b}\uFF0C\u4E00\u6837\u3002\u770B\u4E0B\u4E00\u4F4D\u3002`,
+      decide: (name, a, b) => `${name}\uFF1A${a} \u548C ${b}\uFF0C\u7B2C\u4E00\u4E2A\u4E0D\u4E00\u6837\uFF0C\u6240\u4EE5\u7531${name}\u51B3\u5B9A\u3002`,
+      lastSame: (name, a, b) => `${name}\uFF1A${a} \u548C ${b}\uFF0C\u4E00\u6837\u3002\u6BCF\u4E00\u4F4D\u90FD\u4E00\u6837\u3002`,
+      sign: (x, s, y, name, after, equal) => equal ? `\u6240\u4EE5 ${x} = ${y}\u3002` : `\u6240\u4EE5 ${x} ${s} ${y}\u3002${after ? `${name}\u540E\u9762\u7684\u6570\u4F4D\u4E0D\u5F71\u54CD\u3002` : ""}`
+    },
+    other: "\u8FD9\u91CC\u4E0D\u80FD\u8FD9\u6837\u505A\u3002",
+    fixedHowTo: "\u4ECE\u5DE6\u8FB9\u8D77\uFF0C\u4E00\u4F4D\u4E00\u4F4D\u70B9\u5B83\u4E0B\u9762\u7684\u300C\u4E00\u6837\u300D\u6216\u300C\u4E0D\u4E00\u6837\u300D\uFF0C\u76F4\u5230\u6709\u4E00\u4F4D\u4E0D\u4E00\u6837\uFF1B\u7136\u540E\u5728\u4E24\u4E2A\u6570\u4E2D\u95F4\u9009 >\u3001= \u6216 <\u3002"
+  }
+};
+var wordsOf2 = (language) => PLACE_VALUE_COMPARE_WORDS[language] ?? PLACE_VALUE_COMPARE_WORDS["en-US"];
+var nameOf = (place5, language) => placeValueColumnName(place5, language);
+function placeValueCompareNumerals(pair, language = "en-US") {
+  return [placeValueCompareNumeral(pair.a, pair.aDec, language), placeValueCompareNumeral(pair.b, pair.bDec, language)];
+}
+var hasAfter = (pair) => pair.stop < pair.columns.length - 1;
+function placeValueCompareDoneText(pair, language = "en-US") {
+  const [x, y] = placeValueCompareNumerals(pair, language);
+  return wordsOf2(language).result(x, pair.relation, y, nameOf(pair.place, language), hasAfter(pair), pair.equal);
+}
+function placeValueCompareHowTo(raw) {
+  return wordsOf2(placeValueCompareLanguage(raw)).fixedHowTo;
+}
+function placeValueCompareRefusalText(state, tap, language = "en-US") {
+  const words = wordsOf2(language);
+  const result = applyPlaceValueCompareTap(state, tap);
+  if (result.ok)
+    return "";
+  const { pair } = state, reason = result.reason;
+  if (reason === "demonstrating")
+    return words.refusal.demonstrating;
+  if (reason === "not_decided")
+    return words.lock;
+  if (reason === "not_true" || reason === "already_signed") {
+    const sign = placeValueCompareSignAt(tap.place);
+    const [x, y] = placeValueCompareNumerals(pair, language);
+    return reason === "not_true" ? words.refusal.not_true(x, sign, y) : placeValueCompareDoneText(pair, language);
+  }
+  const k = placeValueCompareTapColumn(state, tap);
+  if (k < 0)
+    return words.other;
+  const name = nameOf(pair.columns[k], language), a = pair.da[k], b = pair.db[k];
+  switch (reason) {
+    case "left_unjudged":
+      return words.refusal.left_unjudged(name, a, b, nameOf(pair.columns[state.marked], language));
+    case "not_same":
+    case "not_different":
+    case "no_judgement":
+      return words.refusal.not_judged(name, a, b);
+    case "after_decided":
+      return words.refusal.after_decided(nameOf(pair.place, language), name);
+    case "already_decides":
+      return words.refusal.already_decides(name, a, b);
+    case "already_same":
+      return words.refusal.already_same(name, a, b);
+    default:
+      return words.other;
+  }
+}
+function placeValueCompareStepSentences(pair, from, to, language = "en-US") {
+  const dm = wordsOf2(language).demo;
+  const { steps } = placeValueCompareDemoSteps(pair);
+  const [x, y] = placeValueCompareNumerals(pair, language);
+  const sentences = [];
+  for (let k = Math.max(0, from); k < Math.min(to, steps.length); k += 1) {
+    const step = steps[k];
+    if (step.anim.kind === "sign") {
+      sentences.push(dm.sign(x, pair.relation, y, nameOf(pair.place, language), hasAfter(pair), pair.equal));
+      continue;
+    }
+    const name = nameOf(step.anim.place, language);
+    sentences.push(step.anim.kind === "decide" ? dm.decide(name, step.anim.a, step.anim.b) : step.anim.done ? dm.lastSame(name, step.anim.a, step.anim.b) : dm.same(name, step.anim.a, step.anim.b));
+  }
+  return sentences;
+}
+
 // node_modules/octos-lesson-language/dist/packages/core/src/cards.js
 function wholeForwardDemonstration(spec) {
   return Object.freeze({
     range: spec.range,
     next: spec.next,
+    stepValues: spec.stepValues ?? ((_content, from, to) => {
+      const values = [];
+      for (let value2 = Math.floor(from + 1e-9) + 1; value2 <= to + 1e-9; value2 += 1)
+        values.push(value2);
+      return values;
+    }),
     field: spec.field,
     tapState: spec.tapState,
     shows: spec.shows,
@@ -11368,7 +11872,9 @@ var PLACE_VALUE_TRADE_DEMONSTRATION = wholeForwardDemonstration({
     const k = Math.max(0, Math.floor(value2));
     const place5 = columns[columns.length - 1 - k];
     return place5 === void 0 ? `every column is finished at ${columns.length}` : `the next value, ${k + 1}, finishes the ${placeValueColumnName(place5).toLowerCase()}`;
-  }
+  },
+  // One action at a time: a column of m actions passes k + 1/m, …, k + 1 (a bring-down, a trade, each break, a take).
+  stepValues: (content, from, to) => placeValueTradeDemoValues(placeValueTradeState(content).problem, from, to)
 });
 var PLACE_VALUE_TRADE_CARD = Object.freeze({
   kind: PLACE_VALUE_TRADE_KIND,
@@ -11592,6 +12098,11 @@ var PLACE_VALUE_TIMES_TEN_DEMONSTRATION = Object.freeze({
   outside(content, value2) {
     const problem = timesTenProblem(content);
     return problem ? `${placeValueTimesTenCountedInMeaning(problem)}; ${value2} is outside its variable's range` : TIMES_TEN_NO_PROBLEM;
+  },
+  // One row's move at a time.
+  stepValues(content, from, to) {
+    const problem = timesTenProblem(content);
+    return problem ? placeValueTimesTenDemoValues(problem, from, to) : [];
   }
 });
 var PLACE_VALUE_TIMES_TEN_CARD = Object.freeze({
@@ -11686,12 +12197,154 @@ var PLACE_VALUE_TIMES_TEN_CARD = Object.freeze({
     }
   })
 });
+var compareContentAt = (content, value2) => {
+  const at2 = structuredClone(content);
+  delete at2.bindings;
+  for (const field of PLACE_VALUE_COMPARE_BINDINGS) {
+    const v = value2(field);
+    if (v !== void 0)
+      at2[field] = v;
+  }
+  return at2;
+};
+var comparePair = (content) => {
+  const pair = placeValueCompareContentPair(content);
+  return "fault" in pair ? void 0 : pair;
+};
+var COMPARE_NO_PAIR = `is a ${PLACE_VALUE_COMPARE_KIND} card's demonstration, but the card's numbers are not a pair it takes`;
+var COMPARE_FORWARD = wholeForwardDemonstration({
+  field: PLACE_VALUE_COMPARE_DEMONSTRATION_FIELD,
+  counts: `counts the columns a ${PLACE_VALUE_COMPARE_KIND} card's demonstration has judged from the left, then one more for the sign`,
+  tapState: "the learner's judgements or sign",
+  shows: "(compared: the columns judged from the left, then one more for the sign), and the program judges each column and chooses the sign",
+  fresh: "chart",
+  opensAtStart: true,
+  start: () => 0,
+  range: (content) => {
+    const pair = comparePair(content);
+    return { min: 0, max: pair ? placeValueCompareDemoEnd(pair) : PLACE_VALUE_COMPARE_MAX_COLUMNS + 1 };
+  },
+  next(content, value2) {
+    const pair = comparePair(content);
+    return pair ? placeValueCompareComparedNext(pair, value2) : COMPARE_NO_PAIR;
+  }
+});
+var PLACE_VALUE_COMPARE_DEMONSTRATION = Object.freeze({
+  ...COMPARE_FORWARD,
+  refuseStep(content, from, to) {
+    const pair = comparePair(content);
+    if (!pair)
+      return COMPARE_NO_PAIR;
+    const refusal = COMPARE_FORWARD.refuseStep(content, from, to);
+    if (refusal !== void 0)
+      return refusal;
+    const end = placeValueCompareDemoEnd(pair);
+    return to > end ? `${placeValueCompareComparedMeaning(pair)}, not ${to}; ${placeValueCompareComparedNext(pair, from)}` : void 0;
+  },
+  refuseReplay(content, value2) {
+    const pair = comparePair(content);
+    if (!pair)
+      return COMPARE_NO_PAIR;
+    const refusal = COMPARE_FORWARD.refuseReplay(content, value2);
+    if (refusal !== void 0)
+      return refusal;
+    return value2 < 0 || value2 > placeValueCompareDemoEnd(pair) ? `${placeValueCompareComparedMeaning(pair)}, not ${value2}` : void 0;
+  },
+  outside(content, value2) {
+    const pair = comparePair(content);
+    return pair ? `${placeValueCompareComparedMeaning(pair)}, not ${value2}` : COMPARE_NO_PAIR;
+  }
+});
+var PLACE_VALUE_COMPARE_CARD = Object.freeze({
+  kind: PLACE_VALUE_COMPARE_KIND,
+  taps: PLACE_VALUE_COMPARE_TAPS,
+  places: PLACE_VALUE_COMPARE_TAP_PLACES,
+  cardFields: PLACE_VALUE_COMPARE_CARD_BINDINGS,
+  practiceFields: PLACE_VALUE_COMPARE_PROBLEM_FIELDS,
+  demonstration: PLACE_VALUE_COMPARE_DEMONSTRATION,
+  fieldsAtOnce: true,
+  validateContent: (raw, path, fail4, options) => validatePlaceValueCompareContent(raw, path, fail4, options?.start ? { start: true } : {}),
+  state: placeValueCompareState,
+  apply: (state, tap) => {
+    const result = applyPlaceValueCompareTap(state, { tap: tap.kind, place: tap.place });
+    return result.ok ? { ok: true, state: result.state } : { ok: false, reason: result.reason };
+  },
+  refusalText(reason, place5, language, state) {
+    const lang = language === "zh-CN" ? "zh-CN" : "en-US";
+    const words = PLACE_VALUE_COMPARE_WORDS[lang];
+    if (reason === "demonstrating")
+      return words.refusal.demonstrating;
+    if (!state)
+      return reason === "not_decided" ? words.lock : words.other;
+    const tap = place5 >= 10 ? "sign" : reason === "not_same" ? "same" : reason === "no_judgement" ? "column" : "different";
+    return placeValueCompareRefusalText(state, { tap, place: place5 }, lang) || words.other;
+  },
+  language: placeValueCompareLanguage,
+  // The learner's fields are card-level: a change is named by the field, at the card's first place.
+  changes: (before, after) => placeValueCompareChanges(before, after).map(({ field, before: from, after: to }) => ({ place: 0, field, before: from, after: to })),
+  tapFields: () => [{ place: 0, field: "marked", min: 0, max: PLACE_VALUE_COMPARE_MAX_COLUMNS }, { place: 0, field: "signed", min: 0, max: 1 }],
+  fieldTarget: (_content, _place, field) => field,
+  contentAt: compareContentAt,
+  /** A practice chart starts fresh: a pair the card takes, nothing compared, judged or signed. */
+  validateStart(state, fail4) {
+    const fault = placeValueCompareStartFault(state);
+    if (fault)
+      fail4(fault);
+  },
+  facts: Object.freeze({
+    /**
+     * The true sign is chosen (the chart decided first). Judged on each tap, so the task ends on the tap that
+     * chooses it; there is no "done".
+     */
+    complete: {
+      keys: [],
+      judgedOnTap: true,
+      read: (_completion, state) => {
+        const actual = placeValueCompareComplete(state) ? 1 : 0;
+        return { actual, target: 1, succeeded: actual === 1 };
+      },
+      /**
+       * The one finished card of the task's own pair (every tap order ends on it), computed, never read from a
+       * logged pile: the task's numbers, nothing demonstrated, every column to the deciding one judged, the sign chosen.
+       */
+      donePile({ content, startValue }) {
+        const bound = boundTargets(content);
+        const number = (field) => bound.has(field) ? startValue(bound.get(field)) : content[field];
+        const own = { ...content };
+        for (const field of PLACE_VALUE_COMPARE_CARD_BINDINGS) {
+          const v = number(field);
+          if (v === void 0)
+            delete own[field];
+          else
+            own[field] = v;
+        }
+        const pair = comparePair(own);
+        if (!pair)
+          return void 0;
+        const final = placeValueCompareDemoSteps(pair).final;
+        const result = {};
+        for (const [target, alias] of bound) {
+          if (target === "compared")
+            result[alias] = 0;
+          else if (target === "marked")
+            result[alias] = final.marked;
+          else if (target === "signed")
+            result[alias] = 1;
+          else
+            result[alias] = number(target);
+        }
+        return result;
+      }
+    }
+  })
+});
 var TAP_CARD_KINDS = Object.freeze({
   [BASE_TEN_TRADE_KIND]: BASE_TEN_TRADE_CARD,
   [PLACE_VALUE_CHART_KIND]: PLACE_VALUE_CHART_CARD,
   [PLACE_VALUE_TRADE_KIND]: PLACE_VALUE_TRADE_CARD,
   [MAKE_TEN_KIND]: MAKE_TEN_CARD,
-  [PLACE_VALUE_TIMES_TEN_KIND]: PLACE_VALUE_TIMES_TEN_CARD
+  [PLACE_VALUE_TIMES_TEN_KIND]: PLACE_VALUE_TIMES_TEN_CARD,
+  [PLACE_VALUE_COMPARE_KIND]: PLACE_VALUE_COMPARE_CARD
 });
 function tapCardKind(kind) {
   return typeof kind === "string" && Object.hasOwn(TAP_CARD_KINDS, kind) ? TAP_CARD_KINDS[kind] : void 0;
@@ -11759,7 +12412,8 @@ var OLL_CARD_BINDING_CAPABILITIES = Object.freeze({
   place_value_chart: PLACE_VALUE_CHART_CARD_BINDINGS,
   place_value_trade: PLACE_VALUE_TRADE_CARD_BINDINGS,
   make_ten: MAKE_TEN_CARD_BINDINGS,
-  place_value_times_ten: [...PLACE_VALUE_TIMES_TEN_CARD_BINDINGS, ...PLACE_VALUE_TIMES_TEN_ROW_FIELDS]
+  place_value_times_ten: [...PLACE_VALUE_TIMES_TEN_CARD_BINDINGS, ...PLACE_VALUE_TIMES_TEN_ROW_FIELDS],
+  place_value_compare: PLACE_VALUE_COMPARE_BINDINGS
 });
 function cardBindingCapabilitiesForNodeKind(kind) {
   return Object.hasOwn(OLL_CARD_BINDING_CAPABILITIES, kind) ? OLL_CARD_BINDING_CAPABILITIES[kind] : [];
@@ -11846,8 +12500,10 @@ var MATH_PLUGIN_MANIFEST = {
   // 0.8.0: the place-value chart, the `place_value_chart` card (decision 0025). 0.9.0: adding and subtracting
   // on the chart as the written method, the `place_value_trade` card (decision 0026). 0.10.0: making ten to add
   // on two ten frames, the `make_ten` card (decision 0027). 0.11.0: an amount counted in another unit, the
-  // `place_value_times_ten` card (decision 0028).
-  version: "0.11.0",
+  // `place_value_times_ten` card (decision 0028). 0.11.1: a lesson's demonstration on a tap card plays one action
+  // at a time, a step's slot each (owner, 2026-11-27; 0026 revision 2); lessons still require 0.11.0. 0.12.0:
+  // comparing two numbers by place, the `place_value_compare` card (decision 0029).
+  version: "0.12.0",
   // Every subject plugin depends on the shared tools (decision 0012).
   depends: { shared: "0.1.0" },
   ollCore: ">=0.10.0"
@@ -11897,6 +12553,9 @@ var OLL_EXECUTION_FEATURES = Object.freeze({
   // Decision 0028: the player draws and plays the place-value times-ten card (its demonstration by "counted in",
   // its row taps); a lesson that only demonstrates it needs that player too.
   "card:place_value_times_ten": "0.19.0",
+  // Decision 0029: the player draws and plays the place-value compare card (its demonstration by "compared", its
+  // judgements and its sign, its task ending on the true sign); a lesson that only demonstrates it needs that player too.
+  "card:place_value_compare": "0.20.0",
   // Decision 0025: a card-level field bound by its bare name (the chart's number); an older player cannot place it.
   "value-bindings:card-field": "0.16.0",
   // Decision 0023 amendment 1: a row of blanks answered in one go; an older player has no such question.
@@ -11937,7 +12596,7 @@ var looksLikeNumberLine = (content) => typeof content.range === "object" && cont
 var FIRST_PARTY_EXTENSIONS = Object.freeze([
   {
     plugin: { id: MATH_PLUGIN_MANIFEST.id, version: MATH_PLUGIN_MANIFEST.version },
-    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION, [FRACTION_MODEL_FEATURE]: FRACTION_MODEL_PLUGIN_VERSION, [BASE_TEN_TRADE_FEATURE]: BASE_TEN_TRADE_PLUGIN_VERSION, [BASE_TEN_TRADE_LANGUAGE_FEATURE]: BASE_TEN_TRADE_LANGUAGE_VERSION, [BASE_TEN_TRADE_SLIDER_FEATURE]: BASE_TEN_TRADE_SLIDER_VERSION, [PLACE_VALUE_CHART_FEATURE]: PLACE_VALUE_CHART_PLUGIN_VERSION, [PLACE_VALUE_TRADE_FEATURE]: PLACE_VALUE_TRADE_PLUGIN_VERSION, [MAKE_TEN_FEATURE]: MAKE_TEN_PLUGIN_VERSION, [PLACE_VALUE_TIMES_TEN_FEATURE]: PLACE_VALUE_TIMES_TEN_PLUGIN_VERSION },
+    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION, [FRACTION_MODEL_FEATURE]: FRACTION_MODEL_PLUGIN_VERSION, [BASE_TEN_TRADE_FEATURE]: BASE_TEN_TRADE_PLUGIN_VERSION, [BASE_TEN_TRADE_LANGUAGE_FEATURE]: BASE_TEN_TRADE_LANGUAGE_VERSION, [BASE_TEN_TRADE_SLIDER_FEATURE]: BASE_TEN_TRADE_SLIDER_VERSION, [PLACE_VALUE_CHART_FEATURE]: PLACE_VALUE_CHART_PLUGIN_VERSION, [PLACE_VALUE_TRADE_FEATURE]: PLACE_VALUE_TRADE_PLUGIN_VERSION, [MAKE_TEN_FEATURE]: MAKE_TEN_PLUGIN_VERSION, [PLACE_VALUE_TIMES_TEN_FEATURE]: PLACE_VALUE_TIMES_TEN_PLUGIN_VERSION, [PLACE_VALUE_COMPARE_FEATURE]: PLACE_VALUE_COMPARE_PLUGIN_VERSION },
     detect(content, kind, use, lesson) {
       if (kind === NUMBER_LINE_KIND || kind === void 0 && looksLikeNumberLine(content)) {
         use(NUMBER_LINE_FEATURE);
@@ -11961,11 +12620,13 @@ var FIRST_PARTY_EXTENSIONS = Object.freeze([
         use(MAKE_TEN_FEATURE);
       if (kind === PLACE_VALUE_TIMES_TEN_KIND)
         use(PLACE_VALUE_TIMES_TEN_FEATURE);
+      if (kind === PLACE_VALUE_COMPARE_KIND)
+        use(PLACE_VALUE_COMPARE_FEATURE);
     }
   }
 ]);
 var FIRST_PARTY_FEATURES = Object.freeze(Object.assign({}, ...FIRST_PARTY_EXTENSIONS.map((extension) => extension.features)));
-var PLUGIN_NODE_FEATURES = Object.freeze({ [NUMBER_LINE_KIND]: NUMBER_LINE_FEATURE, [FRACTION_MODEL_KIND]: FRACTION_MODEL_FEATURE, [BASE_TEN_TRADE_KIND]: BASE_TEN_TRADE_FEATURE, [PLACE_VALUE_CHART_KIND]: PLACE_VALUE_CHART_FEATURE, [PLACE_VALUE_TRADE_KIND]: PLACE_VALUE_TRADE_FEATURE, [MAKE_TEN_KIND]: MAKE_TEN_FEATURE, [PLACE_VALUE_TIMES_TEN_KIND]: PLACE_VALUE_TIMES_TEN_FEATURE });
+var PLUGIN_NODE_FEATURES = Object.freeze({ [NUMBER_LINE_KIND]: NUMBER_LINE_FEATURE, [FRACTION_MODEL_KIND]: FRACTION_MODEL_FEATURE, [BASE_TEN_TRADE_KIND]: BASE_TEN_TRADE_FEATURE, [PLACE_VALUE_CHART_KIND]: PLACE_VALUE_CHART_FEATURE, [PLACE_VALUE_TRADE_KIND]: PLACE_VALUE_TRADE_FEATURE, [MAKE_TEN_KIND]: MAKE_TEN_FEATURE, [PLACE_VALUE_TIMES_TEN_KIND]: PLACE_VALUE_TIMES_TEN_FEATURE, [PLACE_VALUE_COMPARE_KIND]: PLACE_VALUE_COMPARE_FEATURE });
 
 // node_modules/octos-lesson-language/dist/packages/core/src/opening.js
 function applyLessonOpeningPolicy(source, policy = { kind: "preserve" }) {
@@ -12923,6 +13584,11 @@ function checkMakeTenBoundValues(content, path, declarations) {
 }
 function checkPlaceValueTimesTenBoundValues(content, path, declarations) {
   const validate = (evaluated, failAt) => validatePlaceValueTimesTenContent(evaluated, path, failAt, { boundValues: true });
+  checkPluginBoundValues(content, path, declarations, [], validate);
+  checkEachBoundVariable(content, path, declarations, [], validate);
+}
+function checkPlaceValueCompareBoundValues(content, path, declarations) {
+  const validate = (evaluated, failAt) => validatePlaceValueCompareContent(evaluated, path, failAt, { boundValues: true });
   checkPluginBoundValues(content, path, declarations, [], validate);
   checkEachBoundVariable(content, path, declarations, [], validate);
 }
@@ -14042,6 +14708,8 @@ function validateAuthoringLesson(document2, resourceContext = null) {
             checkMakeTenBoundValues(action.content, `${actionPath}/content`, document2.lesson.variables ?? []);
           if (action.kind === PLACE_VALUE_TIMES_TEN_KIND)
             checkPlaceValueTimesTenBoundValues(action.content, `${actionPath}/content`, document2.lesson.variables ?? []);
+          if (action.kind === PLACE_VALUE_COMPARE_KIND)
+            checkPlaceValueCompareBoundValues(action.content, `${actionPath}/content`, document2.lesson.variables ?? []);
           if (tapCard?.validateStart && Array.isArray(action.content.bindings)) {
             const initials = Object.fromEntries((document2.lesson.variables ?? []).map((variable) => [variable.as, variable.initial]));
             tapCard.validateContent(cardContentAt(tapCard, action.content, bareBindings(action.content), initials), `${actionPath}/content`, (failPath, message) => fail("OLL_INVALID_OPERATION_PAYLOAD", failPath, `As its variables start it: ${message}`), { start: true });
@@ -14659,10 +15327,10 @@ function bindingTarget(content, target) {
   const fragmentId = target.slice(0, separator);
   const property = target.slice(separator + 1);
   for (const [field, properties] of Object.entries(OLL_CANONICAL_BINDING_CAPABILITIES)) {
-    const record9 = (Array.isArray(content[field]) ? content[field] : []).find((item) => item.id === fragmentId);
-    if (record9 && properties.includes(property))
-      return { record: record9, property };
-    if (record9)
+    const record10 = (Array.isArray(content[field]) ? content[field] : []).find((item) => item.id === fragmentId);
+    if (record10 && properties.includes(property))
+      return { record: record10, property };
+    if (record10)
       fail("OLL_INVALID_BINDING", "content.bindings.target", `Property '${property}' cannot be bound on '${field}'`);
   }
   fail("OLL_REFERENCE_NOT_FOUND", "content.bindings.target", `Canonical binding target '${target}' was not found`);
@@ -14681,7 +15349,7 @@ function evaluateContentBindings(content, variables) {
       delete bindingTarget(evaluated, binding.target).record.binding_undefined;
   }
   for (const binding of Array.isArray(evaluated.bindings) ? evaluated.bindings : []) {
-    const { record: record9, property } = bindingTarget(evaluated, binding.target);
+    const { record: record10, property } = bindingTarget(evaluated, binding.target);
     if (binding.hide_when_undefined === true) {
       let value2;
       try {
@@ -14690,22 +15358,22 @@ function evaluateContentBindings(content, variables) {
         value2 = void 0;
       }
       if (value2 === void 0 || !Number.isFinite(value2)) {
-        record9.binding_undefined = true;
+        record10.binding_undefined = true;
         continue;
       }
     }
     try {
-      record9[property] = evaluateMathExpression(binding.expression, variables);
-      if (property === "radius" && (record9[property] < 0 || record9[property] === 0 && binding.allow_zero !== true)) {
+      record10[property] = evaluateMathExpression(binding.expression, variables);
+      if (property === "radius" && (record10[property] < 0 || record10[property] === 0 && binding.allow_zero !== true)) {
         throw new Error("Bound radius must be positive unless explicitly allowed to degenerate to zero");
       }
       if (property === "unfold")
-        record9[property] = Math.min(1, Math.max(0, record9[property]));
-      if (property === "sides" && (record9[property] < 3 || record9[property] > 384)) {
+        record10[property] = Math.min(1, Math.max(0, record10[property]));
+      if (property === "sides" && (record10[property] < 3 || record10[property] > 384)) {
         throw new Error("Bound polygon sides must be in 3..384");
       }
       if (binding.label)
-        record9.label = formatBoundNumericLabel(record9[property], binding.label);
+        record10.label = formatBoundNumericLabel(record10[property], binding.label);
     } catch (error) {
       const message = error instanceof Error ? error.message : "binding evaluation failed";
       fail("OLL_BINDING_EVALUATION_FAILED", "content.bindings.expression", message);
@@ -14909,6 +15577,11 @@ function canonicalizeState(state) {
     applied_actions: [...state.applied_actions]
   };
 }
+
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/demonstration-pace.js
+var DEMONSTRATION_STEP_MS = 2e3;
+var DEMONSTRATION_HOLD_MS = 600;
+var DEMONSTRATION_SLOT_MS = DEMONSTRATION_STEP_MS + DEMONSTRATION_HOLD_MS;
 
 // node_modules/octos-lesson-language/dist/packages/web-runtime/src/solids.js
 var ROUND = 40;
@@ -16739,6 +17412,43 @@ function buildPlaceValueTimesTen(input) {
   };
 }
 
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/place-value-compare-builder.js
+var driven8 = (value2) => typeof value2 === "object" && value2 !== null && typeof value2.expression === "string";
+function buildPlaceValueCompare(input) {
+  const bindings = [];
+  const value2 = (raw, target) => {
+    if (!driven8(raw))
+      return raw;
+    bindings.push({ target, expression: raw.expression });
+    return raw.initial;
+  };
+  const a = value2(input.a, "a");
+  const b = value2(input.b, "b");
+  const aDec = input.a_decimals === void 0 ? void 0 : value2(input.a_decimals, "a_decimals");
+  const bDec = input.b_decimals === void 0 ? void 0 : value2(input.b_decimals, "b_decimals");
+  const numbers = [{ value: a, dec: aDec ?? placeValueCompareOwnDecimals(a) }, { value: b, dec: bDec ?? placeValueCompareOwnDecimals(b) }];
+  const made = placeValueCompareMakePair(numbers[0], numbers[1]);
+  if ("fault" in made)
+    throw new Error(placeValueCompareFaultText(made.fault, numbers[0], numbers[1]));
+  const content = {
+    ...input.language !== void 0 ? { language: input.language } : {},
+    a,
+    b,
+    ...aDec !== void 0 ? { a_decimals: aDec } : {},
+    ...bDec !== void 0 ? { b_decimals: bDec } : {},
+    compared: value2(input.compared ?? 0, "compared"),
+    marked: value2(input.marked ?? 0, "marked"),
+    signed: value2(input.signed ?? 0, "signed"),
+    ...bindings.length ? { bindings } : {}
+  };
+  return {
+    actions: [{ do: "write", as: input.as, kind: PLACE_VALUE_COMPARE_KIND, role: input.role, content, place: input.place }],
+    whole: input.as,
+    parts: { whole: input.as },
+    pair: made
+  };
+}
+
 // node_modules/octos-lesson-language/dist/packages/plugin-math/src/number-line-form.js
 var NUMBER_LINE_FORM_LIMITS = { span: 40, subdivisions: NUMBER_LINE_LIMITS.subdivisions, moves: 3 };
 
@@ -17396,7 +18106,8 @@ var HOW_TO = Object.freeze({
   [PLACE_VALUE_CHART_KIND]: placeValueHowTo,
   [PLACE_VALUE_TRADE_KIND]: placeValueTradeHowTo,
   [MAKE_TEN_KIND]: makeTenHowTo,
-  [PLACE_VALUE_TIMES_TEN_KIND]: placeValueTimesTenHowTo
+  [PLACE_VALUE_TIMES_TEN_KIND]: placeValueTimesTenHowTo,
+  [PLACE_VALUE_COMPARE_KIND]: placeValueCompareHowTo
 });
 
 // node_modules/octos-lesson-language/dist/packages/plugin-math/src/index.js
@@ -17490,9 +18201,9 @@ function buildUnitCircle(input) {
 }
 function buildCirclePolygons(input) {
   const { radius } = input;
-  const driven8 = typeof input.sides === "number" ? void 0 : input.sides;
+  const driven9 = typeof input.sides === "number" ? void 0 : input.sides;
   const sides = typeof input.sides === "number" ? input.sides : input.sides.initial;
-  const extent = input.circumscribed ? radius / Math.cos(Math.PI / (driven8?.min ?? sides)) * 1.18 : radius * 1.3;
+  const extent = input.circumscribed ? radius / Math.cos(Math.PI / (driven9?.min ?? sides)) * 1.18 : radius * 1.3;
   const polygon = (as, label) => ({
     as,
     center: "center",
@@ -17513,9 +18224,9 @@ function buildCirclePolygons(input) {
       ...input.circumscribed ? [polygon("circumscribed", input.text.circumscribed_label)] : []
     ],
     ...input.text.caption !== void 0 ? { caption: input.text.caption } : {},
-    ...driven8 ? { bindings: [
-      { target: "inscribed.sides", expression: driven8.expression },
-      ...input.circumscribed ? [{ target: "circumscribed.sides", expression: driven8.expression }] : []
+    ...driven9 ? { bindings: [
+      { target: "inscribed.sides", expression: driven9.expression },
+      ...input.circumscribed ? [{ target: "circumscribed.sides", expression: driven9.expression }] : []
     ] } : {}
   };
   return {
@@ -17847,6 +18558,98 @@ function placeValueTimesTenWordsGiveAnswer(words, practice) {
   return false;
 }
 
+// src/plugins/place-value-compare-moves.ts
+var COMPARE_NUMBER = { first: 0, second: 1, practiceFirst: 2, practiceSecond: 3, compared: 4 };
+var COMPARE_MOST = PLACE_VALUE_COMPARE_MAX_COLUMNS + 1;
+function compareNumberOf(value2, written) {
+  if (!Number.isFinite(value2) || value2 < 0) return void 0;
+  const thousandths = Math.round(value2 * 1e3);
+  if (Math.abs(thousandths - value2 * 1e3) > 1e-6) return void 0;
+  const own = placeValueCompareOwnDecimals(thousandths);
+  const dec = written !== void 0 && Number.isInteger(written) && written >= own && written <= 3 ? written : own;
+  return placeValueCompareFromDecimal(thousandths, 3) ? { value: thousandths, dec } : void 0;
+}
+var compareNumeral = (n) => `${Math.floor(n.value / 1e3)}${n.dec ? `.${String(n.value % 1e3).padStart(3, "0").slice(0, n.dec)}` : ""}`;
+function compareStartProblem(values, written = [], { decimalsUnknown = false } = {}) {
+  if (values.length !== 5) {
+    return { fault: "the card takes five lesson numbers, in order: the two numbers to compare (as the question writes them: 0.70 keeps its zero), the practice pair (another pair, for the learner) and compared (0)" };
+  }
+  const numbers = values.slice(0, 4).map((value2, i) => compareNumberOf(value2, written[i]));
+  if (numbers.some((n) => n === void 0)) return { fault: "the two numbers and the practice pair are numbers from 0 to 9,999,999 with at most three decimal places (thousandths)" };
+  const [a, b, pa, pb] = numbers;
+  const sameNumeral = (x, y) => decimalsUnknown && x.value === y.value;
+  if (sameNumeral(a, b)) b.dec = Math.min(3, Math.max(a.dec, b.dec) + 1);
+  if (sameNumeral(pa, pb)) pb.dec = Math.min(3, Math.max(pa.dec, pb.dec) + 1);
+  const fault = placeValueCompareFault(a, b);
+  if (fault) {
+    return { fault: fault === "same_numeral" ? `the two numbers are the same numeral, ${compareNumeral(a)}: there is nothing to compare (0.7 and 0.70 are a pair: 0.70 is mantissa 70, scale 2)` : `the question's pair: ${placeValueCompareFaultText(fault, a, b)}` };
+  }
+  const pair = placeValueComparePairOf(a, b);
+  const practiceFault = placeValueComparePracticeFault(pair, pa, pb);
+  if (practiceFault) {
+    return { fault: practiceFault === "same_pair" ? "the practice pair is the learner's own: another pair than the question's (the same two numbers in the other order are the same pair), so the learner does not copy the demonstration" : `the practice pair: ${placeValueCompareFaultText(practiceFault, pa, pb)}` };
+  }
+  if ([[pa, pb], [pb, pa]].some(([x, y]) => x.value === a.value && y.value === b.value)) {
+    return { fault: "the practice pair is the learner's own: other numbers than the question's, not the same values written another way" };
+  }
+  if (values[COMPARE_NUMBER.compared] !== 0) return { fault: `compared starts at 0, not ${values[COMPARE_NUMBER.compared]}: the card opens with no column judged` };
+  return { pair, practice: placeValueComparePairOf(pa, pb), numbers: [a, b, pa, pb] };
+}
+var compareOutlineFault = (values) => {
+  const found = compareStartProblem(values.length === 4 ? [...values, 0] : values, [], { decimalsUnknown: true });
+  return "fault" in found ? found.fault : void 0;
+};
+function compareEndOf(values, written = []) {
+  const a = compareNumberOf(values[0] ?? Number.NaN, written[0]), b = compareNumberOf(values[1] ?? Number.NaN, written[1]);
+  if (!a || !b) return COMPARE_MOST;
+  if (a.value === b.value && written[0] === void 0 && written[1] === void 0) return COMPARE_MOST;
+  return placeValueCompareDemoEnd(placeValueComparePairOf(a, b));
+}
+function compareState(start) {
+  return [...start.slice(0, 4), 0];
+}
+function compareMove(state, position, to) {
+  if (position !== COMPARE_NUMBER.compared) return "the card has five lesson numbers; the demonstration moves only compared";
+  const from = state[COMPARE_NUMBER.compared];
+  if (!Number.isInteger(to) || to < 0) return `compared counts the columns judged from the left, then the sign: a whole number from 0, not ${to}; from ${from}, the next value is ${from + 1}`;
+  const end = compareEndOf(state);
+  const value2 = Math.min(to, end);
+  if (value2 < from) return `compared goes forward, never back: from ${from} it can be ${from} to ${end}`;
+  const moved = [...state];
+  moved[COMPARE_NUMBER.compared] = value2;
+  return moved;
+}
+function compareMoves(state, moves) {
+  const steps = [];
+  const ignored = [];
+  let current = [...state];
+  for (const [index, move] of moves.entries()) {
+    if (move.position >= 0 && move.position < COMPARE_NUMBER.compared && move.to !== current[move.position]) {
+      ignored.push({ index, position: move.position, reason: "the two numbers and the practice pair stay as written: the demonstration moves only compared (the card's fifth lesson number)" });
+      continue;
+    }
+    if (move.position < COMPARE_NUMBER.compared) {
+      steps.push({ position: move.position, from: current, to: [...current] });
+      continue;
+    }
+    const result = compareMove(current, move.position, move.to);
+    if (typeof result === "string") return { refused: { position: move.position, reason: result } };
+    steps.push({ position: move.position, from: current, to: result });
+    current = result;
+  }
+  return { steps, ...ignored.length ? { ignored } : {} };
+}
+var FULL_WIDTH4 = /[０-９．，＜＞＝]/gu;
+var halfWidth3 = (text5) => text5.replace(FULL_WIDTH4, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
+function compareWordsGiveAnswer(words, practice) {
+  const text5 = halfWidth3(String(words)).replace(/(\d),(?=\d{3})/gu, "$1");
+  const x = compareNumeral({ value: practice.a, dec: practice.aDec }), y = compareNumeral({ value: practice.b, dec: practice.bDec });
+  const flip = { ">": "<", "<": ">", "=": "=" };
+  const esc = (s) => s.replace(/\./gu, "\\.");
+  const said = (p, sign, q) => new RegExp(`(?<!\\d)(?<!\\d\\.)${esc(p)}\\s*${sign}\\s*${esc(q)}(?!\\d)(?!\\.\\d)`, "u").test(text5);
+  return said(x, practice.relation, y) || said(y, flip[practice.relation], x);
+}
+
 // src/plugins/math.ts
 var SIDE_COUNT = { min: 3, max: 384 };
 var UNIT_SQUARES_PER_SIDE = { min: 1, max: 8 };
@@ -18168,6 +18971,39 @@ var MATH_RECIPES = {
     required_features: ["count_in_another_unit"],
     model_guidance: "\u6362\u4E00\u4E2A\u5355\u4F4D\u6765\u6570\uFF08\u6570\u4F4D\u8868\uFF1A\u5F80\u53F3\u4E00\u4F4D\u4E00\u4E2A\u62C6\u6210\u5341\u4E2A\uFF0C\u5F80\u5DE6\u4E00\u4F4D\u5341\u4E2A\u5408\u6210\u4E00\u4E2A\uFF09\uFF1A\u6570\u5355\u4F4D\uFF083\u4E2A\u5341\u5206\u4E4B\u4E00=?\u4E2A\u5343\u5206\u4E4B\u4E00\uFF1B6\u4E2A\u5343=?\u4E2A\u767E\uFF1B\u4E00\u5343\u91CC\u6709\u51E0\u4E2A\u5341\uFF09\u6216\u500D\u6570\uFF08700\u662F70\u7684\u51E0\u500D\uFF1B0.3\u662F3\u7684\u5341\u5206\u4E4B\u4E00\uFF09\u3002\u8FD9\u4E9B\u9898\u7528\u8FD9\u5F20\u5361\uFF0C\u4E0D\u7528 trade_ten_for_one\uFF08\u5B83\u53EA\u628A\u5341\u4E2A\u5408\u6210\u4E00\u4E2A\uFF09\u3002\u6570\u53EA\u6709\u4E00\u4F4D\u4E0D\u662F\u96F6\uFF085550\u91CC\u7684\u4E24\u4E2A5\u5199500\u548C50\uFF09\uFF0C\u5355\u4F4D\u6700\u591A\u9694\u4E24\u4F4D\uFF0C\u500D\u6570\u662F\u76F8\u90BB\u4E24\u4F4D\u3002\u4E0D\u7528\u4E8E\u4E00\u4E2A\u6570\u5B57\u8868\u793A\u591A\u5C11\u3001\u6BD4\u8F83\u3001\u52A0\u51CF\u3001\u4E58\u9664\u4EE510\u6216100\u3001\u9664\u4EE5\u5C0F\u6570\u3002outline \u7684 numbers \u4F9D\u6B21\u662F\u4E94\u4E2A\u89D2\u8272\uFF0C\u6BCF\u4E2A\u6570\u7684 label \u7528\u8BFE\u7684\u8BED\u8A00\u5199\u5B83\u7684\u89D2\u8272\uFF08\u5982 unit asked\u3001\u95EE\u7684\u5355\u4F4D\uFF09\uFF1Aamount \u8981\u6570\u7684\u6570\uFF08\u5199\u503C\uFF0C3\u4E2A\u5341\u5206\u4E4B\u4E00\u51990.3\uFF09\uFF1Bunit_asked \u95EE\u7684\u5355\u4F4D\uFF08\u95EE\u201C\u662F\u51E0\u4E2A\u767E\u5206\u4E4B\u4E00\u201D\u51990.01\uFF1B\u500D\u6570\u5199\u5C0F\u7684\u657070\uFF09\uFF1Bpractice_amount\u3001practice_unit_asked \u7EC3\u4E60\u7684\u4E24\u4E2A\u6570\uFF08\u540C\u4E00\u79CD\u95EE\u6CD5\uFF0C\u9694\u540C\u6837\u51E0\u4F4D\u3001\u540C\u4E00\u65B9\u5411\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF09\uFF1Bstart_unit \u8981\u6570\u7684\u6570\u73B0\u5728\u7528\u4EC0\u4E48\u5355\u4F4D\u5728\u6570\uFF08\u9898\u76EE\u8BF4\u5B83\u65F6\u7528\u7684\u5355\u4F4D\uFF09\u3002\u62C6\u5F00\u7684\u9898\uFF08\u5F80\u5C0F\u7684\u5355\u4F4D\u6570\uFF09\u548C\u500D\u6570\u4E0D\u5199 start_unit\uFF0C\u7A0B\u5E8F\u8865\u6210\u8981\u6570\u7684\u6570\u81EA\u5DF1\u90A3\u4E00\u4F4D\uFF1A7\u4E2A\u5341\u5206\u4E4B\u4E00=?\u4E2A\u767E\u5206\u4E4B\u4E00 \u51990.7\u30010.01\u3001\u7EC3\u4E60\u4E24\u4E2A\u6570\uFF1B\u4E00\u5343\u91CC\u6709\u51E0\u4E2A\u5341 \u51991000\u300110\u3001\u7EC3\u4E60\u4E24\u4E2A\u6570\u3002\u5408\u8D77\u6765\u7684\u9898\uFF08\u5F80\u5927\u7684\u5355\u4F4D\u6570\uFF09\u8981\u5199\uFF1A70\u4E2A\u767E\u5206\u4E4B\u4E00=?\u4E2A\u5341\u5206\u4E4B\u4E00 \u51990.7\u30010.1\u3001\u7EC3\u4E60\u4E24\u4E2A\u6570\u30010.01\u3002start_unit \u548C unit_asked \u662F\u4E24\u4E2A\u4E0D\u540C\u7684\u5355\u4F4D\u3002\u6F14\u793A\u53EA\u52A8\u753B start_unit\uFF08\u7B2C\u4E94\u4E2A\u6570\uFF09\uFF1A\u4ECE\u5B83\u4E00\u6B65\u4E00\u6B65\u52A8\u753B\u5230 unit_asked \u7684\u503C\uFF080.1\u30010.01\u30010.001\uFF1B\u500D\u6570\u523070\uFF09\uFF0C\u53EA\u5F80\u524D\u8D70\uFF0C\u4E00\u76F4\u5230\u95EE\u7684\u5355\u4F4D\uFF1B\u522B\u7684\u6570\u4E0D\u52A8\u753B\u3002\u7EC3\u4E60\u7684\u6570\u662F\u5B69\u5B50\u8BFE\u540E\u81EA\u5DF1\u505A\u7684\uFF1A\u8BFE\u4E0A\u53EF\u4EE5\u8BF4\u201C\u8BFE\u540E\u8BD5\u8BD5\u2026\u2026\u201D\uFF0C\u4F46\u4E0D\u8BB2\u5B83\u600E\u4E48\u505A\u3001\u4E0D\u5199\u51FA\u5B83\u7684\u7B97\u5F0F\u3001\u4E0D\u8BF4\u5B83\u7684\u7B54\u6848\uFF0Coutline \u4E5F\u4E0D\u4E3A\u5B83\u5B89\u6392\u4E00\u8282\u3002\u7EC3\u4E60\uFF1A\u5BF9\u7B2C\u4E94\u4E2A\u6570\u5199\u6570\u503C\u76EE\u6807\u9898\uFF0C\u7A0B\u5E8F\u518D\u51FA\u7B54\u6848\u90A3\u4E00\u884C\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u7B54\u6848\u3002\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
   },
+  // OLL decision 0029 (a trial): comparing two numbers by place, from the largest place down: two rows of one chart,
+  // lined up by place; the learner judges each place from the left ("Same" or "Different", the card's own buttons),
+  // then chooses >, = or <. The model writes the question's pair as written (0.70 keeps its zero) and a practice pair;
+  // the program supplies "compared" (0: no column judged), which the demonstration animates while the card judges one
+  // column at a time and then chooses the sign (owner, 2026-11-27: the demonstration reaches the sign; no check
+  // enforces it). The program makes the learner's task on the practice pair.
+  place_value_compare: {
+    parts: ["whole"],
+    number_inputs: ["first", "second", "practice_first", "practice_second", "compared"],
+    number_roles: ["problem", "problem", "practice", "practice", "demonstration"],
+    number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
+    // Compared starts at 0 whatever the outline holds (the card opens with no column judged), so the program
+    // supplies it: an outline that declares only the four numbers before it gets it, from 0 to the most any pair can
+    // reach (seven columns, then the sign).
+    program_number_inputs: [{ initial: 0, min: 0, max: COMPARE_MOST, label: "\u4ECE\u5DE6\u8FB9\u8D77\u6BD4\u4E86\u51E0\u4F4D" }],
+    // The card starts on no fewer: an outline that declares fewer loses it at once (a section cannot add one).
+    min_lesson_numbers: 5,
+    parameter_names: [],
+    model_parameter_names: [],
+    required_model_schema_parameters: [],
+    semantic_parameters: [],
+    output_kinds: ["place_value_compare"],
+    // Up to seven lesson variables (the pair, their written decimals, compared, the learner's two): when a lesson
+    // holds too many, the card is the picture that goes.
+    binds_many_variables: true,
+    // No control: the learner works the card by its own taps; the model never names one, and the card's own fixed
+    // text says how it is used.
+    student_controls: [],
+    required_features: ["compare_by_place"],
+    // 0.7 and 0.70 are a pair (OLL 0029): the outline's numbers keep the decimals the model wrote them with.
+    keeps_written_decimals: true,
+    model_guidance: "\u6309\u6570\u4F4D\u6BD4\u5927\u5C0F\uFF08\u6570\u4F4D\u8868\u4E0A\u4E24\u4E2A\u6570\u5404\u5360\u4E00\u884C\uFF0C\u6309\u6570\u4F4D\u5BF9\u9F50\uFF0C\u4ECE\u6700\u9AD8\u4F4D\u4E00\u4F4D\u4E00\u4F4D\u6BD4\uFF0C\u7B2C\u4E00\u4E2A\u4E0D\u4E00\u6837\u7684\u6570\u4F4D\u51B3\u5B9A\uFF0C\u540E\u9762\u7684\u6570\u4F4D\u4E0D\u5F71\u54CD\uFF09\uFF1A\u591A\u4F4D\u6570\u6BD4\u8F83\uFF08\u5230\u767E\u4E07\u4F4D\uFF09\u548C\u5C0F\u6570\u6BD4\u8F83\uFF08\u5230\u5343\u5206\u4F4D\uFF09\uFF0C\u95EE\u54EA\u4E2A\u5927\u3001\u4E3A\u4EC0\u4E48\u3001\u600E\u4E48\u6BD4\u3001\u76F8\u7B49\u5417\uFF080.7\u548C0.70\uFF09\u3002\u4E0D\u7528\u4E8E\u6570\u8F74\u4E0A\u7684\u4F4D\u7F6E\u3001\u51D1\u6574\u3001\u52A0\u51CF\u3001\u5C55\u5F00\u5F0F\u3001\u5206\u6570\u6BD4\u8F83\u3001\u4E8C\u5E74\u7EA7\u7528\u65B9\u5757\u6BD4\u3002outline \u7684 numbers \u4F9D\u6B21\u662F\u4E94\u4E2A\u89D2\u8272\uFF0C\u6BCF\u4E2A\u6570\u7684 label \u7528\u8BFE\u7684\u8BED\u8A00\u5199\u5B83\u7684\u89D2\u8272\uFF08\u5982 first number\u3001\u7B2C\u4E00\u4E2A\u6570\uFF09\uFF1Afirst\u3001second \u9898\u76EE\u7684\u4E24\u4E2A\u6570\uFF0C\u7167\u9898\u76EE\u5199\uFF0C\u5C0F\u6570\u672B\u5C3E\u5199\u51FA\u6765\u76840\u8981\u4FDD\u7559\uFF080.70 \u5199 mantissa 70\u3001scale 2\uFF1B0.7 \u5199 7\u30011\uFF0C\u4E0D\u8981\u88650\uFF09\uFF1Bpractice_first\u3001practice_second \u7EC3\u4E60\u7684\u4E24\u4E2A\u6570\uFF08\u53E6\u4E00\u5BF9\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u6362\u987A\u5E8F\u4E5F\u4E0D\u7B97\uFF0C\u4E5F\u4E0D\u662F\u540C\u6837\u7684\u503C\u6362\u4E2A\u5199\u6CD5\uFF09\uFF1Bcompared \u51990\uFF1A\u8868\u4E00\u5F00\u59CB\u4E00\u4F4D\u4E5F\u6CA1\u6BD4\u3002\u6F14\u793A\u65F6\u628A compared \u52A8\u753B\u5230 1\u30012\u2026\u2026\uFF1A\u6BCF\u5230\u4E00\u4E2A\u503C\uFF0C\u7A0B\u5E8F\u4ECE\u5DE6\u8FB9\u8D77\u5224\u65AD\u4E00\u4F4D\uFF08\u4E00\u6837\u7684\u6807=\uFF0C\u7B2C\u4E00\u4E2A\u4E0D\u4E00\u6837\u7684\u6807\u2260\uFF0C\u540E\u9762\u7684\u4F4D\u4E0D\u5F71\u54CD\uFF09\uFF0C\u6700\u540E\u518D\u9009\u597D\u7B26\u53F7\uFF1B\u6F14\u793A\u4E00\u76F4\u6BD4\u5230\u9009\u597D\u7B26\u53F7\uFF1A\u6700\u540E\u4E00\u4E2A\u503C\u51998\uFF0C\u7A0B\u5E8F\u6BD4\u5B8C\u8BE5\u6BD4\u7684\u4F4D\u5C31\u9009\u597D\u7B26\u53F7\uFF08\u4E0D\u7528\u81EA\u5DF1\u6570\u6709\u51E0\u4F4D\uFF09\u3002\u522B\u7684\u6570\u4E0D\u52A8\u753B\u3002\u7EC3\u4E60\u7684\u6570\u662F\u5B69\u5B50\u8BFE\u540E\u81EA\u5DF1\u505A\u7684\uFF1A\u8BFE\u4E0A\u53EF\u4EE5\u8BF4\u201C\u8BFE\u540E\u8BD5\u8BD5\u2026\u2026\u201D\uFF0C\u4F46\u4E0D\u8BB2\u5B83\u600E\u4E48\u505A\u3001\u4E0D\u5199\u51FA\u5B83\u7684\u7B97\u5F0F\u3001\u4E0D\u8BF4\u5B83\u7684\u7B54\u6848\uFF0Coutline \u4E5F\u4E0D\u4E3A\u5B83\u5B89\u6392\u4E00\u8282\u3002\u7EC3\u4E60\uFF1A\u5BF9\u7B2C\u4E94\u4E2A\u6570\u5199\u4E00\u4E2A\u6570\u503C\u76EE\u6807\u9898\uFF08\u6570\u503C\u51998\uFF09\uFF0C\u5B69\u5B50\u81EA\u5DF1\u4ECE\u5DE6\u8FB9\u8D77\u4E00\u4F4D\u4E00\u4F4D\u6BD4\uFF0C\u518D\u9009\u7B26\u53F7\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u7B54\u6848\uFF08\u4E0D\u5199\u54EA\u4E2A\u5927\uFF0C\u4E0D\u5199 >\u3001<\u3001=\uFF09\u3002\u8BF4\u6570\u4F4D\u7528\u540D\u5B57\uFF08\u5341\u4F4D\u3001\u5341\u5206\u4F4D\u3001tens\uFF09\uFF0C\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
+  },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
     number_inputs: ["columns_or_length", "rows_or_width"],
@@ -18242,7 +19078,10 @@ var MATH_RECIPES = {
     output_kinds: ["number_line"],
     student_controls: ["slider"],
     required_features: ["number_line", "number_comparison"],
-    model_guidance: "\u6570\u8F74\u6BD4\u8F83\u4E24\u4E2A\u6570\uFF1A\u4E24\u4E2A\u6570\u503C\u5404\u753B\u4E00\u70B9\uFF082/3 \u548C 3/5 \u4E5F\u80FD\u753B\uFF09"
+    model_guidance: "\u6570\u8F74\u6BD4\u8F83\u4E24\u4E2A\u6570\uFF1A\u4E24\u4E2A\u6570\u503C\u5404\u753B\u4E00\u70B9\uFF082/3 \u548C 3/5 \u4E5F\u80FD\u753B\uFF09",
+    // Beside the compare card (a trial, OLL 0029), the number line does not take "which is greater and why, by place":
+    // the card compares place by place. Without the trial its text is unchanged.
+    model_guidance_with: { place_value_compare: "\u6570\u8F74\u6BD4\u8F83\u4E24\u4E2A\u6570\uFF1A\u4E24\u4E2A\u6570\u503C\u5404\u753B\u4E00\u70B9\uFF082/3 \u548C 3/5 \u4E5F\u80FD\u753B\uFF09\uFF1B\u6309\u6570\u4F4D\u6BD4\u5927\u5C0F\uFF08\u54EA\u4E2A\u5927\u3001\u4E3A\u4EC0\u4E48\u3001\u4ECE\u6700\u9AD8\u4F4D\u6BD4\u30010.7\u548C0.70\u76F8\u7B49\u5417\uFF09\u4E0D\u7528\u6570\u8F74" }
   },
   // Decision 0016: a solution set. The model names the relation and gives the boundaries (solved first);
   // the program draws open or filled ends and the rays or interval.
@@ -18477,7 +19316,7 @@ function buildConstantSpeedMotion(input) {
   const distance = time.initial * speed.initial;
   const t = quantityValue(time);
   const v = quantityValue(speed);
-  const driven8 = Boolean(time.expression || speed.expression);
+  const driven9 = Boolean(time.expression || speed.expression);
   const lane = Number((0.08 * length2).toPrecision(12));
   const trackContent = {
     title: text5.title,
@@ -18485,13 +19324,13 @@ function buildConstantSpeedMotion(input) {
     points: [
       { as: "start", x: 0, y: lane, label: text5.start },
       { as: "finish", x: length2, y: lane, visible: false },
-      { as: "object", x: distance, y: lane, label: driven8 ? `${text5.distance_readout}${distance}${text5.distance_unit ? ` ${text5.distance_unit}` : ""}` : text5.object }
+      { as: "object", x: distance, y: lane, label: driven9 ? `${text5.distance_readout}${distance}${text5.distance_unit ? ` ${text5.distance_unit}` : ""}` : text5.object }
     ],
     segments: [
       { as: "track", from: "start", to: "finish", style: "dashed" },
       { as: "travelled", from: "start", to: "object", style: "solid" }
     ],
-    ...driven8 ? {
+    ...driven9 ? {
       bindings: [{
         target: "object.x",
         expression: `${v}*${t}`,
@@ -18504,7 +19343,7 @@ function buildConstantSpeedMotion(input) {
     axes: { x: { min: 0, max: time.max, label: text5.time_axis }, y: { min: 0, max: length2, label: text5.distance_axis } },
     curves: [{ as: "primary-curve", expression: `${v}*x`, label: text5.curve_label }],
     points: [{ as: "moving-point", x: time.initial, y: distance, label: text5.current_state }],
-    ...driven8 ? {
+    ...driven9 ? {
       bindings: [
         { target: "moving-point.x", expression: t },
         { target: "moving-point.y", expression: `${v}*${t}` }
@@ -18762,7 +19601,7 @@ var RECIPE_CATALOG_ORDER = [
   "place_value_chart"
 ];
 var RETIRED_RECIPES = ["cube_with_section"];
-var TRIAL_RECIPES = ["constant_speed_motion", "fraction_model", "place_value_trade", "make_ten", "place_value_times_ten"];
+var TRIAL_RECIPES = ["constant_speed_motion", "fraction_model", "place_value_trade", "make_ten", "place_value_times_ten", "place_value_compare"];
 function enabledTrialRecipes(list3) {
   const named = new Set((list3 ?? "").split(",").map((name) => name.trim()).filter(Boolean));
   return TRIAL_RECIPES.filter((name) => named.has(name));
@@ -20379,11 +21218,11 @@ function placeValueTradeNext(columns, k) {
   const place5 = columns[columns.length - 1 - k];
   return place5 === void 0 ? `every column is finished at ${columns.length}` : `the next value, ${k + 1}, finishes the ${placeValueColumnName(place5).toLowerCase()}`;
 }
-var FULL_WIDTH4 = /[０-９．，＝]/gu;
-var halfWidth3 = (text5) => text5.replace(FULL_WIDTH4, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
+var FULL_WIDTH5 = /[０-９．，＝]/gu;
+var halfWidth4 = (text5) => text5.replace(FULL_WIDTH5, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
 var STATES_ANSWER = /(?:=|\b(?:equals?|makes?|answer(?:\s+is)?|total(?:\s+is)?|difference(?:\s+is)?|result(?:\s+is)?|is\s+left)|等于|得数是?|答案是?|结果是?|一共是?|还剩)\s*$/iu;
 function placeValueTradeWordsGiveAnswer(words, answer, practice) {
-  const text5 = halfWidth3(String(words));
+  const text5 = halfWidth4(String(words));
   for (const match of text5.matchAll(/\d{1,3}(?:[,   ]\d{3})+(?:\.\d+)?|\d*\.\d+|\d+/gu)) {
     if (placeValueThousandths(Number(match[0].replace(/[,   ]/gu, ""))) !== answer) continue;
     if (!practice.includes(answer)) return true;
@@ -20492,10 +21331,10 @@ function makeTenMoves(state, moves) {
   }
   return { steps, ...ignored.length ? { ignored } : {} };
 }
-var FULL_WIDTH5 = /[０-９＝]/gu;
-var halfWidth4 = (text5) => text5.replace(FULL_WIDTH5, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
+var FULL_WIDTH6 = /[０-９＝]/gu;
+var halfWidth5 = (text5) => text5.replace(FULL_WIDTH6, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
 function makeTenWordsGiveAnswer(words, sum) {
-  for (const match of halfWidth4(String(words)).matchAll(/\d+/gu)) if (Number(match[0]) === sum) return true;
+  for (const match of halfWidth5(String(words)).matchAll(/\d+/gu)) if (Number(match[0]) === sum) return true;
   return false;
 }
 
@@ -20725,6 +21564,28 @@ var MATH_HOOKS = {
       return "fault" in found ? 5 : 4 + (found.problem.g === 2 ? 1 : 0);
     }
   },
+  place_value_compare: {
+    // The card's numbers have no control: the learner works it by its own taps (OLL 0029; the model never names a
+    // control). Each number's range is its own value, and compared runs from 0 to the most any pair reaches (seven
+    // columns, then the sign); the compiler checks every number and each step itself.
+    fit_numbers(content, plan) {
+      const numbers = content.numbers ?? [];
+      const definitions = numbers.map((number) => plan.numbers?.[number - 1]);
+      if (!definitions.length || definitions.some((definition) => !definition)) return /* @__PURE__ */ new Map();
+      definitions.forEach((definition, position) => {
+        definition.min = position === COMPARE_NUMBER.compared ? 0 : Math.min(0, definition.initial);
+        definition.max = position === COMPARE_NUMBER.compared ? COMPARE_MOST : Math.max(0, definition.initial);
+        delete definition.student_control;
+        delete definition.unit;
+      });
+      return /* @__PURE__ */ new Map();
+    },
+    // Compared moves forward from 0 to the sign; nothing else moves (an animation of another number is left out and
+    // recorded; a value past the end is the end).
+    number_moves: { state: compareState, moves: compareMoves },
+    // Numbers the card cannot start on go with the outline, before any section is written for them.
+    outline_fault: compareOutlineFault
+  },
   number_line: { fit_numbers: fitNumberLineNumbers },
   number_line_compare: { fit_numbers: fitComparedNumbers },
   number_line_solution: { fit_numbers: fitSolutionNumbers },
@@ -20809,7 +21670,7 @@ var MATH_HOOKS = {
       delete parameters3.curve_label;
       return { no_numbers: true };
     },
-    validate_parameters(parameters3, { path, numberCount, fail: fail4, record: record9, array: array2, validateMathExpression: validateMathExpression2 }) {
+    validate_parameters(parameters3, { path, numberCount, fail: fail4, record: record10, array: array2, validateMathExpression: validateMathExpression2 }) {
       if (parameters3 === void 0) {
         fail4(
           "LESSON_PLAN_EXPRESSION",
@@ -20817,7 +21678,7 @@ var MATH_HOOKS = {
           "a function plot requires an explicit mathematical expression"
         );
       }
-      const visualParameters = record9(parameters3, `${path}.parameters`);
+      const visualParameters = record10(parameters3, `${path}.parameters`);
       const expressionFields = ["expression", "expressions", "expression_tokens"].filter((field) => visualParameters[field] !== void 0);
       if (expressionFields.length !== 1) {
         fail4(
@@ -21199,7 +22060,7 @@ var teacherExpressions = /* @__PURE__ */ new Set(["neutral", "encouraging", "car
 function fail3(code, path, message) {
   throw new LessonPlanError(code, path, message);
 }
-function record8(value2, path) {
+function record9(value2, path) {
   if (!value2 || typeof value2 !== "object" || Array.isArray(value2)) {
     fail3("LESSON_PLAN_TYPE", path, "expected an object");
   }
@@ -21247,7 +22108,7 @@ function validateParameters(value2, path) {
     value2.forEach((item, index) => validateParameters(item, `${path}[${index}]`));
     return;
   }
-  const object2 = record8(value2, path);
+  const object2 = record9(value2, path);
   for (const [key, item] of Object.entries(object2)) {
     if (FORBIDDEN_PARAMETER_KEYS.has(key) || key.endsWith("_id")) {
       fail3("LESSON_PLAN_MODEL_ID", `${path}.${key}`, "business identity fields are not allowed in model-authored parameters");
@@ -21256,7 +22117,7 @@ function validateParameters(value2, path) {
   }
 }
 function recipeValidationContext(path, numberCount) {
-  return { path, numberCount, fail: fail3, record: record8, array, validateMathExpression };
+  return { path, numberCount, fail: fail3, record: record9, array, validateMathExpression };
 }
 function validateMathExpression(value2, path, numberCount, allowInput = false) {
   const tokens = array(value2, path);
@@ -21265,7 +22126,7 @@ function validateMathExpression(value2, path, numberCount, allowInput = false) {
   const numbers = /* @__PURE__ */ new Set();
   tokens.forEach((entry, index) => {
     const tokenPath = `${path}[${index}]`;
-    const token = record8(entry, tokenPath);
+    const token = record9(entry, tokenPath);
     const kind = token.kind;
     if (kind === "input") {
       allowedKeys(token, ["kind"], tokenPath);
@@ -21311,7 +22172,7 @@ function capability(value2, path) {
   return value2;
 }
 function validatePart(value2, path) {
-  const part = record8(value2, path);
+  const part = record9(value2, path);
   const kind = part.kind;
   if (kind === "capability") {
     allowedKeys(part, ["kind", "role"], path);
@@ -21324,7 +22185,7 @@ function validatePart(value2, path) {
   fail3("LESSON_PLAN_PART", `${path}.kind`, "unsupported part reference");
 }
 function validateReference(value2, path) {
-  const ref = record8(value2, path);
+  const ref = record9(value2, path);
   const part = ref.part === void 0 ? void 0 : validatePart(ref.part, `${path}.part`);
   if (ref.source === "local_board_item" || ref.source === "local_connection" || ref.source === "local_group") {
     allowedKeys(ref, ["source", "moment", "item", "part"], path);
@@ -21355,7 +22216,7 @@ function validateReference(value2, path) {
   fail3("LESSON_PLAN_REFERENCE", `${path}.source`, "unsupported reference source");
 }
 function validatePlacement2(value2, path) {
-  const placement = record8(value2, path);
+  const placement = record9(value2, path);
   allowedKeys(placement, ["relation", "reference", "align", "gap"], path);
   const relation = placement.relation;
   const relations = /* @__PURE__ */ new Set(["new_region", "below", "above", "left_of", "right_of", "near", "inside", "overlay"]);
@@ -21368,7 +22229,7 @@ function validatePlacement2(value2, path) {
   return placement;
 }
 function validateBoardContent(kind, value2, path, numberCount, resourceCount) {
-  const content = record8(value2, path);
+  const content = record9(value2, path);
   if (kind === "text" || kind === "shape") {
     allowedKeys(content, ["text"], path);
     nonEmptyString(content.text, `${path}.text`);
@@ -21444,8 +22305,8 @@ function validateLessonPlanNumbers(value2, path) {
   if (numbers.length > 16) fail3("LESSON_PLAN_NUMBERS", path, "expected at most 16 numeric states");
   numbers.forEach((entry, index) => {
     const numberPath = `${path}[${index}]`;
-    const number = record8(entry, numberPath);
-    allowedKeys(number, ["initial", "min", "max", "label", "unit", "student_control"], numberPath);
+    const number = record9(entry, numberPath);
+    allowedKeys(number, ["initial", "min", "max", "label", "unit", "student_control", "written_decimals"], numberPath);
     const initial = finiteNumber(number.initial, `${numberPath}.initial`);
     const min = finiteNumber(number.min, `${numberPath}.min`);
     const max = finiteNumber(number.max, `${numberPath}.max`);
@@ -21454,9 +22315,12 @@ function validateLessonPlanNumbers(value2, path) {
     }
     optionalString(number.label, `${numberPath}.label`, 80);
     optionalString(number.unit, `${numberPath}.unit`, 32);
+    if (number.written_decimals !== void 0 && (!Number.isInteger(number.written_decimals) || Number(number.written_decimals) < 1 || Number(number.written_decimals) > 3)) {
+      fail3("LESSON_PLAN_NUMBERS", `${numberPath}.written_decimals`, "expected the written decimals, 1 to 3");
+    }
     if (number.student_control === void 0) return;
     const controlPath = `${numberPath}.student_control`;
-    const control = record8(number.student_control, controlPath);
+    const control = record9(number.student_control, controlPath);
     allowedKeys(control, ["kind", "step"], controlPath);
     if (control.kind !== "slider") fail3("LESSON_PLAN_CONTROL", `${controlPath}.kind`, "only slider is supported");
     if (control.step === void 0) return;
@@ -21475,7 +22339,7 @@ function validateLessonPlanNumbers(value2, path) {
   return numbers;
 }
 function resolveLessonPlan(value2, options = {}) {
-  const root2 = record8(value2, "$lessonPlan");
+  const root2 = record9(value2, "$lessonPlan");
   allowedKeys(root2, ["version", "title", "goals", "teaching_strategies", "numbers", "sections", "close"], "$lessonPlan");
   if (root2.version !== LESSON_PLAN_VERSION) fail3("LESSON_PLAN_VERSION", "$lessonPlan.version", `expected '${LESSON_PLAN_VERSION}'`);
   nonEmptyString(root2.title, "$lessonPlan.title", 160);
@@ -21550,14 +22414,14 @@ function resolveLessonPlan(value2, options = {}) {
   rawSections.forEach((rawSection, sectionOffset) => {
     const sectionIndex = sectionOffset + 1;
     const path = `$lessonPlan.sections[${sectionOffset}]`;
-    const section = record8(rawSection, path);
+    const section = record9(rawSection, path);
     allowedKeys(section, ["purpose", "reusable_items", "moments", "student_activities"], path);
     nonEmptyString(section.purpose, `${path}.purpose`, 480);
     const reusableDeclarations = section.reusable_items === void 0 ? [] : array(section.reusable_items, `${path}.reusable_items`);
     if (reusableDeclarations.length > 32) fail3("LESSON_PLAN_REUSABLE", `${path}.reusable_items`, "expected at most 32 reusable items");
     const declarations = reusableDeclarations.map((entry, declarationOffset) => {
       const declarationPath = `${path}.reusable_items[${declarationOffset}]`;
-      const declaration = record8(entry, declarationPath);
+      const declaration = record9(entry, declarationPath);
       allowedKeys(declaration, ["kind", "board_kind", "capability"], declarationPath);
       if (!["board_item", "connection", "group"].includes(String(declaration.kind))) fail3("LESSON_PLAN_REUSABLE", `${declarationPath}.kind`, "unsupported reusable item kind");
       if (declaration.kind === "board_item") {
@@ -21589,7 +22453,7 @@ function resolveLessonPlan(value2, options = {}) {
     rawMoments.forEach((rawMoment, momentOffset) => {
       const momentIndex = momentOffset + 1;
       const momentPath = `${path}.moments[${momentOffset}]`;
-      const moment = record8(rawMoment, momentPath);
+      const moment = record9(rawMoment, momentPath);
       allowedKeys(moment, ["narration", "delivery", "actions", "restart_numbers"], momentPath);
       if (moment.restart_numbers !== void 0) {
         const restarts = array(moment.restart_numbers, `${momentPath}.restart_numbers`);
@@ -21611,7 +22475,7 @@ function resolveLessonPlan(value2, options = {}) {
       let groupIndex = 0;
       actions.forEach((entry, actionOffset) => {
         const itemPath = `${momentPath}.actions[${actionOffset}]`;
-        const action = record8(entry, itemPath);
+        const action = record9(entry, itemPath);
         const actionKind = action.action;
         if (actionKind === "create") {
           allowedKeys(action, ["action", "kind", "role", "content", "timing", "placement", "reusable_item", "distinct_visual"], itemPath);
@@ -21703,7 +22567,7 @@ function resolveLessonPlan(value2, options = {}) {
           requiredVisualNumberUses.push({ number, path: `${itemPath}.number` });
           if (number > rawNumbers.length) fail3("LESSON_PLAN_NUMBER_REFERENCE", `${itemPath}.number`, "number reference is unavailable");
           const end = finiteNumber(action.end_value, `${itemPath}.end_value`);
-          const definition = record8(rawNumbers[number - 1], `$lessonPlan.numbers[${number - 1}]`);
+          const definition = record9(rawNumbers[number - 1], `$lessonPlan.numbers[${number - 1}]`);
           if (!cardMovedNumbers2.has(number) && (end < Number(definition.min) || end > Number(definition.max))) fail3("LESSON_PLAN_ANIMATION", `${itemPath}.end_value`, "animation end is outside the number range");
           if (action.easing !== void 0 && !["linear", "ease_in_out"].includes(String(action.easing))) fail3("LESSON_PLAN_ANIMATION", `${itemPath}.easing`, "unsupported easing");
           if (action.duration_intent !== void 0 && !["brief", "normal", "extended"].includes(String(action.duration_intent))) fail3("LESSON_PLAN_ANIMATION", `${itemPath}.duration_intent`, "unsupported duration intent");
@@ -21730,7 +22594,7 @@ function resolveLessonPlan(value2, options = {}) {
     const activities = section.student_activities === void 0 ? [] : array(section.student_activities, `${path}.student_activities`);
     activities.forEach((entry, index) => {
       const activityPath = `${path}.student_activities[${index}]`;
-      const activity = record8(entry, activityPath);
+      const activity = record9(entry, activityPath);
       if (activity.kind === "reflection") {
         allowedKeys(activity, ["kind", "prompt", "answer", "reference"], activityPath);
         nonEmptyString(activity.prompt, `${activityPath}.prompt`, 480);
@@ -21756,7 +22620,7 @@ function resolveLessonPlan(value2, options = {}) {
         const seenNumbers = /* @__PURE__ */ new Set();
         numberControls.forEach((entry2, controlIndex) => {
           const controlPath = `${activityPath}.number_controls[${controlIndex}]`;
-          const control = record8(entry2, controlPath);
+          const control = record9(entry2, controlPath);
           allowedKeys(control, ["number", "controls"], controlPath);
           const number = positiveIndex(control.number, `${controlPath}.number`);
           requiredVisualNumberUses.push({ number, path: `${controlPath}.number` });
@@ -21833,7 +22697,7 @@ function resolveLessonPlan(value2, options = {}) {
       reusable_items: resolvedReusable
     });
   });
-  const close = record8(root2.close, "$lessonPlan.close");
+  const close = record9(root2.close, "$lessonPlan.close");
   allowedKeys(close, ["summary", "focus"], "$lessonPlan.close");
   nonEmptyString(close.summary, "$lessonPlan.close.summary", 1200);
   const closeFocus = array(close.focus, "$lessonPlan.close.focus");
@@ -21983,7 +22847,7 @@ function validateLessonPlan(value2, options = {}) {
   return resolveLessonPlan(value2, options).plan;
 }
 function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
-  const outline = record8(value2, "$lessonPlanOutline");
+  const outline = record9(value2, "$lessonPlanOutline");
   allowedKeys(outline, ["version", "title", "goals", "teaching_strategies", "numbers", "request_coverage", "course_visuals", "sections", "close"], "$lessonPlanOutline");
   if (expectedRequestParts > 0 && outline.course_visuals === void 0) {
     fail3(
@@ -22010,7 +22874,7 @@ function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
   const declarationsBySection = [];
   sections.forEach((entry, index) => {
     const path = `$lessonPlanOutline.sections[${index}]`;
-    const section = record8(entry, path);
+    const section = record9(entry, path);
     allowedKeys(section, ["purpose", "allowed_capabilities", "reusable_items"], path);
     nonEmptyString(section.purpose, `${path}.purpose`, 480);
     const allowedCapabilities = array(section.allowed_capabilities, `${path}.allowed_capabilities`);
@@ -22024,7 +22888,7 @@ function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
     if (declarations.length > 32) fail3("LESSON_PLAN_REUSABLE", `${path}.reusable_items`, "expected at most 32 reusable items");
     declarationsBySection.push(declarations.map((declarationValue, declarationIndex) => {
       const declarationPath = `${path}.reusable_items[${declarationIndex}]`;
-      const declaration = record8(declarationValue, declarationPath);
+      const declaration = record9(declarationValue, declarationPath);
       allowedKeys(declaration, ["kind", "board_kind", "capability"], declarationPath);
       if (!["board_item", "connection", "group"].includes(String(declaration.kind))) fail3("LESSON_PLAN_REUSABLE", `${declarationPath}.kind`, "unsupported reusable item kind");
       if (declaration.kind === "board_item") {
@@ -22048,7 +22912,7 @@ function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
   const firstVisualByCapability = /* @__PURE__ */ new Map();
   courseVisuals.forEach((entry, index) => {
     const path = `$lessonPlanOutline.course_visuals[${index}]`;
-    const visual = record8(entry, path);
+    const visual = record9(entry, path);
     allowedKeys(visual, ["capability", "create_section", "use_sections", "relation", "related_visual", "reusable_item"], path);
     const visualCapability = capability(visual.capability, `${path}.capability`);
     const createSection = positiveIndex(visual.create_section, `${path}.create_section`);
@@ -22098,7 +22962,7 @@ function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
     const seen = /* @__PURE__ */ new Set();
     coverage.forEach((entry, index) => {
       const path = `$lessonPlanOutline.request_coverage[${index}]`;
-      const item = record8(entry, path);
+      const item = record9(entry, path);
       allowedKeys(item, ["request_part", "treatment", "sections", "reason"], path);
       const requestPart = positiveIndex(item.request_part, `${path}.request_part`);
       if (expectedRequestParts > 0 && requestPart > expectedRequestParts) fail3("LESSON_PLAN_REQUEST_COVERAGE", `${path}.request_part`, "request part is unavailable");
@@ -22127,7 +22991,7 @@ function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
       }
     }
   }
-  const close = record8(outline.close, "$lessonPlanOutline.close");
+  const close = record9(outline.close, "$lessonPlanOutline.close");
   allowedKeys(close, ["summary", "focus"], "$lessonPlanOutline.close");
   nonEmptyString(close.summary, "$lessonPlanOutline.close.summary", 1200);
   const closeFocus = array(close.focus, "$lessonPlanOutline.close.focus");
@@ -22154,7 +23018,7 @@ function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
   return structuredClone(value2);
 }
 function assembleLessonPlan(outlineValue, draftValues, options = {}) {
-  const outline = record8(validateLessonPlanOutline(outlineValue), "$lessonPlanOutline");
+  const outline = record9(validateLessonPlanOutline(outlineValue), "$lessonPlanOutline");
   allowedKeys(outline, ["version", "title", "goals", "teaching_strategies", "numbers", "request_coverage", "course_visuals", "sections", "close"], "$lessonPlanOutline");
   if (outline.version !== LESSON_PLAN_VERSION) {
     fail3("LESSON_PLAN_VERSION", "$lessonPlanOutline.version", `expected '${LESSON_PLAN_VERSION}'`);
@@ -22167,7 +23031,7 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
   }
   sections.forEach((entry, index) => {
     const path = `$lessonPlanOutline.sections[${index}]`;
-    const section = record8(entry, path);
+    const section = record9(entry, path);
     allowedKeys(section, ["purpose", "allowed_capabilities", "reusable_items"], path);
     nonEmptyString(section.purpose, `${path}.purpose`, 480);
     const allowedCapabilities = array(section.allowed_capabilities, `${path}.allowed_capabilities`);
@@ -22179,7 +23043,7 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
     });
     if (section.reusable_items !== void 0) {
       array(section.reusable_items, `${path}.reusable_items`).forEach((entry2, reusableIndex) => {
-        const declaration = record8(entry2, `${path}.reusable_items[${reusableIndex}]`);
+        const declaration = record9(entry2, `${path}.reusable_items[${reusableIndex}]`);
         if (declaration.capability !== void 0) {
           const value2 = capability(declaration.capability, `${path}.reusable_items[${reusableIndex}].capability`);
           if (!seenCapabilities.has(value2)) fail3("LESSON_PLAN_CAPABILITY", `${path}.reusable_items[${reusableIndex}].capability`, "reusable capability is not allowed for this section");
@@ -22187,7 +23051,7 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
       });
     }
   });
-  const close = record8(outline.close, "$lessonPlanOutline.close");
+  const close = record9(outline.close, "$lessonPlanOutline.close");
   allowedKeys(close, ["summary", "focus"], "$lessonPlanOutline.close");
   nonEmptyString(close.summary, "$lessonPlanOutline.close.summary", 1200);
   const outlineFocus = array(close.focus, "$lessonPlanOutline.close.focus");
@@ -22209,7 +23073,7 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
   const bySection = /* @__PURE__ */ new Map();
   drafts.forEach((entry, index) => {
     const path = `$lessonPlanSectionDrafts[${index}]`;
-    const draft = record8(entry, path);
+    const draft = record9(entry, path);
     allowedKeys(draft, ["version", "section", "moments", "student_activities"], path);
     if (draft.version !== LESSON_PLAN_VERSION) fail3("LESSON_PLAN_VERSION", `${path}.version`, `expected '${LESSON_PLAN_VERSION}'`);
     const section = positiveIndex(draft.section, `${path}.section`);
@@ -22220,11 +23084,11 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
     const outlineSection = sections[section - 1];
     const allowedCapabilities = new Set(array(outlineSection.allowed_capabilities, `$lessonPlanOutline.sections[${section - 1}].allowed_capabilities`));
     array(draft.moments, `${path}.moments`).forEach((momentValue, momentIndex) => {
-      const moment = record8(momentValue, `${path}.moments[${momentIndex}]`);
+      const moment = record9(momentValue, `${path}.moments[${momentIndex}]`);
       array(moment.actions, `${path}.moments[${momentIndex}].actions`).forEach((actionValue, actionIndex) => {
-        const action = record8(actionValue, `${path}.moments[${momentIndex}].actions[${actionIndex}]`);
+        const action = record9(actionValue, `${path}.moments[${momentIndex}].actions[${actionIndex}]`);
         if (action.action !== "create" || action.kind !== "visual") return;
-        const content = record8(action.content, `${path}.moments[${momentIndex}].actions[${actionIndex}].content`);
+        const content = record9(action.content, `${path}.moments[${momentIndex}].actions[${actionIndex}].content`);
         if (!allowedCapabilities.has(content.capability)) {
           fail3("LESSON_PLAN_CAPABILITY", `${path}.moments[${momentIndex}].actions[${actionIndex}].content.capability`, "visual capability is not allowed by the course outline");
         }
@@ -22263,9 +23127,9 @@ function cardIdentity(kind, content) {
       return;
     }
     if (!value2 || typeof value2 !== "object") return;
-    const record9 = value2;
-    if (typeof record9.as === "string" && !fragments.has(record9.as)) fragments.set(record9.as, `part-${fragments.size}`);
-    Object.values(record9).forEach(collect);
+    const record10 = value2;
+    if (typeof record10.as === "string" && !fragments.has(record10.as)) fragments.set(record10.as, `part-${fragments.size}`);
+    Object.values(record10).forEach(collect);
   };
   collect(content);
   const localReference = (value2) => {
@@ -22684,8 +23548,8 @@ function planPlotView(input) {
     const structural = features.filter((feature) => feature.kind !== "intercept");
     let region = hull((structural.length ? structural : features).map((feature) => feature.x));
     if (item.quadratic) {
-      const halfWidth5 = quadraticHalfWidth(item.quadratic.a);
-      region = union(region, { min: item.quadratic.vertex - halfWidth5, max: item.quadratic.vertex + halfWidth5 });
+      const halfWidth6 = quadraticHalfWidth(item.quadratic.a);
+      region = union(region, { min: item.quadratic.vertex - halfWidth6, max: item.quadratic.vertex + halfWidth6 });
     }
     return region;
   };
@@ -22751,8 +23615,8 @@ function planPlotView(input) {
     for (const item of items) {
       const features = item.features.filter((feature) => keptSet.has(feature) || inCluster(feature)).filter((feature) => feature.x >= window.min && feature.x <= window.max);
       if (item.quadratic) {
-        const halfWidth5 = quadraticHalfWidth(item.quadratic.a);
-        const own = { min: Math.max(window.min, item.quadratic.vertex - halfWidth5), max: Math.min(window.max, item.quadratic.vertex + halfWidth5) };
+        const halfWidth6 = quadraticHalfWidth(item.quadratic.a);
+        const own = { min: Math.max(window.min, item.quadratic.vertex - halfWidth6), max: Math.min(window.max, item.quadratic.vertex + halfWidth6) };
         sampled(item, span2(own) > 0 ? own : window);
       } else if (item.period === void 0 && features.some((feature) => feature.kind === "extremum") && !(undefinedBeyond([item], window.min, -1) && undefinedBeyond([item], window.max, 1))) {
         const levels = hull(features.filter((feature) => feature.y !== void 0 && feature.kind !== "intercept").map((feature) => feature.y));
@@ -23757,7 +24621,7 @@ function compileNumberLineSolution(base, content, role, placement, plan, path) {
   });
   return { ...builtVisual(built), parts: new Map(Object.entries({ ...built.parts, primary_control: built.parts.set })) };
 }
-var nameOf = (definition, value2) => {
+var nameOf2 = (definition, value2) => {
   const label = definition.label?.trim();
   return label && Number(label) !== value2 ? label : void 0;
 };
@@ -23817,7 +24681,7 @@ function compileNumberLineRounding(base, content, role, placement, plan, path) {
       { as: "middle", value: { expression: at2(`${steps(variable)} + 0.5`), initial: middle }, style: "open" },
       { as: "upper", value: { expression: at2(`${steps(variable)} + 1`), initial: upper } },
       // Its tick already shows the number; a name that only repeats it ("362") is left off.
-      { as: "number", value: { expression: variable, initial: definition.initial }, ...nameOf(definition, definition.initial) ? { label: nameOf(definition, definition.initial) } : {} }
+      { as: "number", value: { expression: variable, initial: definition.initial }, ...nameOf2(definition, definition.initial) ? { label: nameOf2(definition, definition.initial) } : {} }
     ],
     jumps: [{ as: "move", from: "number", by: { expression: `${at2(unit4 < 1 ? `floor(${variable} * ${scale2} + 0.5 + 0.000000001)` : `floor(${variable} / ${unit4} + 0.5 + 0.000000001)`)} - ${variable}`, initial: Number((result - definition.initial).toPrecision(12)) }, hops: false }]
   });
@@ -23937,17 +24801,17 @@ var REGULAR_SIDES = { min: 3, max: 8 };
 var SOLID_MEASURES = ["volume", "surface_area", "counts"];
 function modelSolid(value2, path, adjustments) {
   if (!value2 || typeof value2 !== "object" || Array.isArray(value2)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", path, "expected a solid: its shape and sizes");
-  const record9 = value2;
-  if (!SOLID_SHAPES.includes(record9.shape)) {
+  const record10 = value2;
+  if (!SOLID_SHAPES.includes(record10.shape)) {
     fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.shape`, `expected one of ${SOLID_SHAPES.join(", ")}`);
   }
-  const solid = { shape: record9.shape };
+  const solid = { shape: record10.shape };
   const used = SHAPE_SIZES[solid.shape];
   for (const key of SOLID_SIZES) {
-    const size = record9[key];
+    const size = record10[key];
     if (size === void 0 || size === null) continue;
     const round = solid.shape === "cylinder" || solid.shape === "cone" || solid.shape === "sphere" || solid.shape === "hemisphere";
-    if (!used.includes(key) && (size === 0 || key === "sides" && round || key === "top_radius" && solid.shape === "cylinder" && size === record9.radius)) {
+    if (!used.includes(key) && (size === 0 || key === "sides" && round || key === "top_radius" && solid.shape === "cylinder" && size === record10.radius)) {
       adjustments.push({ reason: "solid_unused_size", detail: `${path}.${key}: ${String(size)} on a ${solid.shape}, not used` });
       continue;
     }
@@ -24126,8 +24990,8 @@ function compileFractionModel(base, content, role, placement, plan, path) {
   if (!Array.isArray(written) || written.length !== count) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions`, `${view} shows ${count === 2 ? "two fractions" : "one fraction"}`);
   const fractions = written.map((item, index) => {
     const at2 = `${path}.fractions[${index}]`;
-    const record9 = item && typeof item === "object" && !Array.isArray(item) ? item : fail2("LESSON_PLAN_CAPABILITY_PARAMETER", at2, "expected {numerator, denominator}");
-    const numerator = record9.numerator, denominator = record9.denominator;
+    const record10 = item && typeof item === "object" && !Array.isArray(item) ? item : fail2("LESSON_PLAN_CAPABILITY_PARAMETER", at2, "expected {numerator, denominator}");
+    const numerator = record10.numerator, denominator = record10.denominator;
     if (typeof numerator !== "number" || !Number.isInteger(numerator) || numerator < 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${at2}.numerator`, "the numerator is a whole number of parts, 0 or more");
     if (typeof denominator !== "number" || !Number.isInteger(denominator) || denominator < 1) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${at2}.denominator`, "the denominator is a whole number of equal parts, 1 or more");
     return { numerator, denominator };
@@ -24759,6 +25623,109 @@ function compilePlaceValueTimesTen(base, content, role, placement, plan, path) {
     }
   };
 }
+var COMPARE_TEXT = {
+  "en-US": { a: "the first number", b: "the second number", a_decimals: "the first number's written decimals", b_decimals: "the second number's written decimals", compared: "places compared", marked: "places judged", signed: "sign chosen" },
+  "zh-CN": { a: "\u7B2C\u4E00\u4E2A\u6570", b: "\u7B2C\u4E8C\u4E2A\u6570", a_decimals: "\u7B2C\u4E00\u4E2A\u6570\u5199\u51FA\u7684\u5C0F\u6570\u4F4D\u6570", b_decimals: "\u7B2C\u4E8C\u4E2A\u6570\u5199\u51FA\u7684\u5C0F\u6570\u4F4D\u6570", compared: "\u4ECE\u5DE6\u8FB9\u8D77\u6BD4\u4E86\u51E0\u4F4D", marked: "\u5224\u65AD\u4E86\u51E0\u4F4D", signed: "\u9009\u597D\u4E86\u7B26\u53F7" }
+};
+function compilePlaceValueCompare(base, content, role, placement, plan, path) {
+  allowParameterKeys(parameters(content), [], path);
+  const numbers = content.numbers ?? [];
+  const definitions = numbers.map((number, index) => numberDefinition(plan, number, `${path}.numbers[${index}]`));
+  const values = definitions.map((definition) => definition.initial);
+  const written = definitions.map((definition) => definition.written_decimals);
+  const sharesNumbers = (action) => action.action === "create" && action.kind === "visual" && action.content.capability !== "place_value_compare" && (action.content.numbers ?? []).some((number) => numbers.includes(number));
+  const sharingAt = plan.sections.findIndex((section) => section.moments.some((moment) => moment.actions.some(sharesNumbers)));
+  if (sharingAt >= 0) {
+    const sharing = plan.sections[sharingAt].moments.flatMap((moment) => moment.actions).find(sharesNumbers);
+    const cardAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
+    const sharingCapability = sharing.content.capability;
+    failSharedTapCardNumbers(`${path}.numbers`, sharedNumberFact("place_value_compare", "compare card", numbers, sharing.content.numbers ?? [], sharingCapability), "place_value_compare", sharingCapability, sharingAt, cardAt);
+  }
+  const found = compareStartProblem(values, written);
+  if ("fault" in found) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, found.fault, "place_value_compare");
+  const { pair, practice, numbers: [A, B, PA, PB] } = found;
+  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "place_value_compare");
+  if (first && JSON.stringify(first.content.numbers ?? []) !== JSON.stringify(numbers)) {
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `a lesson has one compare card: this lesson's is on lesson numbers ${(first.content.numbers ?? []).join(", ")}`, "place_value_compare");
+  }
+  const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
+  const text5 = COMPARE_TEXT[language];
+  const stem = base.replace(/[^A-Za-z0-9]+/gu, "_").toLowerCase();
+  const name = (field) => `${stem}_${field}`;
+  const own = (n) => placeValueCompareOwnDecimals(n.value) === n.dec;
+  const decimals = ![A, B, PA, PB].every(own);
+  const built = buildPlaceValueCompare({
+    as: base,
+    role,
+    place: placement,
+    ...language === "zh-CN" ? { language } : {},
+    a: { expression: name("a"), initial: A.value },
+    b: { expression: name("b"), initial: B.value },
+    ...decimals ? { a_decimals: { expression: name("a_decimals"), initial: A.dec }, b_decimals: { expression: name("b_decimals"), initial: B.dec } } : {},
+    compared: { expression: name("compared"), initial: 0 },
+    marked: { expression: name("marked"), initial: 0 },
+    signed: { expression: name("signed"), initial: 0 }
+  });
+  const end = placeValueCompareDemoEnd(pair);
+  const span3 = (...items) => ({ min: Math.min(...items), max: Math.max(...items) + (Math.min(...items) === Math.max(...items) ? 1 : 0) });
+  const variables = [
+    { as: name("a"), initial: A.value, ...span3(A.value, PA.value), label: text5.a },
+    { as: name("b"), initial: B.value, ...span3(B.value, PB.value), label: text5.b },
+    ...decimals ? [
+      { as: name("a_decimals"), initial: A.dec, min: 0, max: 3, label: text5.a_decimals },
+      { as: name("b_decimals"), initial: B.dec, min: 0, max: 3, label: text5.b_decimals }
+    ] : [],
+    { as: name("compared"), initial: 0, min: 0, max: Math.max(end, placeValueCompareDemoEnd(practice)), label: text5.compared },
+    { as: name("marked"), initial: 0, min: 0, max: PLACE_VALUE_COMPARE_MAX_COLUMNS, label: text5.marked },
+    { as: name("signed"), initial: 0, min: 0, max: 1, label: text5.signed }
+  ];
+  return {
+    actions: built.actions,
+    whole: built.whole,
+    parts: new Map(Object.entries(built.parts)),
+    variables,
+    mover: {
+      unbound: true,
+      numbers: [...numbers],
+      // A step moves compared forward: the card judges each column, then chooses the sign. A value past the end is
+      // the end (the demonstration runs to the sign). Nothing else moves.
+      play(steps) {
+        const actions = [];
+        for (const step of steps) {
+          if (step.position !== COMPARE_NUMBER.compared) continue;
+          const from = Math.min(end, step.from[step.position]), to = Math.min(end, step.to[step.position]);
+          if (to !== from) actions.push({ do: "animate", variable: name("compared"), value: to });
+        }
+        return actions;
+      },
+      // The model's practice is "the learner compares the practice pair": the card starts again, fresh, on that pair;
+      // the true sign ends the task (no "done"). The value the model wrote is not read. Words that write the practice's
+      // answer (its numbers with the true sign between them) give it away: that task is dropped and recorded, never
+      // the lesson.
+      task(_position, _value, _end, words = []) {
+        if (words.some((each) => compareWordsGiveAnswer(each, practice))) {
+          return { drop: "the task's words write the sign the learner is to find on the card", reason: "practice_answer_in_words" };
+        }
+        const start = {
+          [name("a")]: PA.value,
+          [name("b")]: PB.value,
+          ...decimals ? { [name("a_decimals")]: PA.dec, [name("b_decimals")]: PB.dec } : {},
+          [name("compared")]: 0,
+          [name("marked")]: 0,
+          [name("signed")]: 0
+        };
+        return {
+          task: {
+            start: { kind: "practice", variables: Object.keys(start), values: start },
+            allowed_operations: [{ kind: "card_tap", node: base }],
+            completion: { kind: "card_fact", node: base, fact: "complete" },
+            success_message: placeValueCompareDoneText(practice, language)
+          }
+        };
+      }
+    }
+  };
+}
 var MATH_COMPILERS = {
   number_line: compileNumberLine,
   number_line_compare: compileNumberLineCompare,
@@ -24782,7 +25749,8 @@ var MATH_COMPILERS = {
   place_value_chart: compilePlaceValueChart,
   place_value_trade: compilePlaceValueTrade,
   make_ten: compileMakeTen,
-  place_value_times_ten: compilePlaceValueTimesTen
+  place_value_times_ten: compilePlaceValueTimesTen,
+  place_value_compare: compilePlaceValueCompare
 };
 
 // src/plugins/physics-compilers.ts
@@ -26242,16 +27210,16 @@ function vertexCompatible(value2) {
   let usesDecimal = false;
   const visit = (candidate) => {
     if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return;
-    const record9 = candidate;
-    delete record9.minItems;
-    delete record9.maxItems;
-    if (record9.type === "number") {
+    const record10 = candidate;
+    delete record10.minItems;
+    delete record10.maxItems;
+    if (record10.type === "number") {
       usesDecimal = true;
-      for (const key of Object.keys(record9)) delete record9[key];
-      record9.$ref = "#/$defs/modelDecimal";
+      for (const key of Object.keys(record10)) delete record10[key];
+      record10.$ref = "#/$defs/modelDecimal";
       return;
     }
-    for (const child of Object.values(record9)) {
+    for (const child of Object.values(record10)) {
       if (Array.isArray(child)) child.forEach(visit);
       else visit(child);
     }
@@ -26994,6 +27962,41 @@ var MATH_SECTION_FACTS = {
       after_class_practice: [timesTenDecimal(practice.amount), timesTenDecimal(practice.target)]
     } };
   },
+  // The compare card in its own terms (OLL 0029), once it is drawn: the pair as written (0.70 keeps its zero), its
+  // columns, the deciding place and the true sign (the lesson's own pair: the demonstration shows it), where the
+  // demonstration stands (compared now, and each column as judged so far), what the next value does in the card's own
+  // sentences, where the demonstration goes (compared to the sign: owner, 2026-11-27; information only, no check
+  // enforces it), and the after-class practice pair as written (never its answer: the learner finds it on the card).
+  place_value_compare: ({ established, numbers, state, language }) => {
+    if (!numbers || !established?.numbers?.length) return {};
+    const lessonNumbers = established.numbers;
+    const definitions = lessonNumbers.map((number) => numbers[number - 1]);
+    const found = compareStartProblem(definitions.map((definition) => Number(definition?.initial ?? 0)), definitions.map((definition) => definition?.written_decimals));
+    if ("fault" in found) return {};
+    const { pair, numbers: [a, b, pa, pb] } = found;
+    const cardLanguage = /^en(?:-|$)/iu.test(language ?? "") ? "en-US" : "zh-CN";
+    const end = placeValueCompareDemoEnd(pair);
+    const now = Number(state.get(lessonNumbers[COMPARE_NUMBER.compared]) ?? 0);
+    const k = Number.isFinite(now) ? Math.min(end, Math.max(0, Math.floor(now + 1e-9))) : 0;
+    const shown = placeValueCompareDemoState(pair, k);
+    const name = (place5) => placeValueColumnName(place5, cardLanguage);
+    const says = placeValueCompareStepSentences(pair, 0, end, cardLanguage);
+    return { facts: {
+      numbers: lessonNumbers,
+      pair: [compareNumeral(a), compareNumeral(b)],
+      columns: pair.columns.map(name),
+      deciding_place: pair.equal ? null : name(pair.place),
+      relation: pair.relation,
+      compared_now: k,
+      chart_now: pair.columns.map((place5, index) => {
+        const column = placeValueCompareColumn(shown, index);
+        return { column: name(place5), first: column.a, second: column.b, ...column.status === "open" ? {} : { marked: column.status === "same" ? "=" : column.status === "decides" ? "\u2260" : "doesn't matter" } };
+      }),
+      ...k < end ? { next: Array.from({ length: end - k }, (_, i) => ({ value: k + i + 1, does: says[k + i] })) } : { sign_chosen: pair.relation },
+      demonstration_to: { compared: end },
+      after_class_practice: [compareNumeral(pa), compareNumeral(pb)]
+    } };
+  },
   function_plot: ({ established }) => established && fixedLineSamples(established) ? { lead: { sample_slope: "constant" } } : {},
   geometric_rearrangement: ({ mode, established, numbers, state }) => {
     let facts = {};
@@ -27243,6 +28246,22 @@ function defaultCoverageSection(requestPart, requestPartCount, sectionCount) {
     sectionCount,
     Math.max(1, Math.ceil(requestPart * sectionCount / requestPartCount))
   );
+}
+function withWrittenDecimals(raw, coerced) {
+  if (!LESSON_PLAN_CAPABILITY_NAMES.some((capability2) => recipeDeclares(capability2, "keeps_written_decimals"))) return coerced;
+  const rawNumbers = raw?.numbers;
+  const numbers = coerced?.numbers;
+  if (!Array.isArray(rawNumbers) || !Array.isArray(numbers)) return coerced;
+  numbers.forEach((entry, index) => {
+    const written = rawNumbers[index]?.initial;
+    if (!entry || typeof entry !== "object" || !written || typeof written !== "object") return;
+    const { mantissa, scale: scale2 } = written;
+    if (!Number.isInteger(mantissa) || !Number.isInteger(scale2) || Number(scale2) < 1 || Number(scale2) > 3 || Number(mantissa) < 0) return;
+    let own = Number(scale2);
+    for (let m = Number(mantissa); own > 0 && m % 10 === 0; m /= 10) own -= 1;
+    if (Number(scale2) > own) entry.written_decimals = Number(scale2);
+  });
+  return coerced;
 }
 function lowerModelOutlineNumber(entry, index) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
@@ -27969,14 +28988,14 @@ function lowerModelActionReferences(actionName, action, currentMoment, numberCou
   }
   return lowered;
 }
-function lowerIntegerDecimal(record9, prefix, path) {
-  const mantissa = record9[`${prefix}_mantissa`];
-  const scale2 = record9[`${prefix}_scale`];
+function lowerIntegerDecimal(record10, prefix, path) {
+  const mantissa = record10[`${prefix}_mantissa`];
+  const scale2 = record10[`${prefix}_scale`];
   if (!Number.isInteger(mantissa) || Math.abs(Number(mantissa)) > 1e12 || !Number.isInteger(scale2) || Number(scale2) < 0 || Number(scale2) > 12) {
     throw new LessonPlanError("LESSON_PLAN_MODEL_NUMBER", path, "expected bounded integer mantissa and scale from 0 to 12");
   }
-  delete record9[`${prefix}_mantissa`];
-  delete record9[`${prefix}_scale`];
+  delete record10[`${prefix}_mantissa`];
+  delete record10[`${prefix}_scale`];
   return Number(mantissa) / 10 ** Number(scale2);
 }
 function cardMovedNumbers(actions) {
@@ -29488,7 +30507,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     const bootstrap = course;
     outline = validateLessonPlanOutline(
       lowerModelOutline(
-        coerceLessonPlanOutlineModelNumbers(bootstrap.outline, fixedRequestParts.length),
+        withWrittenDecimals(bootstrap.outline, coerceLessonPlanOutlineModelNumbers(bootstrap.outline, fixedRequestParts.length)),
         fixedRequestParts.length
       ),
       fixedRequestParts.length
@@ -29559,7 +30578,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         try {
           outline = validateLessonPlanOutline(
             lowerModelOutline(
-              coerceLessonPlanOutlineModelNumbers(partialOutline, fixedRequestParts.length),
+              withWrittenDecimals(partialOutline, coerceLessonPlanOutlineModelNumbers(partialOutline, fixedRequestParts.length)),
               fixedRequestParts.length
             ),
             fixedRequestParts.length
@@ -29616,7 +30635,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         if (admitted.result) return admitted.result;
         const candidateOutline = validateLessonPlanOutline(
           lowerModelOutline(
-            coerceLessonPlanOutlineModelNumbers(admitted.course, fixedRequestParts.length),
+            withWrittenDecimals(admitted.course, coerceLessonPlanOutlineModelNumbers(admitted.course, fixedRequestParts.length)),
             fixedRequestParts.length
           ),
           fixedRequestParts.length
@@ -30294,8 +31313,8 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
 
 // src/raw-reply.ts
 var RAW_REPLY_PREFIX = "learning-coach: raw ";
-function frameRawReply(record9) {
-  return `${RAW_REPLY_PREFIX}${JSON.stringify(record9)}
+function frameRawReply(record10) {
+  return `${RAW_REPLY_PREFIX}${JSON.stringify(record10)}
 `;
 }
 function envelopeText(payload) {
@@ -30308,9 +31327,9 @@ function modelTextFromRawReply(line) {
   const rest = line.startsWith(RAW_REPLY_PREFIX) ? line.slice(RAW_REPLY_PREFIX.length) : line;
   if (rest.startsWith("{")) {
     try {
-      const record9 = JSON.parse(rest);
-      if (record9.kind === "content" && typeof record9.body === "string") return record9.body;
-      if (record9.kind === "payload") return envelopeText(record9.body);
+      const record10 = JSON.parse(rest);
+      if (record10.kind === "content" && typeof record10.body === "string") return record10.body;
+      if (record10.kind === "payload") return envelopeText(record10.body);
     } catch {
     }
   }

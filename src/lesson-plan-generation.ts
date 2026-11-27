@@ -424,6 +424,30 @@ function defaultCoverageSection(
   );
 }
 
+/**
+ * The outline's numbers with the decimals the model wrote them with (OLL 0029: 0.70 is not 0.7), read from the raw
+ * reply's own mantissa and scale before they are divided away, kept only when more than the value needs and at most
+ * three, and only while a recipe that keeps them is offered (`keeps_written_decimals`: the compare card): without one
+ * an outline is exactly as before.
+ */
+function withWrittenDecimals(raw: unknown, coerced: unknown): unknown {
+  if (!LESSON_PLAN_CAPABILITY_NAMES.some((capability) => recipeDeclares(capability, "keeps_written_decimals"))) return coerced;
+  const rawNumbers = (raw as { numbers?: unknown } | null)?.numbers;
+  const numbers = (coerced as { numbers?: unknown } | null)?.numbers;
+  if (!Array.isArray(rawNumbers) || !Array.isArray(numbers)) return coerced;
+  numbers.forEach((entry, index) => {
+    const written = (rawNumbers[index] as { initial?: unknown } | null)?.initial as { mantissa?: unknown; scale?: unknown } | null | undefined;
+    if (!entry || typeof entry !== "object" || !written || typeof written !== "object") return;
+    const { mantissa, scale } = written;
+    if (!Number.isInteger(mantissa) || !Number.isInteger(scale) || Number(scale) < 1 || Number(scale) > 3 || Number(mantissa) < 0) return;
+    // The value's own decimals: its mantissa without trailing zeros.
+    let own = Number(scale);
+    for (let m = Number(mantissa); own > 0 && m % 10 === 0; m /= 10) own -= 1;
+    if (Number(scale) > own) (entry as Record<string, unknown>).written_decimals = Number(scale);
+  });
+  return coerced;
+}
+
 /** An outline number as the model wrote it, lowered: its range normalized, and its slider step the program's. */
 function lowerModelOutlineNumber(entry: unknown, index: number): unknown {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
@@ -3367,7 +3391,7 @@ export async function generateLessonPlanWithModel(
     const bootstrap = course as Record<string, unknown>;
     outline = validateLessonPlanOutline(
       lowerModelOutline(
-        coerceLessonPlanOutlineModelNumbers(bootstrap.outline, fixedRequestParts.length),
+        withWrittenDecimals(bootstrap.outline, coerceLessonPlanOutlineModelNumbers(bootstrap.outline, fixedRequestParts.length)),
         fixedRequestParts.length,
       ),
       fixedRequestParts.length,
@@ -3442,7 +3466,7 @@ export async function generateLessonPlanWithModel(
         try {
           outline = validateLessonPlanOutline(
             lowerModelOutline(
-              coerceLessonPlanOutlineModelNumbers(partialOutline, fixedRequestParts.length),
+              withWrittenDecimals(partialOutline, coerceLessonPlanOutlineModelNumbers(partialOutline, fixedRequestParts.length)),
               fixedRequestParts.length,
             ),
             fixedRequestParts.length,
@@ -3519,7 +3543,7 @@ export async function generateLessonPlanWithModel(
       if (admitted.result) return admitted.result;
       const candidateOutline = validateLessonPlanOutline(
         lowerModelOutline(
-          coerceLessonPlanOutlineModelNumbers(admitted.course, fixedRequestParts.length),
+          withWrittenDecimals(admitted.course, coerceLessonPlanOutlineModelNumbers(admitted.course, fixedRequestParts.length)),
           fixedRequestParts.length,
         ),
         fixedRequestParts.length,
