@@ -12,6 +12,10 @@ import {
 import { TRADE_NUMBER, placeValueTradeColumnsOf, placeValueTradeStartFault, placeValueTradeThousandths, tradeDecimal } from "./place-value-trade-moves.js";
 import { MAKE_TEN_PLACES, makeTenFrame, makeTenFreshCount, makeTenProblemOf, makeTenStepSentences, makeTenToTen } from "octos-lesson-language/plugin-math";
 import { MAKE_TEN_NUMBER, makeTenNext, makeTenStartFault, makeTenStartValues } from "./make-ten-moves.js";
+import {
+  placeValueTimesTenDemoState, placeValueTimesTenFacts, placeValueTimesTenPath, placeValueTimesTenPosition, placeValueTimesTenStepSentences,
+} from "octos-lesson-language/plugin-math";
+import { TIMES_TEN_NUMBER, timesTenDecimal, timesTenStartProblem } from "./place-value-times-ten-moves.js";
 
 export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
   // The trading mat in its own terms (owner, 2026-11-24): where practice starts, the amount no trade changes,
@@ -135,6 +139,42 @@ export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
         ? { next: { value: filled + 1, does: makeTenNext(a, b, filled), says: makeTenStepSentences(problem, filled, filled + 1, cardLanguage) } }
         : { ten_made: true }),
       practice_pair: [pa, pb],
+    } };
+  },
+  // The times-ten card in its own terms (OLL 0028), once it is drawn: the question (a count or a times pair), the
+  // amount and the target, the answer, the path "counted in" takes, where the demonstration stands (counted in now,
+  // and each column's disks, rows of ten and squares), each later value of counted in with what it does in the
+  // card's own sentences, and the practice. Everything as the lesson writes it (0.01, never thousandths). Facts,
+  // not instructions: a lesson may rightly stop before the target.
+  place_value_times_ten: ({ established, numbers, state, language }) => {
+    if (!numbers || !established?.numbers?.length) return {};
+    const lessonNumbers = established.numbers;
+    const found = timesTenStartProblem(lessonNumbers.map((number) => Number(numbers[number - 1]?.initial ?? 0)));
+    if ("fault" in found) return {};
+    const { problem, practice } = found;
+    const cardLanguage = /^en(?:-|$)/iu.test(language ?? "") ? "en-US" : "zh-CN";
+    const path = placeValueTimesTenPath(problem);
+    // Counted in starts at the problem's start unit; a step the card refuses does not change it. It is read as the
+    // card reads its own field: its place along the path, whole steps only (a value between two is the earlier).
+    const now = Number(state.get(lessonNumbers[TIMES_TEN_NUMBER.countedIn]!) ?? timesTenDecimal(problem.start));
+    const position = Number.isFinite(now) ? Math.floor(placeValueTimesTenPosition(problem, Math.round(now * 1000)) + 1e-9) : 0;
+    const k = Math.min(path.length - 1, Math.max(0, position));
+    const chart = placeValueTimesTenFacts(placeValueTimesTenDemoState(problem, k));
+    const does = placeValueTimesTenStepSentences(problem, cardLanguage);
+    const name = (place: number) => placeValueColumnName(place, cardLanguage);
+    return { facts: {
+      numbers: lessonNumbers,
+      question: problem.question,
+      amount: timesTenDecimal(problem.amount),
+      target: timesTenDecimal(problem.target),
+      answer: problem.question === "times" ? { renamed: problem.renamed, times: problem.result } : { count: problem.result },
+      counted_in_path: path.map(timesTenDecimal),
+      counted_in_now: timesTenDecimal(path[k]!),
+      chart_now: chart.columns.map((column) => ({ column: name(column.place), disks: column.disks, rows_of_ten: column.rows, squares: column.squares })),
+      ...(k < path.length - 1
+        ? { next: path.slice(k + 1).map((value, i) => ({ value: timesTenDecimal(value), does: does[k + i]! })) }
+        : { reached_target: true }),
+      practice: [timesTenDecimal(practice.amount), timesTenDecimal(practice.target)],
     } };
   },
   function_plot: ({ established }) => (established && fixedLineSamples(established) ? { lead: { sample_slope: "constant" } } : {}),

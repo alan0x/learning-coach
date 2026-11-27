@@ -10,6 +10,8 @@ import {
   placeValueParts, PLACE_VALUE_PLACE_ALIASES,
   buildPlaceValueTrade, placeValueTradeMaxStatus, PLACE_VALUE_TRADE_WORDS,
   buildMakeTen, makeTenChainText, makeTenFreshCount, makeTenProblemOf, makeTenRow, MAKE_TEN_MAX_MOVED, MAKE_TEN_PLACES,
+  buildPlaceValueTimesTen, placeValueTimesTenAnswerParts, placeValueTimesTenDoneText, placeValueTimesTenPath, placeValueTimesTenRowFields,
+  PLACE_VALUE_TIMES_TEN_MAX_ROWS,
   type BuiltRecipe, type RearrangementConstruction, type Solid, type SolidMeasureKind,
 } from "octos-lesson-language/plugin-math";
 import { compileText, lessonTextLanguage } from "../lesson-text.js";
@@ -20,6 +22,8 @@ import {
   PLACE_VALUE_TRADE_OPERATIONS, TRADE_NUMBER, placeValueTradeColumnsOf, placeValueTradeStartFault, placeValueTradeThousandths, placeValueTradeWordsGiveAnswer,
 } from "./place-value-trade-moves.js";
 import { MAKE_TEN_NUMBER, makeTenStartFault, makeTenStartValues, makeTenSum, makeTenWordsGiveAnswer } from "./make-ten-moves.js";
+import { TIMES_TEN_NUMBER, placeValueTimesTenWordsGiveAnswer, timesTenStartProblem } from "./place-value-times-ten-moves.js";
+import { placeValueThousandths } from "./place-value-moves.js";
 import { plotCurveNumbers, plotSampleNumbers } from "./plot-bindings.js";
 import { planPlotView, type PlotView } from "../plot-view-planner.js";
 import { parseModelFormula } from "./math-formulas.js";
@@ -2225,6 +2229,123 @@ function compileMakeTen(
   };
 }
 
+/** The times-ten card's own words: the labels of the variables it creates. Everything said is the model's. */
+const TIMES_TEN_TEXT = {
+  "en-US": { amount: "the amount", target: "the target", counted_in: "counted in", moved_once: "rows moved once", moved_twice: "rows moved twice" },
+  "zh-CN": { amount: "要数的数", target: "用什么来数", counted_in: "现在用什么单位在数", moved_once: "动过一次的行", moved_twice: "动过两次的行" },
+} as const;
+
+/**
+ * The place-value times-ten card (OLL decision 0028, need 35P-04): the same amount counted in another unit, a count
+ * (3 tenths = ? thousandths) or a times pair (700 is ? times 70). The model writes five lesson numbers, the amount,
+ * the target, a practice of the card's shape and "counted in" (whose start the program supplies when the outline
+ * leaves it out); the demonstration animates counted in along the problem's path (the card plays each row's move).
+ * The program binds the card's own variables (the numbers in thousandths, the learner's row sets 0 to 511), plays
+ * each value of counted in, and turns the model's practice into the learner's task on the practice problem (fresh, at
+ * its own start unit; the tap that completes the chart ends it), then the card's own answer row anchored on it, which
+ * OLL ties to the card. Every fault OLL would refuse at the card is refused here first and names the card.
+ */
+function compilePlaceValueTimesTen(
+  base: string,
+  content: LessonPlanVisualContent,
+  role: string,
+  placement: ReturnType<typeof place>,
+  plan: LessonPlan,
+  path: string,
+): CompiledVisual {
+  allowParameterKeys(parameters(content), [], path);
+  const numbers = content.numbers ?? [];
+  const values = numbers.map((number, index) => numberDefinition(plan, number, `${path}.numbers[${index}]`).initial);
+  // The card's numbers are its own: they change only by its rules, so another visual cannot also show them.
+  const sharesNumbers = (action: LessonPlan["sections"][number]["moments"][number]["actions"][number]) => action.action === "create"
+    && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability !== "place_value_times_ten"
+    && ((action.content as LessonPlanVisualContent).numbers ?? []).some((number) => numbers.includes(number));
+  const sharingAt = plan.sections.findIndex((section) => section.moments.some((moment) => moment.actions.some(sharesNumbers)));
+  if (sharingAt >= 0) {
+    const sharing = plan.sections[sharingAt]!.moments.flatMap((moment) => moment.actions).find(sharesNumbers)!;
+    const cardAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
+    const sharingCapability = (sharing.content as LessonPlanVisualContent).capability;
+    fail("LESSON_PLAN_SHARED_NUMBER", `${path}.numbers`, `the times-ten card needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the numbers on the card only, or in words`,
+      sharingAt > cardAt ? sharingCapability : "place_value_times_ten");
+  }
+  const found = timesTenStartProblem(values);
+  if ("fault" in found) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, found.fault, "place_value_times_ten");
+  const { problem, practice } = found as Exclude<typeof found, { fault: string }>;
+  // One card per lesson: a later card on other numbers is refused at its own path.
+  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions)
+    .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "place_value_times_ten");
+  if (first && JSON.stringify((first.content as LessonPlanVisualContent).numbers ?? []) !== JSON.stringify(numbers)) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a lesson has one times-ten card: use the same lesson numbers each time, or write another amount in words", "place_value_times_ten");
+  }
+  const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
+  const text = TIMES_TEN_TEXT[language];
+  const stem = base.replace(/[^A-Za-z0-9]+/gu, "_").toLowerCase();
+  const name = (field: string) => `${stem}_${field}`;
+  const rowFields = placeValueTimesTenRowFields(problem.g);
+  const built = buildPlaceValueTimesTen({
+    as: base, role, place: placement,
+    ...(language === "zh-CN" ? { language } : {}),
+    amount: { expression: name("amount"), initial: problem.amount },
+    target: { expression: name("target"), initial: problem.target },
+    ...(problem.question === "count" ? { start: problem.start } : {}),
+    counted_in: { expression: name("counted_in"), initial: problem.start },
+    moved_once: { expression: name("moved_once"), initial: 0 },
+    ...(problem.g === 2 ? { moved_twice: { expression: name("moved_twice"), initial: 0 } } : {}),
+  });
+  // The amount, the target, counted in and one or two row sets: at most 5 of a lesson's 16 (OLL). Each range covers
+  // the lesson's problem and the practice's (a range is never one value); a row set runs exactly 0 to 511.
+  const span = (...items: number[]) => ({ min: Math.min(...items), max: Math.max(...items) + (Math.min(...items) === Math.max(...items) ? 1 : 0) });
+  const variables: NonNullable<CompiledVisual["variables"]> = [
+    { as: name("amount"), initial: problem.amount, ...span(problem.amount, practice.amount), label: text.amount },
+    { as: name("target"), initial: problem.target, ...span(problem.target, practice.target), label: text.target },
+    { as: name("counted_in"), initial: problem.start, ...span(...placeValueTimesTenPath(problem), ...placeValueTimesTenPath(practice)), label: text.counted_in },
+    ...rowFields.map((field) => ({ as: name(field), initial: 0, min: 0, max: PLACE_VALUE_TIMES_TEN_MAX_ROWS, label: text[field] })),
+  ];
+  return {
+    actions: built.actions, whole: built.whole, parts: new Map(Object.entries(built.parts)), variables,
+    mover: {
+      unbound: true,
+      numbers: [...numbers],
+      // A step moves counted in along the path: the card plays each row's move. Nothing else moves.
+      play(steps) {
+        const actions: AuthoringAction[] = [];
+        for (const step of steps) {
+          if (step.position !== TIMES_TEN_NUMBER.countedIn || step.to[step.position] === step.from[step.position]) continue;
+          actions.push({ do: "animate", variable: name("counted_in"), value: placeValueThousandths(step.to[step.position]!)! } as AuthoringAction);
+        }
+        return actions;
+      },
+      // The model's practice is "the learner counts the practice's amount in its target": the card starts again,
+      // fresh, on that problem at its own start unit; the task ends on the tap that completes the chart (no "done"),
+      // and the program asks the card's own answer row right after it (OLL ties that row to the card: a model's own
+      // question there would cost the lesson). The value the model wrote is not read. Words that write the practice's
+      // count give it away: that task is dropped and recorded, never the lesson.
+      task(_position, _value, _end, words = []) {
+        if (words.some((each) => placeValueTimesTenWordsGiveAnswer(each, practice))) {
+          return { drop: "the task's words write the count the learner is to find on the card", reason: "practice_answer_in_words" };
+        }
+        const start: Record<string, number> = { [name("amount")]: practice.amount, [name("target")]: practice.target, [name("counted_in")]: practice.start };
+        for (const field of rowFields) start[name(field)] = 0;
+        return {
+          task: {
+            start: { kind: "practice", variables: Object.keys(start), values: start },
+            allowed_operations: [{ kind: "card_tap", node: base }],
+            completion: { kind: "card_fact", node: base, fact: "complete" },
+          },
+          then: [{
+            prompt: compileText(plan, practice.question === "times" ? "写出答案。" : "写出有多少个。"),
+            hints: [compileText(plan, practice.question === "times" ? "先数一个小的数里有几个，再数有几个小的数。" : "数一数目标那一列。")],
+            anchor: base,
+            allowed_operations: [{ kind: "row_entry" }],
+            completion: { kind: "numeric_row", parts: placeValueTimesTenAnswerParts(practice, language).map((part) => ("blank" in part ? { blank: { as: part.blank.as, answer: String(part.blank.answer) } } : part)) },
+            success_message: placeValueTimesTenDoneText(practice, language),
+          }],
+        };
+      },
+    },
+  };
+}
+
 export const MATH_COMPILERS = {
   number_line: compileNumberLine,
   number_line_compare: compileNumberLineCompare,
@@ -2248,4 +2369,5 @@ export const MATH_COMPILERS = {
   place_value_chart: compilePlaceValueChart,
   place_value_trade: compilePlaceValueTrade,
   make_ten: compileMakeTen,
+  place_value_times_ten: compilePlaceValueTimesTen,
 } satisfies Record<string, VisualCompiler>;

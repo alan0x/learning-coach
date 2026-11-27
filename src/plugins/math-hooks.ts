@@ -12,6 +12,7 @@ import { BASE_TEN_DRAWN, baseTenColumns, baseTenMoves, baseTenState } from "./ba
 import { placeValueMoves, placeValueState } from "./place-value-moves.js";
 import { TRADE_NUMBER, placeValueTradeColumnsOf, placeValueTradeMoves, placeValueTradeStartFault, placeValueTradeState, placeValueTradeThousandths } from "./place-value-trade-moves.js";
 import { MAKE_TEN_NUMBER, makeTenMoves, makeTenState } from "./make-ten-moves.js";
+import { TIMES_TEN_NUMBER, placeValueTimesTenMoves, placeValueTimesTenState } from "./place-value-times-ten-moves.js";
 import { plotCurveNumbers, plotSampleNumbers, validatePlotSampleNumbers, normalizePlotDraftBindings } from "./plot-bindings.js";
 
 /**
@@ -221,6 +222,25 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
     },
     // The count in the bigger frame moves forward from the bigger number to 10; nothing else moves.
     number_moves: { state: makeTenState, moves: makeTenMoves },
+  },
+  place_value_times_ten: {
+    // The card's numbers have no control: the learner works it by its own taps (OLL 0028; the model never names a
+    // control). Each number's range runs from 0 to the most the card takes; counted in runs over every unit (the
+    // demonstration's path is the card's to check). The compiler checks every number and each step itself.
+    fit_numbers(content, plan) {
+      const numbers = content.numbers ?? [];
+      const definitions = numbers.map((number) => plan.numbers?.[number - 1]);
+      if (!definitions.length || definitions.some((definition) => !definition)) return new Map();
+      definitions.forEach((definition, position) => {
+        definition!.min = 0;
+        definition!.max = Math.max(definition!.initial, position === TIMES_TEN_NUMBER.countedIn ? 1_000_000 : 9_000_000);
+        delete definition!.student_control;
+        delete definition!.unit;
+      });
+      return new Map();
+    },
+    // Counted in moves along the problem's path toward the target; nothing else moves.
+    number_moves: { state: placeValueTimesTenState, moves: placeValueTimesTenMoves },
   },
   number_line: { fit_numbers: fitNumberLineNumbers },
   number_line_compare: { fit_numbers: fitComparedNumbers },

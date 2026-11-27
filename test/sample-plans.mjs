@@ -49,7 +49,7 @@ export function samplePlan(capability) {
       ? 2
       : capability === "number_line_steps"
         ? 3
-        : capability === "place_value_trade"
+        : capability === "place_value_trade" || capability === "place_value_times_ten"
           ? 5
           : capability === "make_ten"
             ? 6
@@ -94,8 +94,8 @@ export function samplePlan(capability) {
     firstMomentActions.push({
       action: "animate",
       // The trade card's demonstration moves its fifth number, columns finished (OLL decision 0026).
-      number: capability === "place_value_trade" || capability === "make_ten" ? 5 : 1,
-      end_value: capability === "place_value_trade" ? 4 : capability === "make_ten" ? 10 : capability === "base_ten_trade" ? 4 : capability === "place_value_chart" ? 4050 : capability === "circle_polygon_bounds" ? 96 : capability === "rectangle_unit_square_array" ? 6 : capability === "number_line_rounding" ? 43 : capability === "number_line_steps" ? 7 : 0.75,
+      number: capability === "place_value_trade" || capability === "make_ten" || capability === "place_value_times_ten" ? 5 : 1,
+      end_value: capability === "place_value_trade" ? 4 : capability === "make_ten" ? 10 : capability === "place_value_times_ten" ? 0.001 : capability === "base_ten_trade" ? 4 : capability === "place_value_chart" ? 4050 : capability === "circle_polygon_bounds" ? 96 : capability === "rectangle_unit_square_array" ? 6 : capability === "number_line_rounding" ? 43 : capability === "number_line_steps" ? 7 : 0.75,
       easing: "linear",
       duration_intent: "brief",
       timing: "during_speech",
@@ -132,6 +132,10 @@ export function samplePlan(capability) {
         // The make-ten card (OLL decision 0027): 8 + 6, the 8's frame filled to ten; the learner makes ten with
         // 7 + 5. The count in the bigger frame starts at 8 and the count moved at 0 (the program's own numbers).
         ? [8, 6, 7, 5, 8, 0].map((initial, position) => ({ initial, min: 0, max: position === 4 ? 10 : position === 5 ? 4 : initial, label: ["first number", "second number", "practice first", "practice second", "in the bigger frame", "moved"][position] }))[index]
+        : capability === "place_value_times_ten"
+        // The times-ten card (OLL decision 0028): 3 tenths counted in thousandths ("counted in" 0.1 -> 0.001); the
+        // learner counts 5 in hundredths. Counted in starts at 0.1 (the program's own number).
+        ? [0.3, 0.001, 5, 0.01, 0.1].map((initial, position) => ({ initial, min: 0, max: initial, label: ["the amount", "counted in", "practice amount", "practice unit", "counted in now"][position] }))[index]
         : capability === "number_line_compare"
         ? { initial: index === 0 ? 0.5 : 0.25, min: 0, max: 1, label: index === 0 ? "first" : "second", student_control: { kind: "slider", step: 0.05 } }
         : capability === "rectangle_unit_square_array"
@@ -181,8 +185,8 @@ export function samplePlan(capability) {
           student_activities: [{
             kind: "number_target",
             prompt: "Move the main value to one half.",
-            number_controls: [{ number: capability === "place_value_trade" || capability === "make_ten" ? 5 : 1, controls: ["slider"] }],
-            value: capability === "place_value_trade" ? 4 : capability === "make_ten" ? 10 : capability === "place_value_chart" ? 3207 : capability === "circle_polygon_bounds" ? 96 : capability === "number_line_rounding" ? 45 : capability === "number_line_steps" ? 6 : 0.5,
+            number_controls: [{ number: capability === "place_value_trade" || capability === "make_ten" || capability === "place_value_times_ten" ? 5 : 1, controls: ["slider"] }],
+            value: capability === "place_value_trade" ? 4 : capability === "make_ten" ? 10 : capability === "place_value_times_ten" ? 0.001 : capability === "place_value_chart" ? 3207 : capability === "circle_polygon_bounds" ? 96 : capability === "number_line_rounding" ? 45 : capability === "number_line_steps" ? 6 : 0.5,
             tolerance: 0.02,
             hints: ["Watch the numeric value."],
           }],
@@ -334,6 +338,46 @@ export function makeTenPlan({ numbers, practice, steps = [10], prompt, hints = [
     }];
   }
   return plan;
+}
+
+/**
+ * A times-ten lesson (OLL decision 0028) as a model writes it: the amount and the target (0.3 and 0.001; a times
+ * pair's larger then smaller number, 700 and 70), the practice's two, and counted in (the unit the question names;
+ * the program supplies it when `start` is undefined and the outline leaves it out). The demonstration is values of
+ * counted in in moments of their own (the target by default), and the practice a number target on counted in.
+ * `typed` adds a model's typed question in section 2, placed by the card.
+ */
+export function timesTenPlan({ amount, target, practice, start, steps = [target], prompt, hints = ["Count the target column."], typed }) {
+  const plan = samplePlan("place_value_times_ten");
+  const startValue = start ?? timesTenOwnUnit(amount, target);
+  const written = [amount, target, ...practice, startValue];
+  plan.numbers = written.map((initial, position) => ({ initial, min: 0, max: position === 4 ? Math.max(initial, ...steps, 1) : initial, label: ["the amount", "counted in", "practice amount", "practice unit", "counted in now"][position] }));
+  const first = plan.sections[0].moments[0];
+  first.actions = first.actions.filter((action) => action.action !== "animate");
+  first.actions[0].content = { capability: "place_value_times_ten", parameters: {}, numbers: [1, 2, 3, 4, 5] };
+  plan.sections[0].moments.push(...steps.map((value, index) => ({
+    narration: `Step ${index + 1}.`,
+    actions: [{ action: "animate", number: 5, end_value: value, duration_intent: "brief", timing: "during_speech" }],
+  })));
+  plan.sections[0].student_activities = [{
+    kind: "number_target",
+    prompt: prompt ?? "Your turn: count the new amount in the new unit.",
+    number_controls: [{ number: 5, controls: ["slider"] }],
+    value: practice[1], tolerance: 0.0005, hints,
+  }];
+  if (typed) {
+    plan.sections[1].student_activities = [{
+      kind: "numeric_answer", prompt: typed.prompt, answer: typed.answer, check: typed.answer,
+      reference: reusable(1, 1), hints: ["Count the target column."],
+    }];
+  }
+  return plan;
+}
+
+/** The unit of the amount's own place, as the program supplies "counted in" (a times pair written smaller first: the larger's). */
+export function timesTenOwnUnit(amount, target) {
+  const own = Math.round(target * 1000) === 10 * Math.round(amount * 1000) ? target : amount;
+  return Number((10 ** Math.floor(Math.log10(own) + 1e-9)).toFixed(3));
 }
 
 /** The columns a pair needs on the trade card: from its lower decimal place up to the highest place of a, b or the answer. */

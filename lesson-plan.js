@@ -7633,7 +7633,7 @@ var v0_1_schema_default = {
         do: { enum: ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate", "hide", "view", "tap"] },
         when: { enum: ["before_speech", "during_speech", "after_speech"] },
         as: { $ref: "#/$defs/alias" },
-        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model", "base_ten_trade", "place_value_chart", "place_value_trade", "make_ten"] },
+        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model", "base_ten_trade", "place_value_chart", "place_value_trade", "make_ten", "place_value_times_ten"] },
         role: { type: "string" },
         content: { type: "object" },
         place: { $ref: "#/$defs/placement" },
@@ -7747,6 +7747,13 @@ var v0_1_schema_default = {
             properties: { do: { const: "write" }, kind: { const: "make_ten" } }
           },
           then: { properties: { content: { $ref: "#/$defs/makeTenContent" } } }
+        },
+        {
+          if: {
+            required: ["do", "kind"],
+            properties: { do: { const: "write" }, kind: { const: "place_value_times_ten" } }
+          },
+          then: { properties: { content: { $ref: "#/$defs/placeValueTimesTenContent" } } }
         },
         {
           if: { properties: { do: { const: "revise" } } },
@@ -8107,6 +8114,28 @@ var v0_1_schema_default = {
         }
       }
     },
+    placeValueTimesTenContent: {
+      type: "object",
+      required: ["question", "toward", "apart", "amount", "target", "counted_in", "moved_once"],
+      additionalProperties: false,
+      properties: {
+        language: { enum: ["en-US", "zh-CN"] },
+        question: { enum: ["count", "times"] },
+        toward: { enum: ["right", "left"] },
+        apart: { enum: [1, 2] },
+        amount: { type: "integer", minimum: 1, maximum: 9e9 },
+        target: { type: "integer", minimum: 1, maximum: 9e9 },
+        counted_in: { type: "integer", minimum: 1, maximum: 9e9 },
+        moved_once: { type: "integer", minimum: 0, maximum: 511 },
+        moved_twice: { type: "integer", minimum: 0, maximum: 511 },
+        bindings: {
+          type: "array",
+          minItems: 1,
+          maxItems: 64,
+          items: { $ref: "#/$defs/valueBinding" }
+        }
+      }
+    },
     scene3dContent: {
       type: "object",
       required: ["objects", "camera", "fallback"],
@@ -8258,7 +8287,7 @@ var v0_1_schema_default = {
       required: ["target", "expression"],
       additionalProperties: false,
       properties: {
-        target: { type: "string", pattern: "^(?:[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*|target|a|b|finished|filled|moved)$" },
+        target: { type: "string", pattern: "^(?:[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*|target|a|b|finished|filled|moved|amount|counted_in|moved_once|moved_twice)$" },
         expression: { type: "string", minLength: 1, maxLength: 256 },
         allow_zero: { const: true },
         hide_when_undefined: { const: true },
@@ -9400,9 +9429,13 @@ function placeValueParts(value2) {
   }
   return list3;
 }
+var EN_UNIT = { 6: ["million", "millions"], 5: ["hundred thousand", "hundred thousands"], 4: ["ten thousand", "ten thousands"], 3: ["thousand", "thousands"], 2: ["hundred", "hundreds"], 1: ["ten", "tens"], 0: ["one", "ones"], [-1]: ["tenth", "tenths"], [-2]: ["hundredth", "hundredths"], [-3]: ["thousandth", "thousandths"] };
 var ZH_UNIT_NAME = { 6: "\u767E\u4E07", 5: "\u5341\u4E07", 4: "\u4E07", 3: "\u5343", 2: "\u767E", 1: "\u5341", 0: "\u4E00", [-1]: "0.1", [-2]: "0.01", [-3]: "0.001" };
 function placeValueUnitName(place5, language = "en-US") {
   return short(language) === "en" ? placeValueUnitText(place5, "en-US") : ZH_UNIT_NAME[place5];
+}
+function placeValueEnUnitWord(place5, plural2) {
+  return EN_UNIT[place5][plural2 ? 1 : 0];
 }
 function placeValueTaskFault(value2, given) {
   if (!value2)
@@ -10494,6 +10527,526 @@ function makeTenStepSentences(problem, from, to, language = "en-US") {
   return sentences;
 }
 
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/place-value-times-ten.js
+var PLACE_VALUE_TIMES_TEN_KIND = "place_value_times_ten";
+var PLACE_VALUE_TIMES_TEN_FEATURE = "plugin:math/place-value-times-ten@1";
+var PLACE_VALUE_TIMES_TEN_PLUGIN_VERSION = "0.11.0";
+var PLACE_VALUE_TIMES_TEN_LANGUAGES = PLACE_VALUE_CHART_LANGUAGES;
+var PLACE_VALUE_TIMES_TEN_MIN_PLACE = PLACE_VALUE_MIN_PLACE;
+var PLACE_VALUE_TIMES_TEN_MAX_PLACE = PLACE_VALUE_MAX_PLACE;
+var PLACE_VALUE_TIMES_TEN_MAX_LINEAGES = 9;
+var PLACE_VALUE_TIMES_TEN_COPIES = 10;
+var PLACE_VALUE_TIMES_TEN_MAX_ROWS = 2 ** PLACE_VALUE_TIMES_TEN_MAX_LINEAGES - 1;
+var PLACE_VALUE_TIMES_TEN_QUESTIONS = ["count", "times"];
+var PLACE_VALUE_TIMES_TEN_TOWARD = ["right", "left"];
+var PLACE_VALUE_TIMES_TEN_ROW_FIELDS = ["moved_once", "moved_twice"];
+var PLACE_VALUE_TIMES_TEN_CARD_BINDINGS = ["amount", "target", "counted_in"];
+var PLACE_VALUE_TIMES_TEN_PROBLEM_FIELDS = ["amount", "target"];
+var PLACE_VALUE_TIMES_TEN_DEMONSTRATION_FIELD = "counted_in";
+var PLACE_VALUE_TIMES_TEN_TAP_PLACES = Object.freeze(Array.from({ length: PLACE_VALUE_TIMES_TEN_COPIES }, (_, i) => `row-${i + 1}`));
+var PLACE_VALUE_TIMES_TEN_TAPS = ["move", "copy", "smaller"];
+var SHORT2 = { "en-US": "en", "zh-CN": "zh" };
+var short2 = (language) => SHORT2[language ?? "en-US"] ?? "en";
+var placeValueTimesTenUnit = (place5) => 10 ** (place5 + 3);
+var unit2 = placeValueTimesTenUnit;
+function placeValueTimesTenOneDigit(value2) {
+  if (!Number.isSafeInteger(value2) || value2 <= 0)
+    return void 0;
+  for (let place5 = PLACE_VALUE_TIMES_TEN_MAX_PLACE + 3; place5 >= PLACE_VALUE_TIMES_TEN_MIN_PLACE; place5 -= 1) {
+    const u = unit2(place5);
+    if (value2 % u === 0) {
+      const digit = value2 / u;
+      return digit <= 9 ? { digit, place: place5 } : void 0;
+    }
+  }
+  return void 0;
+}
+function placeValueTimesTenPlaceOfUnit(value2) {
+  const d = placeValueTimesTenOneDigit(value2);
+  return d && d.digit === 1 ? d.place : void 0;
+}
+function placeValueTimesTenProblem(amount, target, start) {
+  let A = amount, T = target;
+  const ok = (value2) => typeof value2 === "number" && Number.isSafeInteger(value2) && value2 >= 0;
+  if (!ok(A) || !ok(T) || start !== void 0 && !ok(start))
+    return { fault: "unreadable" };
+  let S = start;
+  if (T === 10 * A) {
+    [A, T] = [T, A];
+    const small = placeValueTimesTenOneDigit(T), large = placeValueTimesTenOneDigit(A);
+    if (S !== void 0 && small && large && S === unit2(small.place))
+      S = unit2(large.place);
+  }
+  const a = placeValueTimesTenOneDigit(A);
+  if (!a)
+    return { fault: "not_one_digit" };
+  if (a.place > PLACE_VALUE_TIMES_TEN_MAX_PLACE)
+    return { fault: "out_of_range" };
+  const t = placeValueTimesTenOneDigit(T);
+  if (!t || t.place > PLACE_VALUE_TIMES_TEN_MAX_PLACE)
+    return { fault: t ? "out_of_range" : "not_a_pair" };
+  if (t.digit !== 1) {
+    if (t.digit !== a.digit)
+      return { fault: "not_a_pair" };
+    if (t.place !== a.place - 1)
+      return { fault: a.place - t.place > 1 ? "too_far" : "not_a_pair" };
+    if (S !== void 0 && S !== unit2(a.place))
+      return { fault: "times_start" };
+    return finish({ question: "times", amount: A, target: T, s: a.place, t: t.place, dir: -1, g: 1, n: a.digit, start: unit2(a.place), digit: a.digit, renamed: A / unit2(t.place), result: 10 });
+  }
+  const s = S === void 0 ? a.place : placeValueTimesTenPlaceOfUnit(S);
+  if (s === void 0 || s > PLACE_VALUE_TIMES_TEN_MAX_PLACE || s < PLACE_VALUE_TIMES_TEN_MIN_PLACE)
+    return { fault: "start_not_unit" };
+  if (A % unit2(s) !== 0)
+    return { fault: "not_whole" };
+  if (s === t.place)
+    return { fault: "same_unit" };
+  const g = Math.abs(s - t.place);
+  if (g > 2)
+    return { fault: "too_far" };
+  const dir = t.place < s ? -1 : 1;
+  if (A % T !== 0)
+    return { fault: "not_whole" };
+  const larger = dir < 0 ? A / unit2(s) : A / T;
+  if (larger > PLACE_VALUE_TIMES_TEN_MAX_LINEAGES)
+    return { fault: "too_many" };
+  return finish({ question: "count", amount: A, target: T, s, t: t.place, dir, g, n: larger, start: unit2(s), result: A / T });
+}
+function finish(p) {
+  const lo = Math.min(p.s, p.t), hi = Math.max(p.s, p.t);
+  const columns = [];
+  for (let place5 = hi; place5 >= lo; place5 -= 1)
+    columns.push(place5);
+  return { ...p, columns };
+}
+var isFault = (p) => "fault" in p;
+var placeValueTimesTenShapeOf = (p) => ({ question: p.question, toward: p.dir < 0 ? "right" : "left", apart: p.g });
+function placeValueTimesTenStartUnit(shape, amount, target) {
+  if (shape.question === "times") {
+    const large = placeValueTimesTenOneDigit(Math.max(amount, target));
+    return large ? unit2(large.place) : void 0;
+  }
+  const t = placeValueTimesTenPlaceOfUnit(target);
+  if (t === void 0)
+    return void 0;
+  const s = shape.toward === "right" ? t + shape.apart : t - shape.apart;
+  return s >= PLACE_VALUE_TIMES_TEN_MIN_PLACE && s <= PLACE_VALUE_TIMES_TEN_MAX_PLACE ? unit2(s) : void 0;
+}
+function placeValueTimesTenProblemOfShape(shape, amount, target) {
+  const start = placeValueTimesTenStartUnit(shape, amount, target);
+  if (start === void 0) {
+    const other = placeValueTimesTenProblem(amount, target);
+    if (!isFault(other))
+      return { fault: "not_same_shape" };
+    return { fault: shape.question === "times" ? other.fault : "start_not_unit" };
+  }
+  const p = placeValueTimesTenProblem(amount, target, shape.question === "times" ? void 0 : start);
+  if (isFault(p))
+    return p;
+  const own = placeValueTimesTenShapeOf(p);
+  if (own.question !== shape.question || own.toward !== shape.toward || own.apart !== shape.apart)
+    return { fault: "not_same_shape" };
+  return p;
+}
+function placeValueTimesTenPracticeProblem(example, amount, target) {
+  const p = placeValueTimesTenProblemOfShape(placeValueTimesTenShapeOf(example), amount, target);
+  if (isFault(p))
+    return p;
+  if (p.amount === example.amount && p.target === example.target)
+    return { fault: "same_as_example" };
+  return p;
+}
+var withStage = (s, i, k) => ({ problem: s.problem, stages: s.stages.map((v, j) => j === i ? k : v), ...s.rows ? { rows: s.rows } : {} });
+var placeValueTimesTenPlaceAt = (p, k) => p.s + p.dir * k;
+var placeValueTimesTenSizeAt = (p, k) => p.dir < 0 ? 10 ** k : 10 ** (p.g - k);
+var placeAt = placeValueTimesTenPlaceAt;
+var sizeAt = placeValueTimesTenSizeAt;
+function placeValueTimesTenColumn(state, place5) {
+  const out = [];
+  state.stages.forEach((k, i) => {
+    if (placeAt(state.problem, k) === place5)
+      out.push({ i, size: sizeAt(state.problem, k), stage: k });
+  });
+  return out;
+}
+function placeValueTimesTenChartValue(state) {
+  return state.stages.reduce((sum, k) => sum + sizeAt(state.problem, k) * unit2(placeAt(state.problem, k)), 0);
+}
+var placeValueTimesTenBrokenCount = (state) => state.stages.filter((k) => k >= 1).length;
+var refuse2 = (reason, extra = {}) => ({ ok: false, reason, ...extra });
+function placeValueTimesTenMove(state, i) {
+  const p = state.problem;
+  if (!Number.isInteger(i) || i < 0 || i >= p.n)
+    return refuse2("no_thing");
+  const k = state.stages[i];
+  if (k >= p.g)
+    return refuse2("at_target", { place: placeAt(p, k) });
+  return { ok: true, state: withStage(state, i, k + 1), anim: { kind: p.dir < 0 ? "break" : "bundle", i, from: placeAt(p, k), to: placeAt(p, k + 1), size: sizeAt(p, k), becomes: sizeAt(p, k + 1) } };
+}
+function applyPlaceValueTimesTenTap(state, tap) {
+  if ((state.demo ?? 0) > 0)
+    return refuse2("demonstrating");
+  const p = state.problem;
+  if (tap.tap === "move")
+    return placeValueTimesTenMove(state, tap.row);
+  if (tap.tap === "copy" || tap.tap === "smaller") {
+    if (p.question !== "times")
+      return refuse2("not_times");
+    if (tap.tap === "smaller")
+      return refuse2("smaller", { need: p.digit });
+    if (!Number.isInteger(tap.row) || tap.row < 0 || tap.row >= PLACE_VALUE_TIMES_TEN_COPIES)
+      return refuse2("no_thing");
+    const have = placeValueTimesTenBrokenCount(state);
+    return refuse2(have < p.n ? "copy_short" : "copy_full", { have, need: p.digit });
+  }
+  return refuse2("no_tap");
+}
+var placeValueTimesTenComplete = (state) => state.problem.n > 0 && state.stages.every((k) => k === state.problem.g);
+function placeValueTimesTenPath(problem) {
+  const path = [problem.start];
+  if (problem.question === "times")
+    path.push(problem.target);
+  else
+    for (let k = 1; k <= problem.g; k += 1)
+      path.push(unit2(placeAt(problem, k)));
+  return path;
+}
+function placeValueTimesTenPosition(problem, countedIn) {
+  const path = placeValueTimesTenPath(problem);
+  if (!Number.isFinite(countedIn))
+    return 0;
+  for (let k = 0; k < path.length - 1; k += 1) {
+    const a = path[k], b = path[k + 1];
+    const lo = Math.min(a, b), hi = Math.max(a, b);
+    if (countedIn >= lo && countedIn <= hi)
+      return k + (countedIn - a) / (b - a);
+  }
+  const down = path.at(-1) < path[0];
+  return (down ? countedIn > path[0] : countedIn < path[0]) ? 0 : path.length - 1;
+}
+function placeValueTimesTenDemoState(problem, position) {
+  const steps = placeValueTimesTenPath(problem).length - 1;
+  const at2 = Math.min(steps, Math.max(0, Number.isFinite(position) ? position : 0));
+  const whole2 = Math.floor(at2 + 1e-9), part = at2 - whole2;
+  const moved = Math.floor(part * problem.n + 1e-9);
+  return { problem, stages: Array.from({ length: problem.n }, (_, i) => Math.min(problem.g, whole2 + (i < moved ? 1 : 0))), demo: at2 };
+}
+function countedInText(problem, value2, language = "en-US") {
+  const place5 = placeValueTimesTenPlaceOfUnit(value2);
+  if (place5 === void 0)
+    return placeValueNumeral(value2, language);
+  return short2(language) === "en" ? `${placeValueNumeral(value2)} (${placeValueEnUnitWord(place5, true)})` : `${placeValueNumeral(value2, language)}\uFF08${ZH_UNIT[place5]}\uFF09`;
+}
+function placeValueTimesTenCountedInMeaning(problem) {
+  return `is the unit the amount is counted in now, in thousandths: ${placeValueTimesTenPath(problem).map((value2) => `${value2} = ${countedInText(problem, value2)}`).join(" -> ")}`;
+}
+function countedInNext(problem, from) {
+  const path = placeValueTimesTenPath(problem);
+  const at2 = placeValueTimesTenPosition(problem, from);
+  const next = path.filter((value2, k) => k >= Math.ceil(at2 - 1e-9) && value2 !== from);
+  return next.length ? `from ${from} the next values are ${next.join(" or ")}` : `from ${from} it has reached the target, ${problem.target}`;
+}
+function placeValueTimesTenCountedInFault(problem, from, to) {
+  const path = placeValueTimesTenPath(problem);
+  const index = path.indexOf(to);
+  if (index >= 0 && index + 1e-9 >= placeValueTimesTenPosition(problem, from))
+    return void 0;
+  const why = index < 0 ? `${to} is not one of its values` : `it goes forward, not back to ${to}`;
+  return `${placeValueTimesTenCountedInMeaning(problem)}; ${why}; ${countedInNext(problem, from)}`;
+}
+function placeValueTimesTenCountedInReplayFault(problem, value2) {
+  return placeValueTimesTenPath(problem).includes(value2) ? void 0 : `${placeValueTimesTenCountedInMeaning(problem)}; a replay sets one of these, not ${value2}`;
+}
+function record7(value2, path, fail4) {
+  if (!value2 || typeof value2 !== "object" || Array.isArray(value2))
+    fail4(path, "Expected an object");
+  return value2;
+}
+function wholeNumber6(raw, path, low, high, fail4, what) {
+  if (typeof raw !== "number" || !Number.isInteger(raw) || raw < low || raw > high)
+    fail4(path, `${what} is a whole number from ${low} to ${high}`);
+  return raw;
+}
+var MAX_VALUE = 9 * unit2(PLACE_VALUE_TIMES_TEN_MAX_PLACE);
+function placeValueTimesTenFaultText(fault, amount, target) {
+  const ok = typeof amount === "number" && typeof target === "number" && Number.isSafeInteger(amount) && Number.isSafeInteger(target) && amount >= 0 && target >= 0;
+  const pair = ok ? `${placeValueNumeral(amount)} and ${placeValueNumeral(target)}` : "These numbers";
+  switch (fault) {
+    case "not_one_digit":
+      return `${pair}: the amount is one digit in one place (500 for the 5 in 5,550; 0.3 for 3 tenths), never a whole numeral (not_one_digit)`;
+    case "out_of_range":
+      return `${pair}: the card's places run from the millions to the thousandths (out_of_range)`;
+    case "not_a_pair":
+      return `${pair}: the target is a unit (0.001, 10, 100) or the same digit one place right (700 and 70) (not_a_pair)`;
+    case "start_not_unit":
+      return `${pair}: the unit the amount starts in is a place's unit (0.01, 10) (start_not_unit)`;
+    case "same_unit":
+      return `${pair}: the amount starts in the target's own unit; a put-together question starts in the smaller unit it names (40 hundredths: 0.01) (same_unit)`;
+    case "too_far":
+      return `${pair}: the two units are at most two places apart, and a times pair's are neighbours (too_far)`;
+    case "too_many":
+      return `${pair}: the larger unit holds 1 to 9 (300 tens are 30 hundreds) (too_many)`;
+    case "not_whole":
+      return `${pair}: the amount is a whole number of both units (4 hundredths is not a whole number of tenths) (not_whole)`;
+    case "times_start":
+      return `${pair}: a times pair starts in the larger number's own place (times_start)`;
+    case "not_same_shape":
+      return `${pair}: the card's question, direction and places apart are fixed; this pair is of another shape (not_same_shape)`;
+    default:
+      return "The numbers are whole numbers of thousandths from 0 to the millions (unreadable)";
+  }
+}
+var shapeOfContent = (content) => ({
+  question: content.question === "times" ? "times" : "count",
+  toward: content.question === "times" ? "right" : content.toward === "left" ? "left" : "right",
+  apart: content.question === "times" ? 1 : content.apart === 2 ? 2 : 1
+});
+function placeValueTimesTenContentProblem(raw) {
+  const content = raw ?? {};
+  const amount = content.amount, target = content.target;
+  if (typeof amount !== "number" || typeof target !== "number")
+    return { fault: "unreadable" };
+  return placeValueTimesTenProblemOfShape(shapeOfContent(content), amount, target);
+}
+function validatePlaceValueTimesTenContent(raw, path, fail4, options = {}) {
+  const content = record7(raw, path, fail4);
+  for (const key of Object.keys(content)) {
+    if (!["language", "question", "toward", "apart", "amount", "target", "counted_in", "moved_once", "moved_twice", "bindings"].includes(key))
+      fail4(`${path}/${key}`, `Unknown place-value times-ten field '${key}'`);
+  }
+  if (content.language !== void 0 && !PLACE_VALUE_TIMES_TEN_LANGUAGES.includes(content.language)) {
+    fail4(`${path}/language`, `The card speaks ${PLACE_VALUE_TIMES_TEN_LANGUAGES.join(" or ")}`);
+  }
+  if (!PLACE_VALUE_TIMES_TEN_QUESTIONS.includes(content.question))
+    fail4(`${path}/question`, "The question is 'count' or 'times'");
+  if (!PLACE_VALUE_TIMES_TEN_TOWARD.includes(content.toward))
+    fail4(`${path}/toward`, "The card moves toward the 'right' (breaking) or the 'left' (putting together)");
+  if (content.apart !== 1 && content.apart !== 2)
+    fail4(`${path}/apart`, "The two units are 1 or 2 places apart");
+  if (content.question === "times" && (content.toward !== "right" || content.apart !== 1))
+    fail4(`${path}/apart`, "A times pair breaks toward the right, one place apart");
+  const low = options.boundValues ? 0 : 1;
+  const amount = wholeNumber6(content.amount, `${path}/amount`, low, MAX_VALUE, fail4, "The amount (in thousandths)");
+  const target = wholeNumber6(content.target, `${path}/target`, low, MAX_VALUE, fail4, "The target (in thousandths)");
+  const countedIn = wholeNumber6(content.counted_in, `${path}/counted_in`, low, MAX_VALUE, fail4, "Counted in (in thousandths)");
+  const once = wholeNumber6(content.moved_once, `${path}/moved_once`, 0, PLACE_VALUE_TIMES_TEN_MAX_ROWS, fail4, "The rows moved once");
+  if (content.apart === 2) {
+    if (content.moved_twice === void 0)
+      fail4(`${path}/moved_twice`, "Two places apart, the card has the rows moved twice");
+  } else if (content.moved_twice !== void 0)
+    fail4(`${path}/moved_twice`, "One place apart, nothing moves twice");
+  const twice = content.moved_twice === void 0 ? 0 : wholeNumber6(content.moved_twice, `${path}/moved_twice`, 0, PLACE_VALUE_TIMES_TEN_MAX_ROWS, fail4, "The rows moved twice");
+  if (options.boundValues)
+    return;
+  const problem = placeValueTimesTenContentProblem(content);
+  if (isFault(problem))
+    fail4(`${path}/${problem.fault === "not_same_shape" || problem.fault === "start_not_unit" ? "target" : "amount"}`, placeValueTimesTenFaultText(problem.fault, amount, target));
+  const p = problem;
+  if (p.amount !== amount)
+    fail4(`${path}/amount`, `A times pair is written larger first: amount ${p.amount}, target ${p.target}`);
+  const rows = 2 ** p.n - 1;
+  if ((once & ~rows) !== 0)
+    fail4(`${path}/moved_once`, `${placeValueNumeral(amount)} has ${p.n} rows: no bit past row ${p.n} (at most ${rows})`);
+  if ((twice & ~once) !== 0)
+    fail4(`${path}/moved_twice`, "A row moves twice only after it has moved once");
+  const pathValues = placeValueTimesTenPath(p);
+  if (!pathValues.includes(countedIn)) {
+    fail4(`${path}/counted_in`, `'counted_in' ${placeValueTimesTenCountedInFault(p, p.start, countedIn) ?? `is one of ${pathValues.join(", ")}`}`);
+  }
+  if (countedIn !== p.start && (once !== 0 || twice !== 0)) {
+    fail4(`${path}/counted_in`, "A demonstration (counted in past its start) plays on a fresh chart: no row moved");
+  }
+}
+var placeValueTimesTenLanguage = (raw) => placeValueLanguage(raw);
+var FALLBACK = finish({ question: "count", amount: 0, target: 1, s: -2, t: -3, dir: -1, g: 1, n: 0, start: 10, result: 0 });
+function placeValueTimesTenState(raw) {
+  const content = raw ?? {};
+  const found = placeValueTimesTenContentProblem(content);
+  const problem = isFault(found) ? FALLBACK : found;
+  const countedIn = Number(content.counted_in);
+  const position = Number.isFinite(countedIn) ? placeValueTimesTenPosition(problem, countedIn) : 0;
+  if (position > 0)
+    return { ...placeValueTimesTenDemoState(problem, position), demo: position };
+  const bits = (value2, i) => typeof value2 === "number" && Number.isFinite(value2) ? Math.floor(Math.max(0, value2) / 2 ** i) % 2 : 0;
+  const stages = Array.from({ length: problem.n }, (_, i) => {
+    const once = bits(content.moved_once, i);
+    return Math.min(problem.g, once + (once && problem.g === 2 ? bits(content.moved_twice, i) : 0));
+  });
+  const written = (value2) => typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
+  return { problem, stages, demo: 0, rows: { moved_once: written(content.moved_once), moved_twice: written(content.moved_twice) } };
+}
+var placeValueTimesTenRowFields = (apart) => apart === 2 ? ["moved_once", "moved_twice"] : ["moved_once"];
+function placeValueTimesTenRowSets(state) {
+  const mask = (bits) => bits.reduce((sum, on, i) => sum + (on ? 2 ** i : 0), 0);
+  return { moved_once: mask(state.stages.map((k) => k >= 1)), moved_twice: mask(state.stages.map((k) => k >= 2)) };
+}
+function placeValueTimesTenChanges(before, after) {
+  const a = before.rows ?? placeValueTimesTenRowSets(before), b = placeValueTimesTenRowSets(after);
+  return placeValueTimesTenRowFields(after.problem.g).filter((field) => a[field] !== b[field]).map((field) => ({ field, before: a[field], after: b[field] }));
+}
+function placeValueTimesTenStateStartFault(state) {
+  const p = state.problem;
+  if ((state.demo ?? 0) > 0)
+    return `A practice chart starts fresh: 'counted_in' is its own start unit, ${p.start} (${countedInText(p, p.start)}), not a value the demonstration reaches`;
+  if (state.stages.some((k) => k > 0))
+    return "A practice chart starts fresh: no row moved (moved_once and moved_twice are 0)";
+  return void 0;
+}
+function placeValueTimesTenFacts(state) {
+  const p = state.problem, path = placeValueTimesTenPath(p);
+  const reached = Math.min(...state.stages, p.g);
+  const shown = p.question === "times" ? placeValueTimesTenComplete(state) ? p.target : p.start : path[reached];
+  const index = path.indexOf(shown);
+  return {
+    value: placeValueTimesTenChartValue(state),
+    counted_in: shown,
+    complete: placeValueTimesTenComplete(state),
+    next: path.slice(index + 1),
+    columns: p.columns.map((place5) => {
+      const things = placeValueTimesTenColumn(state, place5);
+      const count = (size) => things.filter((thing) => thing.size === size).length;
+      return { place: place5, disks: count(1), rows: count(10), squares: count(100) };
+    }),
+    ...p.question === "times" ? { copies: placeValueTimesTenBrokenCount(state) } : {}
+  };
+}
+var ZH_UNIT = { 6: "\u767E\u4E07", 5: "\u5341\u4E07", 4: "\u4E07", 3: "\u5343", 2: "\u767E", 1: "\u5341", 0: "\u4E00", [-1]: "\u5341\u5206\u4E4B\u4E00", [-2]: "\u767E\u5206\u4E4B\u4E00", [-3]: "\u5343\u5206\u4E4B\u4E00" };
+function placeValueTimesTenCountOf(n, place5, language = "en-US") {
+  return short2(language) === "zh" ? `${n}\u4E2A${ZH_UNIT[place5]}` : `${n.toLocaleString("en-US")} ${placeValueEnUnitWord(place5, n !== 1)}`;
+}
+var one = (place5) => placeValueEnUnitWord(place5, false);
+var an = (place5) => `${/^[aeiou]/u.test(one(place5)) && place5 !== 0 ? "an" : "a"} ${one(place5)}`;
+var plural = (place5) => placeValueEnUnitWord(place5, true);
+var aNumber = (written) => `${/^(8|11|18)(\D|$)|^8\d/u.test(written) ? "an" : "a"} ${written}`;
+var PLACE_VALUE_TIMES_TEN_WORDS = {
+  "en-US": {
+    chartLabel: "Counting an amount in another unit on a place-value chart",
+    point: "Decimal point",
+    howto: {
+      count: "Tap a disk to break it into ten of the column on its right, or a row of ten to put them together into one of the column on its left.",
+      times: "Tap a disk of the larger number to break it into ten: one goes into each copy of the smaller number."
+    },
+    step: {
+      breakDisk: (from, to) => `Tap ${an(from)} to break it into ten ${plural(to)}.`,
+      breakRow: (from, to) => `Tap a row of ten ${plural(from)} to break it into a hundred ${plural(to)}.`,
+      joinRow: (from, to) => `Tap a row of ten ${plural(from)} to put them together into one ${one(to)}.`,
+      joinSquare: (from, to) => `Tap a square of a hundred ${plural(from)} to put it together into ten ${plural(to)}.`,
+      deal: (from, to, B) => `Tap ${an(from)} to break it into ten ${plural(to)}, one into each ${B}.`,
+      doneCount: "Type how many below.",
+      doneTimes: "Type the answers below."
+    },
+    locked: { count: (t) => `Opens when everything is in ${plural(t)}.`, times: (B) => `Opens when every row is ${aNumber(B)}.` },
+    refusal: {
+      at_target: (t) => `These are ${plural(t)} already.`,
+      copy_short: (have, d, t, B) => `This ${B} has ${placeValueTimesTenCountOf(have, t, "en-US")}; ${B} is ${placeValueTimesTenCountOf(d, t, "en-US")}.`,
+      copy_full: (B) => `This row is one ${B}.`,
+      smaller: (B, d, t) => `This is ${B}: ${placeValueTimesTenCountOf(d, t, "en-US")}.`,
+      demonstrating: "This chart shows the demonstration."
+    },
+    other: "That can't be done here.",
+    demo: {
+      breakDisk: (from, to) => `Break each ${one(from)} into ten ${plural(to)}.`,
+      breakRow: (from, to) => `Break every ${one(from)} into ten ${plural(to)}.`,
+      joinRow: (from, to) => `Put each ten ${plural(from)} together into one ${one(to)}.`,
+      joinSquare: (from, to) => `Put every ten ${plural(from)} together into one ${one(to)}.`,
+      deal: (from, to, B) => `Break each ${one(from)} into ten ${plural(to)}, one into each ${B}.`
+    }
+  },
+  "zh-CN": {
+    chartLabel: "\u5728\u6570\u4F4D\u8868\u4E0A\u6362\u4E00\u4E2A\u5355\u4F4D\u6765\u6570",
+    point: "\u5C0F\u6570\u70B9",
+    howto: {
+      count: "\u70B9\u4E00\u4E2A\u5706\u7247\uFF0C\u628A\u5B83\u62C6\u6210\u53F3\u8FB9\u4E00\u4F4D\u7684\u5341\u4E2A\uFF1B\u6216\u70B9\u4E00\u6392\u5341\u4E2A\uFF0C\u628A\u5B83\u4EEC\u5408\u6210\u5DE6\u8FB9\u4E00\u4F4D\u7684\u4E00\u4E2A\u3002",
+      times: "\u70B9\u5927\u7684\u6570\u7684\u4E00\u4E2A\u5706\u7247\uFF0C\u628A\u5B83\u62C6\u6210\u5341\u4E2A\uFF1A\u6BCF\u4E00\u4E2A\u5C0F\u7684\u6570\u91CC\u653E\u4E00\u4E2A\u3002"
+    },
+    step: {
+      breakDisk: (from, to) => `\u70B9\u4E00\u4E2A${ZH_UNIT[from]}\uFF0C\u628A\u5B83\u62C6\u6210\u5341\u4E2A${ZH_UNIT[to]}\u3002`,
+      breakRow: (from, to) => `\u70B9\u4E00\u6392\u5341\u4E2A${ZH_UNIT[from]}\uFF0C\u628A\u5B83\u62C6\u6210\u4E00\u767E\u4E2A${ZH_UNIT[to]}\u3002`,
+      joinRow: (from, to) => `\u70B9\u4E00\u6392\u5341\u4E2A${ZH_UNIT[from]}\uFF0C\u628A\u5B83\u4EEC\u5408\u6210\u4E00\u4E2A${ZH_UNIT[to]}\u3002`,
+      joinSquare: (from, to) => `\u70B9\u4E00\u5757\u4E00\u767E\u4E2A${ZH_UNIT[from]}\uFF0C\u628A\u5B83\u5408\u6210\u5341\u4E2A${ZH_UNIT[to]}\u3002`,
+      deal: (from, to, B) => `\u70B9\u4E00\u4E2A${ZH_UNIT[from]}\uFF0C\u628A\u5B83\u62C6\u6210\u5341\u4E2A${ZH_UNIT[to]}\uFF0C\u6BCF\u4E00\u4E2A ${B} \u91CC\u653E\u4E00\u4E2A\u3002`,
+      doneCount: "\u5728\u4E0B\u9762\u5199\u51FA\u6709\u591A\u5C11\u4E2A\u3002",
+      doneTimes: "\u5728\u4E0B\u9762\u5199\u51FA\u7B54\u6848\u3002"
+    },
+    locked: { count: (t) => `\u5168\u90E8\u53D8\u6210${ZH_UNIT[t]}\u540E\u624D\u80FD\u5199\u3002`, times: (B) => `\u6BCF\u4E00\u884C\u90FD\u662F ${B} \u540E\u624D\u80FD\u5199\u3002` },
+    refusal: {
+      at_target: (t) => `\u8FD9\u4E9B\u5DF2\u7ECF\u662F${ZH_UNIT[t]}\u4E86\u3002`,
+      copy_short: (have, d, t, B) => `\u8FD9\u4E00\u4E2A ${B} \u53EA\u6709 ${have} \u4E2A${ZH_UNIT[t]}\uFF1B${B} \u662F ${d} \u4E2A${ZH_UNIT[t]}\u3002`,
+      copy_full: (B) => `\u8FD9\u4E00\u884C\u662F\u4E00\u4E2A ${B}\u3002`,
+      smaller: (B, d, t) => `\u8FD9\u662F ${B}\uFF1A${d} \u4E2A${ZH_UNIT[t]}\u3002`,
+      demonstrating: "\u8FD9\u5F20\u8868\u662F\u6F14\u793A\u3002"
+    },
+    other: "\u8FD9\u91CC\u4E0D\u80FD\u8FD9\u6837\u505A\u3002",
+    demo: {
+      breakDisk: (from, to) => `\u628A\u6BCF\u4E2A${ZH_UNIT[from]}\u62C6\u6210\u5341\u4E2A${ZH_UNIT[to]}\u3002`,
+      breakRow: (from, to) => `\u628A\u6BCF\u4E2A${ZH_UNIT[from]}\u90FD\u62C6\u6210\u5341\u4E2A${ZH_UNIT[to]}\u3002`,
+      joinRow: (from, to) => `\u6BCF\u5341\u4E2A${ZH_UNIT[from]}\u5408\u6210\u4E00\u4E2A${ZH_UNIT[to]}\u3002`,
+      joinSquare: (from, to) => `\u6BCF\u5341\u4E2A${ZH_UNIT[from]}\u5408\u6210\u4E00\u4E2A${ZH_UNIT[to]}\u3002`,
+      deal: (from, to, B) => `\u628A\u6BCF\u4E2A${ZH_UNIT[from]}\u62C6\u6210\u5341\u4E2A${ZH_UNIT[to]}\uFF0C\u6BCF\u4E00\u4E2A ${B} \u91CC\u653E\u4E00\u4E2A\u3002`
+    }
+  }
+};
+var wordsOf = (language) => PLACE_VALUE_TIMES_TEN_WORDS[language] ?? PLACE_VALUE_TIMES_TEN_WORDS["en-US"];
+function placeValueTimesTenHowTo(raw) {
+  const words = wordsOf(placeValueTimesTenLanguage(raw));
+  return raw?.question === "times" ? words.howto.times : words.howto.count;
+}
+function placeValueTimesTenAnswerParts(p, language = "en-US") {
+  const en = short2(language) === "en";
+  if (p.question === "count") {
+    const c = p.amount / unit2(p.s);
+    return [{ text: `${placeValueTimesTenCountOf(c, p.s, language)} =` }, { blank: { as: "count", answer: p.result } }, { text: en ? plural(p.t) : `\u4E2A${ZH_UNIT[p.t]}` }];
+  }
+  const A = placeValueNumeral(p.amount, language), B = placeValueNumeral(p.target, language);
+  return en ? [{ text: `${placeValueTimesTenCountOf(p.digit, p.s)} =` }, { blank: { as: "renamed", answer: p.renamed } }, { text: `${plural(p.t)};` }, { text: `${A} is` }, { blank: { as: "times", answer: 10 } }, { text: `times ${B}` }] : [{ text: `${placeValueTimesTenCountOf(p.digit, p.s, language)} =` }, { blank: { as: "renamed", answer: p.renamed } }, { text: `\u4E2A${ZH_UNIT[p.t]}\uFF1B` }, { text: `${A} \u662F ${B} \u7684` }, { blank: { as: "times", answer: 10 } }, { text: "\u500D" }];
+}
+function placeValueTimesTenDoneText(p, language = "en-US") {
+  const en = short2(language) === "en";
+  if (p.question === "count") {
+    const c = p.amount / unit2(p.s);
+    return `\u2713 ${placeValueTimesTenCountOf(c, p.s, language)} = ${placeValueTimesTenCountOf(p.result, p.t, language)}`;
+  }
+  const A = placeValueNumeral(p.amount, language), B = placeValueNumeral(p.target, language), d = p.digit;
+  return en ? `\u2713 ${A} = 10 \xD7 ${B}. The ${d} in ${A} is worth ten times the ${d} in ${B}; ${B} is 1/10 of ${A}.` : `\u2713 ${A} = 10 \xD7 ${B}\u3002${A} \u91CC\u7684 ${d} \u662F ${B} \u91CC\u7684 ${d} \u7684 10 \u500D\uFF1B${B} \u662F ${A} \u7684\u5341\u5206\u4E4B\u4E00\u3002`;
+}
+function placeValueTimesTenRefusalText(state, tap, language = "en-US") {
+  const words = wordsOf(language), r = words.refusal, p = state.problem;
+  const result = applyPlaceValueTimesTenTap(state, tap);
+  if (result.ok)
+    return "";
+  const B = placeValueNumeral(p.target, language);
+  switch (result.reason) {
+    case "at_target":
+      return r.at_target(p.t);
+    case "copy_short":
+      return r.copy_short(result.have, result.need, p.t, B);
+    case "copy_full":
+      return r.copy_full(B);
+    case "smaller":
+      return r.smaller(B, p.digit, p.t);
+    case "demonstrating":
+      return r.demonstrating;
+    default:
+      return words.other;
+  }
+}
+function placeValueTimesTenStepSentences(p, language = "en-US") {
+  const dm = wordsOf(language).demo, B = placeValueNumeral(p.target, language);
+  return Array.from({ length: p.g }, (_, k) => {
+    const from = placeAt(p, k), to = placeAt(p, k + 1), size = sizeAt(p, k);
+    if (p.question === "times")
+      return dm.deal(from, to, B);
+    if (p.dir < 0)
+      return size === 1 ? dm.breakDisk(from, to) : dm.breakRow(from, to);
+    return size === 10 ? dm.joinRow(from, to) : dm.joinSquare(from, to);
+  });
+}
+var PLACE_VALUE_TIMES_TEN_GEOMETRY = { D: 30, G: 3, RP: 4, CP: 12, RH: 42, SQ: 106, SG: 8, NARROW: 150, POINT: 14, GAP: 8, EDGE: 12, HEAD: 34, LABEL: 22 };
+var GEO = PLACE_VALUE_TIMES_TEN_GEOMETRY;
+var placeValueTimesTenRowWidth = (k) => k * (GEO.D + GEO.G) - GEO.G + 2 * GEO.RP;
+var ROW_W = placeValueTimesTenRowWidth(10);
+var WIDE = ROW_W + 2 * GEO.CP;
+
 // node_modules/octos-lesson-language/dist/packages/core/src/cards.js
 function wholeForwardDemonstration(spec) {
   return Object.freeze({
@@ -10994,11 +11547,151 @@ var MAKE_TEN_CARD = Object.freeze({
     }
   })
 });
+var TIMES_TEN_TAP_OF_REASON = Object.freeze({
+  no_thing: "move",
+  at_target: "move",
+  demonstrating: "move",
+  copy_short: "copy",
+  copy_full: "copy",
+  not_times: "copy",
+  smaller: "smaller"
+});
+var timesTenContentAt = (content, value2) => {
+  const at2 = structuredClone(content);
+  delete at2.bindings;
+  for (const field of [...PLACE_VALUE_TIMES_TEN_CARD_BINDINGS, ...PLACE_VALUE_TIMES_TEN_ROW_FIELDS]) {
+    const v = value2(field);
+    if (v !== void 0 && (field !== "moved_twice" || at2.apart === 2))
+      at2[field] = v;
+  }
+  return at2;
+};
+var timesTenProblem = (content) => {
+  const problem = placeValueTimesTenContentProblem(content);
+  return "fault" in problem ? void 0 : problem;
+};
+var TIMES_TEN_NO_PROBLEM = "is a place_value_times_ten card's demonstration, but the card's numbers are not a problem it takes";
+var PLACE_VALUE_TIMES_TEN_DEMONSTRATION = Object.freeze({
+  field: PLACE_VALUE_TIMES_TEN_DEMONSTRATION_FIELD,
+  tapState: "a set of the rows the learner moved",
+  shows: "(counted in: the unit the amount is counted in now, from the unit the question names to the target, in thousandths), and the program plays each row's move",
+  fresh: "chart",
+  opensAtStart: true,
+  start(content) {
+    const problem = timesTenProblem(content);
+    return problem ? problem.start : Number(content?.counted_in);
+  },
+  refuseStep(content, from, to) {
+    const problem = timesTenProblem(content);
+    return problem ? placeValueTimesTenCountedInFault(problem, from, to) : TIMES_TEN_NO_PROBLEM;
+  },
+  refuseReplay(content, value2) {
+    const problem = timesTenProblem(content);
+    return problem ? placeValueTimesTenCountedInReplayFault(problem, value2) : TIMES_TEN_NO_PROBLEM;
+  },
+  outside(content, value2) {
+    const problem = timesTenProblem(content);
+    return problem ? `${placeValueTimesTenCountedInMeaning(problem)}; ${value2} is outside its variable's range` : TIMES_TEN_NO_PROBLEM;
+  }
+});
+var PLACE_VALUE_TIMES_TEN_CARD = Object.freeze({
+  kind: PLACE_VALUE_TIMES_TEN_KIND,
+  taps: PLACE_VALUE_TIMES_TEN_TAPS,
+  places: PLACE_VALUE_TIMES_TEN_TAP_PLACES,
+  cardFields: PLACE_VALUE_TIMES_TEN_CARD_BINDINGS,
+  practiceFields: PLACE_VALUE_TIMES_TEN_PROBLEM_FIELDS,
+  demonstration: PLACE_VALUE_TIMES_TEN_DEMONSTRATION,
+  fieldsAtOnce: true,
+  validateContent: (raw, path, fail4, options) => {
+    validatePlaceValueTimesTenContent(raw, path, fail4);
+    const rows = raw;
+    if (options?.start && (rows.moved_once || rows.moved_twice))
+      fail4(`${path}/${rows.moved_once ? "moved_once" : "moved_twice"}`, "A card opens fresh: no row moved (moved_once and moved_twice are 0)");
+  },
+  state: placeValueTimesTenState,
+  apply: (state, tap) => {
+    const result = applyPlaceValueTimesTenTap(state, { tap: tap.kind, row: tap.place });
+    return result.ok ? { ok: true, state: result.state } : { ok: false, reason: result.reason };
+  },
+  refusalText(reason, place5, language, state) {
+    const lang = language === "zh-CN" ? "zh-CN" : "en-US";
+    const tap = TIMES_TEN_TAP_OF_REASON[reason];
+    if (state && tap) {
+      const text5 = placeValueTimesTenRefusalText(state, { tap, row: place5 }, lang);
+      if (text5)
+        return text5;
+    }
+    const words = PLACE_VALUE_TIMES_TEN_WORDS[lang];
+    return reason === "demonstrating" ? words.refusal.demonstrating : words.other;
+  },
+  language: placeValueTimesTenLanguage,
+  // A row set is a card-level field: its change is named by the field, at the card's first place.
+  changes: (before, after) => placeValueTimesTenChanges(before, after).map(({ field, before: from, after: to }) => ({ place: 0, field, before: from, after: to })),
+  tapFields(content) {
+    const apart = content?.apart === 2 ? 2 : 1;
+    return placeValueTimesTenRowFields(apart).map((field) => ({ place: 0, field, min: 0, max: PLACE_VALUE_TIMES_TEN_MAX_ROWS }));
+  },
+  fieldTarget: (_content, _place, field) => field,
+  contentAt: timesTenContentAt,
+  /** A practice chart starts fresh: counted in at its own start unit, no row moved. */
+  validateStart(state, fail4) {
+    const fault = placeValueTimesTenStateStartFault(state);
+    if (fault)
+      fail4(fault);
+  },
+  answers(state, language) {
+    const p = state.problem;
+    if (!p.n)
+      return void 0;
+    const lang = language === "zh-CN" ? "zh-CN" : "en-US";
+    const values = placeValueTimesTenAnswerParts(p, lang).flatMap((part) => "blank" in part ? [part.blank.answer] : []);
+    return { values, text: placeValueTimesTenDoneText(p, lang).replace(/^✓ /u, "") };
+  },
+  facts: Object.freeze({
+    /**
+     * Every row has reached the target: the chart holds the amount in the target unit (a times pair: ten whole
+     * copies). Judged on each tap, so the task ends on the tap that completes the chart; the typed answer is a
+     * task of its own after it.
+     */
+    complete: {
+      keys: [],
+      judgedOnTap: true,
+      read: (_completion, state) => {
+        const actual = placeValueTimesTenComplete(state) ? 1 : 0;
+        return { actual, target: 1, succeeded: actual === 1 };
+      },
+      /**
+       * The one finished chart of the task's own problem (every tap order ends on it), computed, never read from a
+       * logged pile: the task's numbers, "counted in" at the task's own start unit, every row moved.
+       */
+      donePile({ content, startValue }) {
+        const bound = boundTargets(content);
+        const number = (field) => bound.has(field) ? startValue(bound.get(field)) : Number(content[field]);
+        const own = { ...content, amount: number("amount"), target: number("target") };
+        const problem = placeValueTimesTenContentProblem(own);
+        if ("fault" in problem)
+          return void 0;
+        const rows = 2 ** problem.n - 1;
+        const result = {};
+        for (const [target, alias] of bound) {
+          if (target === "amount" || target === "target")
+            result[alias] = number(target);
+          else if (target === "counted_in")
+            result[alias] = problem.start;
+          else if (target === "moved_once" || target === "moved_twice")
+            result[alias] = rows;
+        }
+        return result;
+      }
+    }
+  })
+});
 var TAP_CARD_KINDS = Object.freeze({
   [BASE_TEN_TRADE_KIND]: BASE_TEN_TRADE_CARD,
   [PLACE_VALUE_CHART_KIND]: PLACE_VALUE_CHART_CARD,
   [PLACE_VALUE_TRADE_KIND]: PLACE_VALUE_TRADE_CARD,
-  [MAKE_TEN_KIND]: MAKE_TEN_CARD
+  [MAKE_TEN_KIND]: MAKE_TEN_CARD,
+  [PLACE_VALUE_TIMES_TEN_KIND]: PLACE_VALUE_TIMES_TEN_CARD
 });
 function tapCardKind(kind) {
   return typeof kind === "string" && Object.hasOwn(TAP_CARD_KINDS, kind) ? TAP_CARD_KINDS[kind] : void 0;
@@ -11065,7 +11758,8 @@ var OLL_BINDING_CAPABILITIES = {
 var OLL_CARD_BINDING_CAPABILITIES = Object.freeze({
   place_value_chart: PLACE_VALUE_CHART_CARD_BINDINGS,
   place_value_trade: PLACE_VALUE_TRADE_CARD_BINDINGS,
-  make_ten: MAKE_TEN_CARD_BINDINGS
+  make_ten: MAKE_TEN_CARD_BINDINGS,
+  place_value_times_ten: [...PLACE_VALUE_TIMES_TEN_CARD_BINDINGS, ...PLACE_VALUE_TIMES_TEN_ROW_FIELDS]
 });
 function cardBindingCapabilitiesForNodeKind(kind) {
   return Object.hasOwn(OLL_CARD_BINDING_CAPABILITIES, kind) ? OLL_CARD_BINDING_CAPABILITIES[kind] : [];
@@ -11151,8 +11845,9 @@ var MATH_PLUGIN_MANIFEST = {
   // (0023 amendment 3). 0.7.0: a slider on a place's count, each stop one trade (0023 amendment 4).
   // 0.8.0: the place-value chart, the `place_value_chart` card (decision 0025). 0.9.0: adding and subtracting
   // on the chart as the written method, the `place_value_trade` card (decision 0026). 0.10.0: making ten to add
-  // on two ten frames, the `make_ten` card (decision 0027).
-  version: "0.10.0",
+  // on two ten frames, the `make_ten` card (decision 0027). 0.11.0: an amount counted in another unit, the
+  // `place_value_times_ten` card (decision 0028).
+  version: "0.11.0",
   // Every subject plugin depends on the shared tools (decision 0012).
   depends: { shared: "0.1.0" },
   ollCore: ">=0.10.0"
@@ -11199,6 +11894,9 @@ var OLL_EXECUTION_FEATURES = Object.freeze({
   // Decision 0027: the player draws and plays the make-ten card (its demonstration by the count in the bigger
   // frame, its taps, its task ending on the tap that makes the ten); a lesson that only demonstrates it needs it too.
   "card:make_ten": "0.18.0",
+  // Decision 0028: the player draws and plays the place-value times-ten card (its demonstration by "counted in",
+  // its row taps); a lesson that only demonstrates it needs that player too.
+  "card:place_value_times_ten": "0.19.0",
   // Decision 0025: a card-level field bound by its bare name (the chart's number); an older player cannot place it.
   "value-bindings:card-field": "0.16.0",
   // Decision 0023 amendment 1: a row of blanks answered in one go; an older player has no such question.
@@ -11239,7 +11937,7 @@ var looksLikeNumberLine = (content) => typeof content.range === "object" && cont
 var FIRST_PARTY_EXTENSIONS = Object.freeze([
   {
     plugin: { id: MATH_PLUGIN_MANIFEST.id, version: MATH_PLUGIN_MANIFEST.version },
-    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION, [FRACTION_MODEL_FEATURE]: FRACTION_MODEL_PLUGIN_VERSION, [BASE_TEN_TRADE_FEATURE]: BASE_TEN_TRADE_PLUGIN_VERSION, [BASE_TEN_TRADE_LANGUAGE_FEATURE]: BASE_TEN_TRADE_LANGUAGE_VERSION, [BASE_TEN_TRADE_SLIDER_FEATURE]: BASE_TEN_TRADE_SLIDER_VERSION, [PLACE_VALUE_CHART_FEATURE]: PLACE_VALUE_CHART_PLUGIN_VERSION, [PLACE_VALUE_TRADE_FEATURE]: PLACE_VALUE_TRADE_PLUGIN_VERSION, [MAKE_TEN_FEATURE]: MAKE_TEN_PLUGIN_VERSION },
+    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION, [FRACTION_MODEL_FEATURE]: FRACTION_MODEL_PLUGIN_VERSION, [BASE_TEN_TRADE_FEATURE]: BASE_TEN_TRADE_PLUGIN_VERSION, [BASE_TEN_TRADE_LANGUAGE_FEATURE]: BASE_TEN_TRADE_LANGUAGE_VERSION, [BASE_TEN_TRADE_SLIDER_FEATURE]: BASE_TEN_TRADE_SLIDER_VERSION, [PLACE_VALUE_CHART_FEATURE]: PLACE_VALUE_CHART_PLUGIN_VERSION, [PLACE_VALUE_TRADE_FEATURE]: PLACE_VALUE_TRADE_PLUGIN_VERSION, [MAKE_TEN_FEATURE]: MAKE_TEN_PLUGIN_VERSION, [PLACE_VALUE_TIMES_TEN_FEATURE]: PLACE_VALUE_TIMES_TEN_PLUGIN_VERSION },
     detect(content, kind, use, lesson) {
       if (kind === NUMBER_LINE_KIND || kind === void 0 && looksLikeNumberLine(content)) {
         use(NUMBER_LINE_FEATURE);
@@ -11261,11 +11959,13 @@ var FIRST_PARTY_EXTENSIONS = Object.freeze([
         use(PLACE_VALUE_TRADE_FEATURE);
       if (kind === MAKE_TEN_KIND)
         use(MAKE_TEN_FEATURE);
+      if (kind === PLACE_VALUE_TIMES_TEN_KIND)
+        use(PLACE_VALUE_TIMES_TEN_FEATURE);
     }
   }
 ]);
 var FIRST_PARTY_FEATURES = Object.freeze(Object.assign({}, ...FIRST_PARTY_EXTENSIONS.map((extension) => extension.features)));
-var PLUGIN_NODE_FEATURES = Object.freeze({ [NUMBER_LINE_KIND]: NUMBER_LINE_FEATURE, [FRACTION_MODEL_KIND]: FRACTION_MODEL_FEATURE, [BASE_TEN_TRADE_KIND]: BASE_TEN_TRADE_FEATURE, [PLACE_VALUE_CHART_KIND]: PLACE_VALUE_CHART_FEATURE, [PLACE_VALUE_TRADE_KIND]: PLACE_VALUE_TRADE_FEATURE, [MAKE_TEN_KIND]: MAKE_TEN_FEATURE });
+var PLUGIN_NODE_FEATURES = Object.freeze({ [NUMBER_LINE_KIND]: NUMBER_LINE_FEATURE, [FRACTION_MODEL_KIND]: FRACTION_MODEL_FEATURE, [BASE_TEN_TRADE_KIND]: BASE_TEN_TRADE_FEATURE, [PLACE_VALUE_CHART_KIND]: PLACE_VALUE_CHART_FEATURE, [PLACE_VALUE_TRADE_KIND]: PLACE_VALUE_TRADE_FEATURE, [MAKE_TEN_KIND]: MAKE_TEN_FEATURE, [PLACE_VALUE_TIMES_TEN_KIND]: PLACE_VALUE_TIMES_TEN_FEATURE });
 
 // node_modules/octos-lesson-language/dist/packages/core/src/opening.js
 function applyLessonOpeningPolicy(source, policy = { kind: "preserve" }) {
@@ -11681,6 +12381,25 @@ function validateCardStudentTask(task, path, registry, cards, declarations, star
   fact.validate?.(completion, kind.state(cardContentAt(kind, content, variables, { ...initial, ...startValues })), (field, message) => fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/${field}`, message));
   validateTaskFeedback(task, path);
 }
+function requireCardAnswers(task, previous, path) {
+  if (!previous || task.anchor !== previous.node)
+    return;
+  const own = previous.kind.answers?.(previous.state, previous.language);
+  if (!own)
+    return;
+  const read = (answer) => typeof answer === "string" ? parseNumericAnswer(answer)?.value : void 0;
+  if (task.completion.kind === "numeric_answer") {
+    const value2 = read(task.completion.answer);
+    if (value2 === void 0 || !own.values.includes(value2)) {
+      fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/answer`, `The answer after this card's task is the card's own (${own.text}): ${own.values.join(" or ")}`);
+    }
+    return;
+  }
+  const blanks = (task.completion.parts ?? []).flatMap((part) => "blank" in part && part.blank ? [read(part.blank.answer)] : []);
+  if (blanks.length !== own.values.length || blanks.some((value2, i) => value2 !== own.values[i])) {
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/parts`, `The row after this card's task asks the card's own answers (${own.text}): ${own.values.length} blank${own.values.length === 1 ? "" : "s"}, ${own.values.join(" and ")}`);
+  }
+}
 function validateRowStudentTask(task, path, registry) {
   resolveLocal(registry, task.anchor, `${path}/anchor`, ["node"]);
   requireArray(task.allowed_operations, `${path}/allowed_operations`);
@@ -11854,6 +12573,7 @@ function cardSliderTask(task, path, allowedVariables, cardSliders, contents, dec
 function validateStudentTasks(document2, variables, availableControls, scene3dCameras, registry, numberLineGrids = /* @__PURE__ */ new Map(), tapCards = /* @__PURE__ */ new Map(), cardSliders = /* @__PURE__ */ new Map()) {
   const matContents = matCardContents(tapCards);
   const taskAliases = /* @__PURE__ */ new Set();
+  let lastCardTask;
   for (const [index, task] of (document2.lesson.tasks ?? []).entries()) {
     const path = `/lesson/tasks/${index}`;
     requireObject(task, path);
@@ -11877,16 +12597,27 @@ function validateStudentTasks(document2, variables, availableControls, scene3dCa
       validateScene3dStudentTask(task, path, scene3dCameras);
       continue;
     }
+    const previousCardTask = lastCardTask;
+    lastCardTask = void 0;
     if (task.completion.kind === "numeric_answer") {
       validateAnswerStudentTask(task, path, registry);
+      requireCardAnswers(task, previousCardTask, path);
       continue;
     }
     if (task.completion.kind === "numeric_row") {
       validateRowStudentTask(task, path, registry);
+      requireCardAnswers(task, previousCardTask, path);
       continue;
     }
     if (task.completion.kind === "card_fact") {
       validateCardStudentTask(task, path, registry, tapCards, document2.lesson.variables ?? [], startValues, availableControls, cardSliders);
+      const card2 = tapCards.get(task.completion.node);
+      if (card2?.kind.answers) {
+        const variables2 = cardTapVariables(card2.kind, card2.content, document2.lesson.variables ?? [], `${path}/completion/node`);
+        const initial = Object.fromEntries((document2.lesson.variables ?? []).map((variable) => [variable.as, variable.initial]));
+        const practice = cardContentAt(card2.kind, card2.content, variables2, { ...initial, ...startValues });
+        lastCardTask = { node: task.completion.node, kind: card2.kind, state: card2.kind.state(practice), language: card2.kind.language(card2.content) };
+      }
       continue;
     }
     const expressionTask = task;
@@ -12190,6 +12921,11 @@ function checkMakeTenBoundValues(content, path, declarations) {
   checkPluginBoundValues(content, path, declarations, MAKE_TEN_PART_FIELDS, validate);
   checkEachBoundVariable(content, path, declarations, MAKE_TEN_PART_FIELDS, validate);
 }
+function checkPlaceValueTimesTenBoundValues(content, path, declarations) {
+  const validate = (evaluated, failAt) => validatePlaceValueTimesTenContent(evaluated, path, failAt, { boundValues: true });
+  checkPluginBoundValues(content, path, declarations, [], validate);
+  checkEachBoundVariable(content, path, declarations, [], validate);
+}
 function checkEachBoundVariable(content, path, declarations, fields, validate) {
   const bindings = Array.isArray(content.bindings) ? content.bindings : [];
   const known = new Set(declarations.map((declaration) => declaration.as));
@@ -12215,14 +12951,15 @@ function checkEachBoundVariable(content, path, declarations, fields, validate) {
     }
   }
 }
-function checkDemonstrationAnimate(cards, variable, value2, before, path) {
+function checkDemonstrationAnimate(cards, variable, value2, before, path, played = {}) {
   for (const { kind, content } of cards.values()) {
     if (!kind.demonstration)
       continue;
     const bound = bareBindings(content);
     if (bound.get(kind.demonstration.field) === variable) {
-      const from = before ?? kind.demonstration.start(content);
-      const refusal = kind.demonstration.refuseStep(content, from, value2);
+      const shown = cardContentAt(kind, content, bound, played);
+      const from = before ?? kind.demonstration.start(shown);
+      const refusal = kind.demonstration.refuseStep(shown, from, value2);
       if (refusal !== void 0)
         fail("OLL_INVALID_VARIABLE", `${path}/value`, `'${variable}' ${refusal}`);
     }
@@ -12270,7 +13007,11 @@ function checkDemonstrationReplay(cards, values, played, path) {
       continue;
     const bound = bareBindings(content);
     const field = bound.get(kind.demonstration.field);
-    const refusal = field !== void 0 && Object.hasOwn(values, field) ? kind.demonstration.refuseReplay(content, values[field]) : void 0;
+    const at2 = kind.contentAt(content, (target) => {
+      const alias = bound.get(target);
+      return alias === void 0 ? void 0 : { ...played, ...values }[alias];
+    });
+    const refusal = field !== void 0 && Object.hasOwn(values, field) ? kind.demonstration.refuseReplay(at2, values[field]) : void 0;
     if (refusal !== void 0)
       fail("OLL_INVALID_PHASE_START", `${path}/values/${field}`, `'${field}' ${refusal}`);
     let touched = field !== void 0 && Object.hasOwn(values, field);
@@ -12287,12 +13028,19 @@ function checkDemonstrationReplay(cards, values, played, path) {
         touched = true;
     if (!touched)
       continue;
-    const at2 = kind.contentAt(content, (target) => {
-      const alias = bound.get(target);
-      return alias === void 0 ? void 0 : { ...played, ...values }[alias];
-    });
     kind.validateContent(at2, "$", (failPath, message) => fail("OLL_INVALID_PHASE_START", path, `The replay's card is not one this card takes: ${message} (${failPath.replace(/^\$\//, "")})`));
   }
+}
+function demonstrationCardOf(cards, variable) {
+  return [...cards.values()].find(({ kind, content }) => kind.demonstration && bareBindings(content).get(kind.demonstration.field) === variable);
+}
+function checkDemonstrationRange(cards, variables, variable, value2, path, played) {
+  const declared = variables.find((candidate) => candidate.as === variable);
+  const shown = demonstrationCardOf(cards, variable);
+  if (!declared || !shown?.kind.demonstration || value2 >= declared.min && value2 <= declared.max)
+    return;
+  const at2 = cardContentAt(shown.kind, shown.content, bareBindings(shown.content), played);
+  fail("OLL_INVALID_VARIABLE", `${path}/value`, `'${variable}' ${shown.kind.demonstration.outside(at2, value2)}`);
 }
 function checkOpensFresh(action, played, path) {
   const kind = tapCardKind(action.kind);
@@ -13292,6 +14040,8 @@ function validateAuthoringLesson(document2, resourceContext = null) {
             checkPlaceValueTradeBoundValues(action.content, `${actionPath}/content`, document2.lesson.variables ?? []);
           if (action.kind === MAKE_TEN_KIND)
             checkMakeTenBoundValues(action.content, `${actionPath}/content`, document2.lesson.variables ?? []);
+          if (action.kind === PLACE_VALUE_TIMES_TEN_KIND)
+            checkPlaceValueTimesTenBoundValues(action.content, `${actionPath}/content`, document2.lesson.variables ?? []);
           if (tapCard?.validateStart && Array.isArray(action.content.bindings)) {
             const initials = Object.fromEntries((document2.lesson.variables ?? []).map((variable) => [variable.as, variable.initial]));
             tapCard.validateContent(cardContentAt(tapCard, action.content, bareBindings(action.content), initials), `${actionPath}/content`, (failPath, message) => fail("OLL_INVALID_OPERATION_PAYLOAD", failPath, `As its variables start it: ${message}`), { start: true });
@@ -13320,11 +14070,7 @@ function validateAuthoringLesson(document2, resourceContext = null) {
           const variable = document2.lesson.variables?.find((candidate) => candidate.as === action.variable);
           if (!variable)
             fail("OLL_REFERENCE_NOT_FOUND", `${actionPath}/variable`, `Variable '${action.variable}' is not declared`);
-          if (action.value < variable.min || action.value > variable.max) {
-            const shown = [...shownCards.values()].find(({ kind, content }) => kind.demonstration && bareBindings(content).get(kind.demonstration.field) === action.variable);
-            if (shown?.kind.demonstration) {
-              fail("OLL_INVALID_VARIABLE", `${actionPath}/value`, `'${action.variable}' ${shown.kind.demonstration.outside(shown.content, action.value)}`);
-            }
+          if ((action.value < variable.min || action.value > variable.max) && !demonstrationCardOf(shownCards, action.variable)) {
             fail("OLL_INVALID_VARIABLE", `${actionPath}/value`, `Animation target for '${action.variable}' is outside its range`);
           }
           return;
@@ -13435,7 +14181,8 @@ function validateAuthoringLesson(document2, resourceContext = null) {
           if (action.do === "write")
             checkOpensFresh(action, playedValues, `${beatPath}/actions/${actionIndex}`);
           if (action.do === "animate") {
-            checkDemonstrationAnimate(shownCards, action.variable, action.value, playedValues[action.variable], `${beatPath}/actions/${actionIndex}`);
+            checkDemonstrationRange(shownCards, document2.lesson.variables ?? [], action.variable, action.value, `${beatPath}/actions/${actionIndex}`, playedValues);
+            checkDemonstrationAnimate(shownCards, action.variable, action.value, playedValues[action.variable], `${beatPath}/actions/${actionIndex}`, playedValues);
             playedValues[action.variable] = action.value;
           }
           if (action.do !== "tap")
@@ -13468,6 +14215,15 @@ function validateAuthoringLesson(document2, resourceContext = null) {
         continue;
       if ((document2.lesson.variables ?? []).find((declaration) => declaration.as === variable)?.control || availableStudentControls.get(variable)?.size) {
         fail("OLL_INVALID_VARIABLE", "/lesson/variables", `Variable '${variable}' is changed only by tapping the card; it cannot have its own control`);
+      }
+    }
+  }
+  for (const [alias, card] of tapCards) {
+    for (const [field, variable] of bareBindings(card.content)) {
+      if (cardSliders.get(variable)?.card === alias)
+        continue;
+      if ((document2.lesson.variables ?? []).find((declaration) => declaration.as === variable)?.control || availableStudentControls.get(variable)?.size) {
+        fail("OLL_INVALID_VARIABLE", "/lesson/variables", `Variable '${variable}' is bound to a ${card.kind.kind} card's '${field}': the card changes it, so it cannot have its own control`);
       }
     }
   }
@@ -13903,10 +14659,10 @@ function bindingTarget(content, target) {
   const fragmentId = target.slice(0, separator);
   const property = target.slice(separator + 1);
   for (const [field, properties] of Object.entries(OLL_CANONICAL_BINDING_CAPABILITIES)) {
-    const record8 = (Array.isArray(content[field]) ? content[field] : []).find((item) => item.id === fragmentId);
-    if (record8 && properties.includes(property))
-      return { record: record8, property };
-    if (record8)
+    const record9 = (Array.isArray(content[field]) ? content[field] : []).find((item) => item.id === fragmentId);
+    if (record9 && properties.includes(property))
+      return { record: record9, property };
+    if (record9)
       fail("OLL_INVALID_BINDING", "content.bindings.target", `Property '${property}' cannot be bound on '${field}'`);
   }
   fail("OLL_REFERENCE_NOT_FOUND", "content.bindings.target", `Canonical binding target '${target}' was not found`);
@@ -13925,7 +14681,7 @@ function evaluateContentBindings(content, variables) {
       delete bindingTarget(evaluated, binding.target).record.binding_undefined;
   }
   for (const binding of Array.isArray(evaluated.bindings) ? evaluated.bindings : []) {
-    const { record: record8, property } = bindingTarget(evaluated, binding.target);
+    const { record: record9, property } = bindingTarget(evaluated, binding.target);
     if (binding.hide_when_undefined === true) {
       let value2;
       try {
@@ -13934,22 +14690,22 @@ function evaluateContentBindings(content, variables) {
         value2 = void 0;
       }
       if (value2 === void 0 || !Number.isFinite(value2)) {
-        record8.binding_undefined = true;
+        record9.binding_undefined = true;
         continue;
       }
     }
     try {
-      record8[property] = evaluateMathExpression(binding.expression, variables);
-      if (property === "radius" && (record8[property] < 0 || record8[property] === 0 && binding.allow_zero !== true)) {
+      record9[property] = evaluateMathExpression(binding.expression, variables);
+      if (property === "radius" && (record9[property] < 0 || record9[property] === 0 && binding.allow_zero !== true)) {
         throw new Error("Bound radius must be positive unless explicitly allowed to degenerate to zero");
       }
       if (property === "unfold")
-        record8[property] = Math.min(1, Math.max(0, record8[property]));
-      if (property === "sides" && (record8[property] < 3 || record8[property] > 384)) {
+        record9[property] = Math.min(1, Math.max(0, record9[property]));
+      if (property === "sides" && (record9[property] < 3 || record9[property] > 384)) {
         throw new Error("Bound polygon sides must be in 3..384");
       }
       if (binding.label)
-        record8.label = formatBoundNumericLabel(record8[property], binding.label);
+        record9.label = formatBoundNumericLabel(record9[property], binding.label);
     } catch (error) {
       const message = error instanceof Error ? error.message : "binding evaluation failed";
       fail("OLL_BINDING_EVALUATION_FAILED", "content.bindings.expression", message);
@@ -14164,7 +14920,7 @@ var scale = (a, k) => ({ x: a.x * k, y: a.y * k, z: a.z * k });
 var dot = (a, b) => a.x * b.x + a.y * b.y + a.z * b.z;
 var cross = (a, b) => ({ x: a.y * b.z - a.z * b.y, y: a.z * b.x - a.x * b.z, z: a.x * b.y - a.y * b.x });
 var length = (a) => Math.hypot(a.x, a.y, a.z);
-var unit2 = (a) => {
+var unit3 = (a) => {
   const l = length(a) || 1;
   return scale(a, 1 / l);
 };
@@ -14190,7 +14946,7 @@ function flatFace(points, centre) {
     const next = points[(index + 1) % points.length];
     normal = add(normal, { x: (point.y - next.y) * (point.z + next.z), y: (point.z - next.z) * (point.x + next.x), z: (point.x - next.x) * (point.y + next.y) });
   });
-  normal = unit2(normal);
+  normal = unit3(normal);
   if (dot(normal, sub(average(points), centre)) < 0)
     normal = scale(normal, -1);
   return { points, normal, part: "face" };
@@ -14240,7 +14996,7 @@ function roundSides(bottom, top, height, bottomRadius, topRadius) {
 function polyhedronVertices(kind) {
   const phi = (1 + Math.sqrt(5)) / 2;
   const raw = kind === "tetrahedron" ? [[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]] : kind === "octahedron" ? [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]] : [[0, 1, phi], [0, -1, phi], [0, 1, -phi], [0, -1, -phi], [1, phi, 0], [-1, phi, 0], [1, -phi, 0], [-1, -phi, 0], [phi, 0, 1], [-phi, 0, 1], [phi, 0, -1], [-phi, 0, -1]];
-  return raw.map(([x, y, z]) => unit2({ x, y, z }));
+  return raw.map(([x, y, z]) => unit3({ x, y, z }));
 }
 function triangleFaces(vertices) {
   const distances = vertices.flatMap((a, i) => vertices.slice(i + 1).map((b) => length(sub(a, b))));
@@ -14258,7 +15014,7 @@ function triangleFaces(vertices) {
 }
 function aroundCentre(points, normal) {
   const centre = average(points);
-  const u = unit2(sub(points[0], centre));
+  const u = unit3(sub(points[0], centre));
   const v = cross(normal, u);
   return [...points].sort((a, b) => Math.atan2(dot(sub(a, centre), v), dot(sub(a, centre), u)) - Math.atan2(dot(sub(b, centre), v), dot(sub(b, centre), u)));
 }
@@ -14267,7 +15023,7 @@ function polyhedronFacets(kind, c, radius) {
   if (kind === "dodecahedron") {
     const icosahedron = polyhedronVertices("icosahedron");
     const triangles = triangleFaces(icosahedron);
-    const centres = triangles.map((triangle) => unit2(average(triangle)));
+    const centres = triangles.map((triangle) => unit3(average(triangle)));
     faces = icosahedron.map((vertex) => aroundCentre(triangles.flatMap((triangle, index) => triangle.includes(vertex) ? [centres[index]] : []), vertex));
   } else
     faces = triangleFaces(polyhedronVertices(kind));
@@ -14295,14 +15051,14 @@ function prismLike(c, base, height, topScale, unfold) {
   bottom.forEach((point, index) => {
     const next = (index + 1) % bottom.length;
     const face = flatFace(topScale > 0 ? [point, bottom[next], top[next], top[index]] : [point, bottom[next], top[0]], inside);
-    const axis = unit2(sub(bottom[next], point));
+    const axis = unit3(sub(bottom[next], point));
     const outward = cross(axis, UP);
-    const toward = unit2(sub(average(face.points.slice(2)), average([point, bottom[next]])));
+    const toward = unit3(sub(average(face.points.slice(2)), average([point, bottom[next]])));
     const angle = Math.atan2(dot(toward, UP), -dot(toward, outward));
     const hinge = { at: point, axis, angle: unfold * (Math.PI - angle) };
     facets.push(hinged({ ...face, surface: `side-${index + 1}` }, [hinge]));
     if (index === front && topScale > 0) {
-      const topHinge = { at: top[index], axis: unit2(sub(top[next], top[index])), angle: unfold * angle };
+      const topHinge = { at: top[index], axis: unit3(sub(top[next], top[index])), angle: unfold * angle };
       facets.push(hinged({ ...flatFace(top, inside), surface: "top" }, [topHinge, hinge]));
     }
   });
@@ -14333,13 +15089,13 @@ function unrolledRound(c, radius, height, cone, unfold) {
   const slant = Math.hypot(radius, height);
   const apex = { x: c.x, y: c.y, z: c.z + half };
   const contact = { x: c.x, y: c.y - radius, z: c.z - half };
-  const g = unit2(sub(contact, apex));
+  const g = unit3(sub(contact, apex));
   const e1 = { x: 1, y: 0, z: 0 };
   const inward = cross(e1, g);
   const reach = radius + unfold * (slant - radius);
   const beta = Math.asin(Math.min(1, reach / slant));
   const axis = add(scale(g, Math.cos(beta)), scale(inward, Math.sin(beta)));
-  const towardG = Math.sin(beta) > 1e-9 ? unit2(sub(g, scale(axis, Math.cos(beta)))) : g;
+  const towardG = Math.sin(beta) > 1e-9 ? unit3(sub(g, scale(axis, Math.cos(beta)))) : g;
   const direction = (psi) => add(scale(axis, Math.cos(beta)), scale(add(scale(towardG, Math.cos(psi)), scale(e1, Math.sin(psi))), Math.sin(beta)));
   const tilt = { at: contact, axis: e1, angle: unfold * Math.atan2(radius, height) };
   const strips = [];
@@ -14347,7 +15103,7 @@ function unrolledRound(c, radius, height, cone, unfold) {
     const [s0, s1] = [arc(index), arc(index + 1)];
     const [p0, p1] = [s0 / reach, s1 / reach];
     const middle = direction((p0 + p1) / 2);
-    const normal = unit2(cross(sub(direction(p1), direction(p0)), middle));
+    const normal = unit3(cross(sub(direction(p1), direction(p0)), middle));
     strips.push({ points: [add(apex, scale(direction(p0), slant)), add(apex, scale(direction(p1), slant)), apex], normal: dot(normal, sub(middle, axis)) < 0 ? scale(normal, -1) : normal, part: "side", surface: "side" });
   }
   if (unfold >= 1 - 1e-9) {
@@ -14442,7 +15198,7 @@ function sphereBands(c, radii, upperHalf) {
       const [a, b] = [index, index + 1].map((step) => 2 * Math.PI * step / ROUND);
       const at2 = (lat2, lon2) => add(c, { x: radii.x * Math.cos(lat2) * Math.cos(lon2), y: radii.y * Math.cos(lat2) * Math.sin(lon2), z: radii.z * Math.sin(lat2) });
       const lat = (low + high) / 2, lon = (a + b) / 2;
-      const normal = unit2({ x: Math.cos(lat) * Math.cos(lon) / radii.x, y: Math.cos(lat) * Math.sin(lon) / radii.y, z: Math.sin(lat) / radii.z });
+      const normal = unit3({ x: Math.cos(lat) * Math.cos(lon) / radii.x, y: Math.cos(lat) * Math.sin(lon) / radii.y, z: Math.sin(lat) / radii.z });
       facets.push({ points: [at2(low, a), at2(low, b), at2(high, b), at2(high, a)], normal, part: "side", surface: "side" });
     }
   }
@@ -14667,9 +15423,9 @@ var approximate = (value2) => value2 !== 0 && Math.abs(value2) < 5e-3 ? value2.t
 function piText(coefficient2) {
   if (coefficient2.n === 0n)
     return void 0;
-  const decimal2 = decimalText(coefficient2);
-  if (decimal2 !== void 0)
-    return decimal2 === "1" ? "\u03C0" : `${decimal2}\u03C0`;
+  const decimal3 = decimalText(coefficient2);
+  if (decimal3 !== void 0)
+    return decimal3 === "1" ? "\u03C0" : `${decimal3}\u03C0`;
   if (coefficient2.d <= 12n)
     return `${coefficient2.n === 1n ? "" : coefficient2.n}\u03C0/${coefficient2.d}`;
   return void 0;
@@ -15938,6 +16694,51 @@ function buildMakeTen(input) {
   };
 }
 
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/place-value-times-ten-builder.js
+var driven7 = (value2) => typeof value2 === "object" && value2 !== null && typeof value2.expression === "string";
+function buildPlaceValueTimesTen(input) {
+  const bindings = [];
+  const value2 = (raw, target) => {
+    if (!driven7(raw))
+      return raw;
+    bindings.push({ target, expression: raw.expression });
+    return raw.initial;
+  };
+  const amountIn = value2(input.amount, "amount");
+  const targetIn = value2(input.target, "target");
+  const found = placeValueTimesTenProblem(amountIn, targetIn, input.start);
+  if ("fault" in found)
+    throw new Error(placeValueTimesTenFaultText(found.fault, amountIn, targetIn));
+  const problem = found;
+  if (problem.amount !== amountIn) {
+    for (const binding of bindings)
+      binding.target = binding.target === "amount" ? "target" : binding.target === "target" ? "amount" : binding.target;
+  }
+  const shape = placeValueTimesTenShapeOf(problem);
+  const countedIn = value2(input.counted_in ?? problem.start, "counted_in");
+  const rows = {};
+  for (const field of placeValueTimesTenRowFields(problem.g))
+    rows[field] = value2(input[field] ?? 0, field);
+  const content = {
+    ...input.language !== void 0 ? { language: input.language } : {},
+    question: shape.question,
+    toward: shape.toward,
+    apart: shape.apart,
+    amount: problem.amount,
+    target: problem.target,
+    counted_in: countedIn,
+    moved_once: rows.moved_once ?? 0,
+    ...rows.moved_twice !== void 0 ? { moved_twice: rows.moved_twice } : {},
+    ...bindings.length ? { bindings } : {}
+  };
+  return {
+    actions: [{ do: "write", as: input.as, kind: PLACE_VALUE_TIMES_TEN_KIND, role: input.role, content, place: input.place }],
+    whole: input.as,
+    parts: { whole: input.as },
+    problem
+  };
+}
+
 // node_modules/octos-lesson-language/dist/packages/plugin-math/src/number-line-form.js
 var NUMBER_LINE_FORM_LIMITS = { span: 40, subdivisions: NUMBER_LINE_LIMITS.subdivisions, moves: 3 };
 
@@ -16114,14 +16915,14 @@ function markParts(tokens, requested, labels, check, path) {
     return [];
   checkPlotFormula(tokens, `${path}.marks`);
   const polynomial2 = polynomialOf(tokens);
-  const refuse2 = (mark, why) => {
+  const refuse3 = (mark, why) => {
     throw new PlotDerivationRefusal(`${path}.marks`, `the ${mark} mark ${why}; leave it out of marks and do not narrate it`);
   };
   if (!polynomial2)
-    return refuse2(marks[0], "needs a line or a quadratic (marks are derived exactly)");
+    return refuse3(marks[0], "needs a line or a quadratic (marks are derived exactly)");
   const [c, b, a] = [0, 1, 2].map((power2) => coefficient(polynomial2, power2));
   if (polynomialText([c, b, a]).length > 240)
-    refuse2(marks[0], "is too long an expression for this formula");
+    refuse3(marks[0], "is too long an expression for this formula");
   crossCheck(tokens, [c, b, a], check, path);
   const linear = isZero(a);
   const parts = [];
@@ -16147,7 +16948,7 @@ function markParts(tokens, requested, labels, check, path) {
       }
     } else {
       if (linear)
-        refuse2(mark, "needs a quadratic");
+        refuse3(mark, "needs a quadratic");
       const axis = (divisor) => `${negate(b).text === "0" ? "0" : `(${negate(b).text})`}/(2*${wrap(divisor)})`;
       const part = (divisor) => mark === "vertex" ? { kind: "point", as: "mark-vertex", label: labels("\u9876\u70B9"), x: axis(divisor), y: `${wrap(c)}-${wrap(b)}^2/(4*${wrap(divisor)})` } : { kind: "guide", as: "mark-axis", label: labels("\u5BF9\u79F0\u8F74"), value: axis(divisor) };
       parts.push(written(part(snap(a)), part(a)));
@@ -16158,7 +16959,7 @@ function markParts(tokens, requested, labels, check, path) {
   for (const part of parts)
     for (const text5 of [part.x, part.y, part.value]) {
       if (text5 !== void 0 && text5.length > 240)
-        refuse2(owners.get(part), "is too long an expression for this formula");
+        refuse3(owners.get(part), "is too long an expression for this formula");
     }
   return parts;
 }
@@ -16289,13 +17090,13 @@ function shapeOf(tokens, root2) {
 }
 function formulaBars(tokens, want, check, path) {
   checkPlotFormula(tokens, `${path}.marks`);
-  const refuse2 = (what, why) => {
+  const refuse3 = (what, why) => {
     throw new PlotDerivationRefusal(`${path}.marks`, `the ${what} mark ${why}; leave it out of marks and do not narrate it`);
   };
   const first = want.domain ? "domain" : "range";
   const root2 = treeOf(tokens);
   if (!root2)
-    return refuse2(first, "could not be derived");
+    return refuse3(first, "could not be derived");
   const all2 = (axis) => ({ axis, from: null, to: null, from_closed: false, to_closed: false });
   const proved = (text5) => check.sign(text5) !== "unknown";
   const bySign = (sign, end, up, axis) => {
@@ -16319,7 +17120,7 @@ function formulaBars(tokens, want, check, path) {
         if (b.value === 0)
           bars.push({ axis: "y", from: c.text, to: c.text, from_closed: true, to_closed: true });
         else if (!proved(b.text))
-          refuse2("range", "collapses to one value where the slope is 0");
+          refuse3("range", "collapses to one value where the slope is 0");
         else
           bars.push(all2("y"));
       } else {
@@ -16327,7 +17128,7 @@ function formulaBars(tokens, want, check, path) {
         bars.push(...bySign(a.text, vertexY, { from_closed: true }, "y"));
       }
     }
-    return guarded(bars, first, refuse2);
+    return guarded(bars, first, refuse3);
   }
   const higher = polynomialOf(tokens, 9);
   if (higher) {
@@ -16336,34 +17137,34 @@ function formulaBars(tokens, want, check, path) {
       bars.push(all2("x"));
     if (want.range) {
       if (top % 2 === 0)
-        refuse2("range", "is derived for polynomials of odd degree, lines and quadratics only");
+        refuse3("range", "is derived for polynomials of odd degree, lines and quadratics only");
       if (!proved(at(higher, top).text))
-        refuse2("range", "collapses where the leading coefficient is 0");
+        refuse3("range", "collapses where the leading coefficient is 0");
       bars.push(all2("y"));
     }
-    return guarded(bars, first, refuse2);
+    return guarded(bars, first, refuse3);
   }
   const shape = shapeOf(tokens, root2);
   if (!shape)
-    return refuse2(first, "is derived only for polynomials, roots, reciprocals, exponentials, logarithms, sines and cosines");
+    return refuse3(first, "is derived only for polynomials, roots, reciprocals, exponentials, logarithms, sines and cosines");
   const pSign = shape.p.value;
   const edge = `-${wrap2(shape.q.text)}/${wrap2(shape.p.text)}`;
   if (want.range) {
     if (pSign === 0 || !proved(shape.p.text))
-      refuse2("range", "collapses to one value where x's coefficient is 0");
+      refuse3("range", "collapses to one value where x's coefficient is 0");
   }
   if (want.domain) {
     if (shape.family === "sinusoid")
       bars.push(all2("x"));
     else if (shape.family === "exponential") {
       if (shape.base && check.sign(shape.base.text) !== "positive")
-        refuse2("domain", "needs a base above 0");
+        refuse3("domain", "needs a base above 0");
       bars.push(all2("x"));
     } else if (shape.family === "reciprocal") {
       bars.push({ axis: "x", from: null, to: edge, from_closed: false, to_closed: false }, { axis: "x", from: edge, to: null, from_closed: false, to_closed: false });
     } else {
       if (pSign === void 0)
-        refuse2("domain", "needs x with a fixed coefficient inside the root or logarithm");
+        refuse3("domain", "needs x with a fixed coefficient inside the root or logarithm");
       const closed = shape.family === "sqrt";
       bars.push(pSign > 0 ? { axis: "x", from: edge, to: null, from_closed: closed, to_closed: false } : { axis: "x", from: null, to: edge, from_closed: false, to_closed: closed });
     }
@@ -16374,26 +17175,26 @@ function formulaBars(tokens, want, check, path) {
       bars.push({ axis: "y", from: `${wrap2(shape.k)}-${amplitude}`, to: `${wrap2(shape.k)}+${amplitude}`, from_closed: true, to_closed: true });
     } else if (shape.family === "log") {
       if (!proved(shape.a))
-        refuse2("range", "collapses to one value where the coefficient is 0");
+        refuse3("range", "collapses to one value where the coefficient is 0");
       bars.push(all2("y"));
     } else if (shape.family === "reciprocal") {
       const guard = proved(shape.a) ? shape.k : `${wrap2(shape.k)}+0*log((${shape.a})^2)`;
       bars.push({ axis: "y", from: null, to: guard, from_closed: false, to_closed: false }, { axis: "y", from: guard, to: null, from_closed: false, to_closed: false });
     } else if (shape.family === "exponential") {
       if (shape.base && !(shape.base.value !== void 0 && shape.base.value > 0 && shape.base.value !== 1))
-        refuse2("range", "needs a fixed base above 0 and not 1");
+        refuse3("range", "needs a fixed base above 0 and not 1");
       bars.push(...bySign(shape.a, shape.k, { from_closed: false }, "y"));
     } else {
       bars.push(...bySign(shape.a, shape.k, { from_closed: true }, "y"));
     }
   }
-  return guarded(bars, first, refuse2);
+  return guarded(bars, first, refuse3);
 }
-function guarded(bars, first, refuse2) {
+function guarded(bars, first, refuse3) {
   for (const bar of bars)
     for (const text5 of [bar.from, bar.to]) {
       if (text5 !== null && text5.length > 240)
-        refuse2(first, "is too long an expression for this formula");
+        refuse3(first, "is too long an expression for this formula");
     }
   return bars;
 }
@@ -16594,31 +17395,9 @@ var HOW_TO = Object.freeze({
   [BASE_TEN_TRADE_KIND]: baseTenHowTo,
   [PLACE_VALUE_CHART_KIND]: placeValueHowTo,
   [PLACE_VALUE_TRADE_KIND]: placeValueTradeHowTo,
-  [MAKE_TEN_KIND]: makeTenHowTo
+  [MAKE_TEN_KIND]: makeTenHowTo,
+  [PLACE_VALUE_TIMES_TEN_KIND]: placeValueTimesTenHowTo
 });
-
-// node_modules/octos-lesson-language/dist/packages/plugin-math/src/place-value-times-ten.js
-var PLACE_VALUE_TIMES_TEN_MAX_PLACE = PLACE_VALUE_MAX_PLACE;
-var PLACE_VALUE_TIMES_TEN_MAX_LINEAGES = 9;
-var PLACE_VALUE_TIMES_TEN_COPIES = 10;
-var PLACE_VALUE_TIMES_TEN_MAX_ROWS = 2 ** PLACE_VALUE_TIMES_TEN_MAX_LINEAGES - 1;
-var PLACE_VALUE_TIMES_TEN_TAP_PLACES = Object.freeze(Array.from({ length: PLACE_VALUE_TIMES_TEN_COPIES }, (_, i) => `row-${i + 1}`));
-var placeValueTimesTenUnit = (place5) => 10 ** (place5 + 3);
-var unit3 = placeValueTimesTenUnit;
-function finish(p) {
-  const lo = Math.min(p.s, p.t), hi = Math.max(p.s, p.t);
-  const columns = [];
-  for (let place5 = hi; place5 >= lo; place5 -= 1)
-    columns.push(place5);
-  return { ...p, columns };
-}
-var MAX_VALUE = 9 * unit3(PLACE_VALUE_TIMES_TEN_MAX_PLACE);
-var FALLBACK = finish({ question: "count", amount: 0, target: 1, s: -2, t: -3, dir: -1, g: 1, n: 0, start: 10, result: 0 });
-var PLACE_VALUE_TIMES_TEN_GEOMETRY = { D: 30, G: 3, RP: 4, CP: 12, RH: 42, SQ: 106, SG: 8, NARROW: 150, POINT: 14, GAP: 8, EDGE: 12, HEAD: 34, LABEL: 22 };
-var GEO = PLACE_VALUE_TIMES_TEN_GEOMETRY;
-var placeValueTimesTenRowWidth = (k) => k * (GEO.D + GEO.G) - GEO.G + 2 * GEO.RP;
-var ROW_W = placeValueTimesTenRowWidth(10);
-var WIDE = ROW_W + 2 * GEO.CP;
 
 // node_modules/octos-lesson-language/dist/packages/plugin-math/src/index.js
 var MATH_SUBJECT_DESCRIPTION = {
@@ -16711,9 +17490,9 @@ function buildUnitCircle(input) {
 }
 function buildCirclePolygons(input) {
   const { radius } = input;
-  const driven7 = typeof input.sides === "number" ? void 0 : input.sides;
+  const driven8 = typeof input.sides === "number" ? void 0 : input.sides;
   const sides = typeof input.sides === "number" ? input.sides : input.sides.initial;
-  const extent = input.circumscribed ? radius / Math.cos(Math.PI / (driven7?.min ?? sides)) * 1.18 : radius * 1.3;
+  const extent = input.circumscribed ? radius / Math.cos(Math.PI / (driven8?.min ?? sides)) * 1.18 : radius * 1.3;
   const polygon = (as, label) => ({
     as,
     center: "center",
@@ -16734,9 +17513,9 @@ function buildCirclePolygons(input) {
       ...input.circumscribed ? [polygon("circumscribed", input.text.circumscribed_label)] : []
     ],
     ...input.text.caption !== void 0 ? { caption: input.text.caption } : {},
-    ...driven7 ? { bindings: [
-      { target: "inscribed.sides", expression: driven7.expression },
-      ...input.circumscribed ? [{ target: "circumscribed.sides", expression: driven7.expression }] : []
+    ...driven8 ? { bindings: [
+      { target: "inscribed.sides", expression: driven8.expression },
+      ...input.circumscribed ? [{ target: "circumscribed.sides", expression: driven8.expression }] : []
     ] } : {}
   };
   return {
@@ -16798,6 +17577,219 @@ var REARRANGEMENT_MODEL_GUIDANCE = "\u91CD\u6392\u8FDB\u5EA6\uFF0C\u4E0D\u6539\u
 
 // src/plugins/plot-mark-names.ts
 var PLOT_MARKS2 = ["intercepts", "vertex", "symmetry_axis", "slope_triangle", "domain", "range"];
+
+// src/plugins/place-value-moves.ts
+var PLACE_VALUE_ROW_PARTS = 6;
+var PLACE_VALUE_GIVENS = ["name", "expanded", "expanded_factors", "place_counts", "numeral"];
+var THOUSANDTHS_SLACK = 1e-4;
+function placeValueThousandths(value2) {
+  if (!Number.isFinite(value2) || value2 < 0) return void 0;
+  const thousandths = Math.round(value2 * 1e3);
+  if (Math.abs(value2 * 1e3 - thousandths) > THOUSANDTHS_SLACK) return void 0;
+  return thousandths <= PLACE_VALUE_MAX_VALUE ? thousandths : void 0;
+}
+function placeValueDecimal(thousandths) {
+  return Number((thousandths / 1e3).toFixed(3));
+}
+function placeValuePlain(thousandths) {
+  return String(placeValueDecimal(thousandths));
+}
+function numberFault(value2, role) {
+  if (!Number.isFinite(value2) || value2 < 0) return `the ${role} is a number from 0 to 9,999,999.999`;
+  if (Math.abs(value2 * 1e3 - Math.round(value2 * 1e3)) > THOUSANDTHS_SLACK) return `the ${role} has at most three decimal places (thousandths): the chart's last column is the thousandths`;
+  if (Math.round(value2 * 1e3) > PLACE_VALUE_MAX_VALUE) return `the ${role} is at most 9,999,999.999: the chart's highest column is the millions`;
+  return void 0;
+}
+function placeValueStartFault(values, given) {
+  if (values.length < 1 || values.length > 2) return "the chart takes two lesson numbers: the question's number, then a different practice number for the learner";
+  const roles = ["question's number", "practice number"];
+  for (const [index, value2] of values.entries()) {
+    const fault = numberFault(value2, roles[index]);
+    if (fault) return fault;
+  }
+  const [number, practice] = values.map((value2) => Math.round(value2 * 1e3));
+  for (const [index, value2] of [number, practice].entries()) {
+    if (value2 === void 0) continue;
+    const leak = placeValueTaskFault(value2, given);
+    if (leak === "zero") {
+      return `the ${roles[index]} is 0: there is nothing to ${given === "numeral" ? "pull apart" : "build"}. Write the number itself as its value (for example 0.309), not 0: the chart starts empty by itself${given === "numeral" ? "" : ", and the demonstration animates the number up from 0"}`;
+    }
+    if (leak) {
+      return `the ${roles[index]} ${placeValueDecimal(value2)} has one non-zero place, so ${given === "numeral" ? "pulling it apart" : `its ${given.replace("_", " ")} form`} shows the answer itself: choose a number with two or more non-zero places${given === "numeral" ? "" : ", or give its name or place counts"}`;
+    }
+  }
+  if (practice !== void 0 && practice === number) return "the practice number is the learner's own: a different number from the question's, so the learner does not copy the demonstration";
+  if (given === "numeral" && practice !== void 0 && placeValueParts(practice).length > PLACE_VALUE_ROW_PARTS) {
+    return `a practice number to pull apart has at most ${PLACE_VALUE_ROW_PARTS} non-zero places: its parts are written in one row of at most ${PLACE_VALUE_ROW_PARTS} blanks`;
+  }
+  return void 0;
+}
+var PLACES = Array.from({ length: PLACE_VALUE_MAX_PLACE - PLACE_VALUE_MIN_PLACE + 1 }, (_, i) => PLACE_VALUE_MAX_PLACE - i);
+function placesOnlyIn(withDigits, without) {
+  return PLACES.filter((place5) => placeValueDigitAt(withDigits, place5) && !placeValueDigitAt(without, place5));
+}
+function placeValueStepPlaces(from, to, build) {
+  return build ? placesOnlyIn(to, from) : placesOnlyIn(from, to);
+}
+function placeValueState(start, content) {
+  const build = content?.parameters?.given !== "numeral";
+  return [build ? 0 : start[0], ...start.slice(1), start[0], build ? 1 : 0];
+}
+function placeValueNextValues(number, from, build) {
+  if (build) {
+    const parts = placeValueParts(number);
+    return [.../* @__PURE__ */ new Set([...parts.map((_, k) => parts.slice(0, k + 1).reduce((sum, part) => sum + part.value, 0)), number])].filter((value2) => value2 > from && placesOnlyIn(from, value2).length === 0);
+  }
+  return placeValueParts(from).map((_, k, all2) => all2.slice(k + 1).reduce((sum, part) => sum + part.value, 0));
+}
+function placeValueMove(state, position, to) {
+  if (position !== 0 || state.length < 3) return "the practice number is the learner's: it does not move in the lesson. Animate the question's number to show the demonstration";
+  const build = state.at(-1) === 1;
+  const number = Math.round(state.at(-2) * 1e3);
+  const from = Math.round(state[0] * 1e3);
+  const target = placeValueThousandths(to);
+  if (target === void 0) return "the chart's number is a number from 0 to 9,999,999.999 with at most three decimal places";
+  if (target === from) return [...state];
+  const ofNumber = PLACES.every((place5) => !placeValueDigitAt(target, place5) || placeValueDigitAt(target, place5) === placeValueDigitAt(number, place5));
+  const kept = build ? placesOnlyIn(from, target).length === 0 : placesOnlyIn(target, from).length === 0;
+  if (!ofNumber || !kept) {
+    if (build) {
+      const placed = placeValueNextValues(number, from, true);
+      return `building, the chart's number is the value on the chart: it starts at 0 and each step puts whole places of ${placeValueDecimal(number)} on the chart, highest first; places already on stay, so from ${placeValueDecimal(from)} it can be ${placed.length ? placed.map(placeValueDecimal).join(", ") : `only ${placeValueDecimal(from)}: the number is built`}`;
+    }
+    const left = placeValueNextValues(number, from, false);
+    return `pulling apart, the chart's number is what is still on the chart: it starts at the number and each step takes whole places out, highest first, so from ${placeValueDecimal(from)} it can be ${left.map(placeValueDecimal).join(", ")}`;
+  }
+  const next = [...state];
+  next[0] = placeValueDecimal(target);
+  return next;
+}
+function placeValueMoves(state, moves) {
+  const steps = [];
+  let current = [...state];
+  for (const move of moves) {
+    const result = placeValueMove(current, move.position, move.to);
+    if (typeof result === "string") return { refused: { position: move.position, reason: result } };
+    steps.push({ position: move.position, from: current, to: result });
+    current = result;
+  }
+  return { steps };
+}
+var FULL_WIDTH2 = /[０-９．，]/gu;
+var halfWidth = (text5) => text5.replace(FULL_WIDTH2, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
+function placeValueWordsWrite(words, thousandths) {
+  const text5 = halfWidth(String(words));
+  const numerals = text5.match(/\d{1,3}(?:[,   ]\d{3})+(?:\.\d+)?|\d*\.\d+|\d+/gu) ?? [];
+  return numerals.some((numeral) => placeValueThousandths(Number(numeral.replace(/[,   ]/gu, ""))) === thousandths);
+}
+
+// src/plugins/place-value-times-ten-moves.ts
+var TIMES_TEN_NUMBER = { amount: 0, target: 1, practiceAmount: 2, practiceTarget: 3, countedIn: 4 };
+var timesTenDecimal = (thousandths) => Number((thousandths / 1e3).toFixed(3));
+var decimal = timesTenDecimal;
+function timesTenProblemOf(amount, target, countedIn) {
+  const plain2 = placeValueTimesTenProblem(amount, target);
+  if (!("fault" in plain2) && plain2.question === "times") return plain2;
+  return placeValueTimesTenProblem(amount, target, countedIn);
+}
+function timesTenStartOf(amount, target) {
+  const A = placeValueThousandths(amount), T = placeValueThousandths(target);
+  if (A === void 0 || T === void 0) return 0;
+  const plain2 = placeValueTimesTenProblem(A, T);
+  return "fault" in plain2 ? 0 : decimal(plain2.start);
+}
+function timesTenStartProblem(values) {
+  if (values.length !== 5) {
+    return { fault: "the card takes five lesson numbers, in order: the amount (its value: 0.3 for 3 tenths), the target (0.001; a times pair's smaller number, 70), the practice's amount and target (another problem of the same kind), and counted in (the unit the question names)" };
+  }
+  const [A, T, PA, PT, C] = values.map(placeValueThousandths);
+  if ([A, T, PA, PT].some((value2) => value2 === void 0 || value2 <= 0)) return { fault: "the amount, the target and the practice's two numbers are numbers above 0 with at most three decimal places (thousandths)" };
+  const written = timesTenProblemOf(A, T, C);
+  const own = "fault" in written ? timesTenProblemOf(A, T, void 0) : written;
+  const problem = "fault" in own ? written : own;
+  if ("fault" in problem) {
+    const said = placeValueTimesTenFaultText(problem.fault, A, T);
+    return { fault: problem.fault === "same_unit" || problem.fault === "start_not_unit" ? `${said}; counted in (the fifth number) is the unit the question names, not the target: 3 tenths starts at 0.1, 40 hundredths at 0.01` : `the question: ${said}` };
+  }
+  const practice = placeValueTimesTenPracticeProblem(problem, PA, PT);
+  if ("fault" in practice) {
+    if (practice.fault === "same_as_example") return { fault: "the practice is the learner's own: another amount or target than the question's, so the learner does not copy the demonstration" };
+    const how = problem.question === "times" ? "another times pair, the same digit in two neighbouring places (4,000 and 400)" : `another count ${problem.g === 2 ? "two places" : "one place"} ${problem.dir < 0 ? "to the right (breaking)" : "to the left (putting together)"}, like the question's`;
+    return { fault: `the practice is ${how}: ${placeValueTimesTenFaultText(practice.fault, PA, PT)}` };
+  }
+  return { problem, practice };
+}
+function timesTenPathText(problem) {
+  return placeValueTimesTenPath(problem).map((value2) => {
+    const place5 = placeValueTimesTenPlaceOfUnit(value2);
+    return place5 === void 0 ? `${decimal(value2)}` : `${decimal(value2)} (${placeValueColumnName(place5).toLowerCase()})`;
+  }).join(" -> ");
+}
+function timesTenNext(problem, from) {
+  const path = placeValueTimesTenPath(problem);
+  const at2 = placeValueTimesTenPosition(problem, placeValueThousandths(from) ?? 0);
+  return path.filter((value2, k) => k >= Math.ceil(at2 - 1e-9) && value2 !== placeValueThousandths(from)).map(decimal);
+}
+function timesTenProblemNow(state) {
+  const [A, T] = [state[TIMES_TEN_NUMBER.amount], state[TIMES_TEN_NUMBER.target]].map(placeValueThousandths);
+  const C = placeValueThousandths(state[TIMES_TEN_NUMBER.countedIn] ?? Number.NaN);
+  if (A !== void 0 && T !== void 0 && C !== void 0) {
+    const own = timesTenProblemOf(A, T, void 0);
+    if (!("fault" in own) && placeValueTimesTenPath(own).includes(C)) return { problem: own };
+    const at2 = timesTenProblemOf(A, T, C);
+    if (!("fault" in at2)) return { problem: at2 };
+  }
+  const found = timesTenStartProblem(state);
+  return "fault" in found ? found : { problem: found.problem };
+}
+function placeValueTimesTenState2(start) {
+  const values = [...start.slice(0, 5)];
+  const found = timesTenStartProblem(values);
+  if (!("fault" in found)) values[TIMES_TEN_NUMBER.countedIn] = decimal(found.problem.start);
+  return values;
+}
+function placeValueTimesTenMove2(state, position, to) {
+  if (position < 0 || position > TIMES_TEN_NUMBER.countedIn) return "the card has five lesson numbers";
+  if (to === state[position]) return [...state];
+  if (position !== TIMES_TEN_NUMBER.countedIn) {
+    return "the amount, the target and the practice stay as written: the demonstration moves only counted in (the card's fifth lesson number), the unit the amount is counted in now, and the card plays each row";
+  }
+  const found = timesTenProblemNow(state);
+  if ("fault" in found) return found.fault;
+  const { problem } = found;
+  const from = state[TIMES_TEN_NUMBER.countedIn];
+  const path = placeValueTimesTenPath(problem);
+  const index = path.indexOf(placeValueThousandths(to) ?? Number.NaN);
+  const next = timesTenNext(problem, from);
+  const said = next.length ? `from ${from} the next values are ${next.join(" or ")}` : `from ${from} it has reached the target, ${decimal(problem.target)}`;
+  if (index < 0) return `counted in is the unit the amount is counted in now: ${timesTenPathText(problem)}; ${to} is not one of its values; ${said}`;
+  if (index + 1e-9 < placeValueTimesTenPosition(problem, placeValueThousandths(from) ?? 0)) return `counted in goes forward along ${timesTenPathText(problem)}, never back to ${to}; ${said}`;
+  const moved = [...state];
+  moved[TIMES_TEN_NUMBER.countedIn] = to;
+  return moved;
+}
+function placeValueTimesTenMoves(state, moves) {
+  const steps = [];
+  let current = [...state];
+  for (const move of moves) {
+    const result = placeValueTimesTenMove2(current, move.position, move.to);
+    if (typeof result === "string") return { refused: { position: move.position, reason: result } };
+    steps.push({ position: move.position, from: current, to: result });
+    current = result;
+  }
+  return { steps };
+}
+var FULL_WIDTH3 = /[０-９．，＝]/gu;
+var halfWidth2 = (text5) => text5.replace(FULL_WIDTH3, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
+function placeValueTimesTenWordsGiveAnswer(words, practice) {
+  const count = practice.question === "times" ? practice.renamed : practice.result;
+  const shown = new Set([practice.amount, practice.target].map(decimal));
+  for (const match of halfWidth2(String(words)).matchAll(/\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d*\.\d+|\d+/gu)) {
+    const value2 = Number(match[0].replace(/,/gu, ""));
+    if (value2 === count && !shown.has(value2)) return true;
+  }
+  return false;
+}
 
 // src/plugins/math.ts
 var SIDE_COUNT = { min: 3, max: 384 };
@@ -17052,6 +18044,35 @@ var MATH_RECIPES = {
     student_controls: [],
     required_features: ["make_ten_to_add"],
     model_guidance: "\u51D1\u5341\uFF08\u4E24\u4E2A\u5341\u683C\u6846\uFF09\uFF1A\u4E24\u4E2A\u4E00\u4F4D\u6570\u76F8\u52A0\u3001\u548C\u5927\u4E8E10\uFF08\u59828+6\uFF09\uFF0C\u5C0F\u6570\u5206\u51FA\u4E00\u90E8\u5206\u628A\u5927\u6570\u8865\u6210\u5341\u3002\u4E0D\u7528\u4E8E\u548C\u6B63\u597D\u662F10\u3001\u63A5\u7740\u6570\u3001\u7834\u5341\u51CF\u3001\u4E24\u4F4D\u6570\u52A0\u4E00\u4F4D\u6570\u3001\u4E09\u4E2A\u6570\u76F8\u52A0\u3002outline \u7684 numbers \u4F9D\u6B21\u5199\u56DB\u4E2A\u6570\uFF1A\u9898\u76EE\u7684\u4E24\u4E2A\u6570\u3001\u7EC3\u4E60\u7684\u4E24\u4E2A\u6570\uFF08\u53E6\u4E00\u5BF9\uFF0C\u4E5F\u662F\u4E00\u4F4D\u6570\u3001\u548C\u5927\u4E8E10\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u6362\u987A\u5E8F\u4E5F\u4E0D\u7B97\uFF09\u3002\u7A0B\u5E8F\u518D\u8865\u4E24\u4E2A\u6570\uFF1A\u5927\u6570\u90A3\u4E00\u6846\u91CC\u6709\u51E0\u4E2A\uFF08\u5F00\u59CB\u5C31\u662F\u5927\u6570\uFF09\u3001\u79FB\u8FC7\u53BB\u51E0\u4E2A\uFF080\uFF09\u3002\u6F14\u793A\u65F6\u628A\u7B2C\u4E94\u4E2A\u6570\u52A8\u753B\u523010\uFF08\u53EF\u4EE5\u53EA\u52309\uFF09\uFF0C\u7A0B\u5E8F\u4E00\u4E2A\u4E00\u4E2A\u5730\u79FB\u5706\u7247\uFF1B\u522B\u7684\u6570\u4E0D\u52A8\u753B\u3002\u7EC3\u4E60\uFF1A\u5BF9\u7B2C\u4E94\u4E2A\u6570\u5199\u4E00\u4E2A\u6570\u503C\u76EE\u6807\u9898\uFF08\u6570\u503C\u519910\uFF09\uFF0C\u5B69\u5B50\u81EA\u5DF1\u8865\u6EE1\u5341\uFF0C\u7A0B\u5E8F\u518D\u51FA\u4E00\u884C\u7A7A\uFF088+6=8+__+__=10+__=__\uFF09\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u548C\u3002\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
+  },
+  // OLL decision 0028 (a trial): the same amount counted in another unit on the place-value chart, a count (3 tenths =
+  // ? thousandths) or a times pair (700 is ? times 70). The model writes the amount, the target and a practice of
+  // the same kind; the program supplies "counted in" (its start is the amount's own place; a put-together question
+  // writes the unit it names), and the demonstration animates it along the problem's path while the card moves one
+  // row at a time. The program makes the learner's task on the practice and the card's answer row after it.
+  place_value_times_ten: {
+    parts: ["whole"],
+    number_inputs: ["amount", "target", "practice_amount", "practice_target", "counted_in"],
+    number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
+    // Counted in starts at the unit the question names: for a count that breaks and for a times pair it is the
+    // amount's own place, so the program supplies it from the amount when the outline declares only the four numbers
+    // before it; a put-together question declares its own (40 hundredths: 0.01), which is kept.
+    program_number_inputs: [{ initial: ([amount, target]) => timesTenStartOf(amount ?? 0, target ?? 0), min: 0, max: 1e6, label: "\u73B0\u5728\u7528\u4EC0\u4E48\u5355\u4F4D\u5728\u6570" }],
+    // The card starts on no fewer: an outline that declares fewer loses it at once (a section cannot add one).
+    min_lesson_numbers: 5,
+    parameter_names: [],
+    model_parameter_names: [],
+    required_model_schema_parameters: [],
+    semantic_parameters: [],
+    output_kinds: ["place_value_times_ten"],
+    // Up to five lesson variables (the amount, the target, counted in, one or two row sets): when a lesson holds too
+    // many, the card is the picture that goes.
+    binds_many_variables: true,
+    // No control: the learner works the card by its own taps; the model never names one, and the card's own fixed
+    // text says how it is used.
+    student_controls: [],
+    required_features: ["count_in_another_unit"],
+    model_guidance: "\u6362\u4E00\u4E2A\u5355\u4F4D\u6765\u6570\uFF08\u6570\u4F4D\u8868\uFF1A\u5F80\u53F3\u4E00\u4F4D\u4E00\u4E2A\u62C6\u6210\u5341\u4E2A\uFF0C\u5F80\u5DE6\u4E00\u4F4D\u5341\u4E2A\u5408\u6210\u4E00\u4E2A\uFF09\uFF1A\u6570\u5355\u4F4D\uFF083\u4E2A\u5341\u5206\u4E4B\u4E00=?\u4E2A\u5343\u5206\u4E4B\u4E00\uFF1B30\u4E2A\u5341=?\u4E2A\u767E\uFF09\u6216\u500D\u6570\uFF08700\u662F70\u7684\u51E0\u500D\uFF1B0.3\u662F3\u7684\u5341\u5206\u4E4B\u4E00\uFF09\u3002\u6570\u53EA\u6709\u4E00\u4F4D\u4E0D\u662F\u96F6\uFF085550\u91CC\u7684\u4E24\u4E2A5\u5199500\u548C50\uFF09\uFF0C\u5355\u4F4D\u6700\u591A\u9694\u4E24\u4F4D\uFF0C\u500D\u6570\u662F\u76F8\u90BB\u4E24\u4F4D\u3002\u4E0D\u7528\u4E8E\u4E00\u4E2A\u6570\u5B57\u8868\u793A\u591A\u5C11\u3001\u6BD4\u8F83\u3001\u52A0\u51CF\u3001\u4E58\u9664\u4EE510\u3001\u9664\u4EE5\u5C0F\u6570\u3002outline \u7684 numbers \u4F9D\u6B21\u5199\uFF1A\u8981\u6570\u7684\u6570\uFF08\u5199\u503C\uFF0C3\u4E2A\u5341\u5206\u4E4B\u4E00\u51990.3\uFF09\u3001\u7528\u4EC0\u4E48\u6765\u6570\uFF080.001\uFF1B\u500D\u6570\u5199\u5C0F\u7684\u657070\uFF09\u3001\u7EC3\u4E60\u7684\u4E24\u4E2A\u6570\uFF08\u540C\u4E00\u79CD\u95EE\u6CD5\uFF0C\u9694\u540C\u6837\u51E0\u4F4D\u3001\u540C\u4E00\u65B9\u5411\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF09\u3001\u73B0\u5728\u7528\u4EC0\u4E48\u5355\u4F4D\u5728\u6570\uFF08\u5408\u8D77\u6765\u7684\u9898\u5199\u9898\u76EE\u8BF4\u7684\u5355\u4F4D\uFF0C\u598240\u4E2A\u767E\u5206\u4E4B\u4E00\u51990.01\uFF1B\u522B\u7684\u7A0B\u5E8F\u8865\uFF09\u3002\u6F14\u793A\u628A\u7B2C\u4E94\u4E2A\u6570\u52A8\u753B\u5230\u540E\u9762\u7684\u5355\u4F4D\uFF080.01\u30010.001\uFF1B\u500D\u6570\u523070\uFF09\uFF0C\u53EA\u5F80\u524D\u8D70\u3002\u7EC3\u4E60\uFF1A\u5BF9\u7B2C\u4E94\u4E2A\u6570\u5199\u6570\u503C\u76EE\u6807\u9898\uFF0C\u7A0B\u5E8F\u518D\u51FA\u7B54\u6848\u90A3\u4E00\u884C\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u7B54\u6848\u3002\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
@@ -17359,7 +18380,7 @@ function buildConstantSpeedMotion(input) {
   const distance = time.initial * speed.initial;
   const t = quantityValue(time);
   const v = quantityValue(speed);
-  const driven7 = Boolean(time.expression || speed.expression);
+  const driven8 = Boolean(time.expression || speed.expression);
   const lane = Number((0.08 * length2).toPrecision(12));
   const trackContent = {
     title: text5.title,
@@ -17367,13 +18388,13 @@ function buildConstantSpeedMotion(input) {
     points: [
       { as: "start", x: 0, y: lane, label: text5.start },
       { as: "finish", x: length2, y: lane, visible: false },
-      { as: "object", x: distance, y: lane, label: driven7 ? `${text5.distance_readout}${distance}${text5.distance_unit ? ` ${text5.distance_unit}` : ""}` : text5.object }
+      { as: "object", x: distance, y: lane, label: driven8 ? `${text5.distance_readout}${distance}${text5.distance_unit ? ` ${text5.distance_unit}` : ""}` : text5.object }
     ],
     segments: [
       { as: "track", from: "start", to: "finish", style: "dashed" },
       { as: "travelled", from: "start", to: "object", style: "solid" }
     ],
-    ...driven7 ? {
+    ...driven8 ? {
       bindings: [{
         target: "object.x",
         expression: `${v}*${t}`,
@@ -17386,7 +18407,7 @@ function buildConstantSpeedMotion(input) {
     axes: { x: { min: 0, max: time.max, label: text5.time_axis }, y: { min: 0, max: length2, label: text5.distance_axis } },
     curves: [{ as: "primary-curve", expression: `${v}*x`, label: text5.curve_label }],
     points: [{ as: "moving-point", x: time.initial, y: distance, label: text5.current_state }],
-    ...driven7 ? {
+    ...driven8 ? {
       bindings: [
         { target: "moving-point.x", expression: t },
         { target: "moving-point.y", expression: `${v}*${t}` }
@@ -17644,7 +18665,7 @@ var RECIPE_CATALOG_ORDER = [
   "place_value_chart"
 ];
 var RETIRED_RECIPES = ["cube_with_section"];
-var TRIAL_RECIPES = ["constant_speed_motion", "fraction_model", "place_value_trade", "make_ten"];
+var TRIAL_RECIPES = ["constant_speed_motion", "fraction_model", "place_value_trade", "make_ten", "place_value_times_ten"];
 function enabledTrialRecipes(list3) {
   const named = new Set((list3 ?? "").split(",").map((name) => name.trim()).filter(Boolean));
   return TRIAL_RECIPES.filter((name) => named.has(name));
@@ -17799,6 +18820,13 @@ var EN = {
   "\u5927\u6570\u90A3\u4E00\u6846\u91CC\u6709\u51E0\u4E2A": "in the bigger number's frame",
   "\u79FB\u8FC7\u53BB\u51E0\u4E2A": "moved across",
   "\u5199\u6210\u7B97\u5F0F\u3002": "Write it as a number sentence.",
+  "\u5199\u51FA\u6709\u591A\u5C11\u4E2A\u3002": "Write how many.",
+  "\u5199\u51FA\u7B54\u6848\u3002": "Write the answers.",
+  "\u6570\u4E00\u6570\u76EE\u6807\u90A3\u4E00\u5217\u3002": "Count the target column.",
+  "\u5148\u6570\u4E00\u4E2A\u5C0F\u7684\u6570\u91CC\u6709\u51E0\u4E2A\uFF0C\u518D\u6570\u6709\u51E0\u4E2A\u5C0F\u7684\u6570\u3002": "Count what one copy of the smaller number holds, then how many copies there are.",
+  "\u8981\u6570\u7684\u6570": "the amount",
+  "\u7528\u4EC0\u4E48\u6765\u6570": "the target",
+  "\u73B0\u5728\u7528\u4EC0\u4E48\u5355\u4F4D\u5728\u6570": "counted in",
   "\u5148\u8BFB\u6EE1\u5341\u7684\u90A3\u4E00\u6846\uFF0C\u518D\u8BFB\u53E6\u4E00\u6846\u3002": "Read the full frame first, then the other one.",
   "\u5148\u8BFB\u53E6\u4E00\u6846\u5269\u4E0B\u7684\uFF0C\u518D\u8BFB\u6EE1\u5341\u7684\u90A3\u4E00\u6846\u3002": "Read what is left in the other frame first, then the full frame.",
   "y \u622A\u8DDD": "y-intercept",
@@ -19188,111 +20216,6 @@ function baseTenFacts2(start, now) {
   };
 }
 
-// src/plugins/place-value-moves.ts
-var PLACE_VALUE_ROW_PARTS = 6;
-var PLACE_VALUE_GIVENS = ["name", "expanded", "expanded_factors", "place_counts", "numeral"];
-var THOUSANDTHS_SLACK = 1e-4;
-function placeValueThousandths(value2) {
-  if (!Number.isFinite(value2) || value2 < 0) return void 0;
-  const thousandths = Math.round(value2 * 1e3);
-  if (Math.abs(value2 * 1e3 - thousandths) > THOUSANDTHS_SLACK) return void 0;
-  return thousandths <= PLACE_VALUE_MAX_VALUE ? thousandths : void 0;
-}
-function placeValueDecimal(thousandths) {
-  return Number((thousandths / 1e3).toFixed(3));
-}
-function placeValuePlain(thousandths) {
-  return String(placeValueDecimal(thousandths));
-}
-function numberFault(value2, role) {
-  if (!Number.isFinite(value2) || value2 < 0) return `the ${role} is a number from 0 to 9,999,999.999`;
-  if (Math.abs(value2 * 1e3 - Math.round(value2 * 1e3)) > THOUSANDTHS_SLACK) return `the ${role} has at most three decimal places (thousandths): the chart's last column is the thousandths`;
-  if (Math.round(value2 * 1e3) > PLACE_VALUE_MAX_VALUE) return `the ${role} is at most 9,999,999.999: the chart's highest column is the millions`;
-  return void 0;
-}
-function placeValueStartFault(values, given) {
-  if (values.length < 1 || values.length > 2) return "the chart takes two lesson numbers: the question's number, then a different practice number for the learner";
-  const roles = ["question's number", "practice number"];
-  for (const [index, value2] of values.entries()) {
-    const fault = numberFault(value2, roles[index]);
-    if (fault) return fault;
-  }
-  const [number, practice] = values.map((value2) => Math.round(value2 * 1e3));
-  for (const [index, value2] of [number, practice].entries()) {
-    if (value2 === void 0) continue;
-    const leak = placeValueTaskFault(value2, given);
-    if (leak === "zero") {
-      return `the ${roles[index]} is 0: there is nothing to ${given === "numeral" ? "pull apart" : "build"}. Write the number itself as its value (for example 0.309), not 0: the chart starts empty by itself${given === "numeral" ? "" : ", and the demonstration animates the number up from 0"}`;
-    }
-    if (leak) {
-      return `the ${roles[index]} ${placeValueDecimal(value2)} has one non-zero place, so ${given === "numeral" ? "pulling it apart" : `its ${given.replace("_", " ")} form`} shows the answer itself: choose a number with two or more non-zero places${given === "numeral" ? "" : ", or give its name or place counts"}`;
-    }
-  }
-  if (practice !== void 0 && practice === number) return "the practice number is the learner's own: a different number from the question's, so the learner does not copy the demonstration";
-  if (given === "numeral" && practice !== void 0 && placeValueParts(practice).length > PLACE_VALUE_ROW_PARTS) {
-    return `a practice number to pull apart has at most ${PLACE_VALUE_ROW_PARTS} non-zero places: its parts are written in one row of at most ${PLACE_VALUE_ROW_PARTS} blanks`;
-  }
-  return void 0;
-}
-var PLACES = Array.from({ length: PLACE_VALUE_MAX_PLACE - PLACE_VALUE_MIN_PLACE + 1 }, (_, i) => PLACE_VALUE_MAX_PLACE - i);
-function placesOnlyIn(withDigits, without) {
-  return PLACES.filter((place5) => placeValueDigitAt(withDigits, place5) && !placeValueDigitAt(without, place5));
-}
-function placeValueStepPlaces(from, to, build) {
-  return build ? placesOnlyIn(to, from) : placesOnlyIn(from, to);
-}
-function placeValueState(start, content) {
-  const build = content?.parameters?.given !== "numeral";
-  return [build ? 0 : start[0], ...start.slice(1), start[0], build ? 1 : 0];
-}
-function placeValueNextValues(number, from, build) {
-  if (build) {
-    const parts = placeValueParts(number);
-    return [.../* @__PURE__ */ new Set([...parts.map((_, k) => parts.slice(0, k + 1).reduce((sum, part) => sum + part.value, 0)), number])].filter((value2) => value2 > from && placesOnlyIn(from, value2).length === 0);
-  }
-  return placeValueParts(from).map((_, k, all2) => all2.slice(k + 1).reduce((sum, part) => sum + part.value, 0));
-}
-function placeValueMove(state, position, to) {
-  if (position !== 0 || state.length < 3) return "the practice number is the learner's: it does not move in the lesson. Animate the question's number to show the demonstration";
-  const build = state.at(-1) === 1;
-  const number = Math.round(state.at(-2) * 1e3);
-  const from = Math.round(state[0] * 1e3);
-  const target = placeValueThousandths(to);
-  if (target === void 0) return "the chart's number is a number from 0 to 9,999,999.999 with at most three decimal places";
-  if (target === from) return [...state];
-  const ofNumber = PLACES.every((place5) => !placeValueDigitAt(target, place5) || placeValueDigitAt(target, place5) === placeValueDigitAt(number, place5));
-  const kept = build ? placesOnlyIn(from, target).length === 0 : placesOnlyIn(target, from).length === 0;
-  if (!ofNumber || !kept) {
-    if (build) {
-      const placed = placeValueNextValues(number, from, true);
-      return `building, the chart's number is the value on the chart: it starts at 0 and each step puts whole places of ${placeValueDecimal(number)} on the chart, highest first; places already on stay, so from ${placeValueDecimal(from)} it can be ${placed.length ? placed.map(placeValueDecimal).join(", ") : `only ${placeValueDecimal(from)}: the number is built`}`;
-    }
-    const left = placeValueNextValues(number, from, false);
-    return `pulling apart, the chart's number is what is still on the chart: it starts at the number and each step takes whole places out, highest first, so from ${placeValueDecimal(from)} it can be ${left.map(placeValueDecimal).join(", ")}`;
-  }
-  const next = [...state];
-  next[0] = placeValueDecimal(target);
-  return next;
-}
-function placeValueMoves(state, moves) {
-  const steps = [];
-  let current = [...state];
-  for (const move of moves) {
-    const result = placeValueMove(current, move.position, move.to);
-    if (typeof result === "string") return { refused: { position: move.position, reason: result } };
-    steps.push({ position: move.position, from: current, to: result });
-    current = result;
-  }
-  return { steps };
-}
-var FULL_WIDTH2 = /[０-９．，]/gu;
-var halfWidth = (text5) => text5.replace(FULL_WIDTH2, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
-function placeValueWordsWrite(words, thousandths) {
-  const text5 = halfWidth(String(words));
-  const numerals = text5.match(/\d{1,3}(?:[,   ]\d{3})+(?:\.\d+)?|\d*\.\d+|\d+/gu) ?? [];
-  return numerals.some((numeral) => placeValueThousandths(Number(numeral.replace(/[,   ]/gu, ""))) === thousandths);
-}
-
 // src/plugins/place-value-trade-moves.ts
 var PLACE_VALUE_TRADE_OPERATIONS2 = ["add", "subtract"];
 var TRADE_NUMBER = { first: 0, second: 1, practiceFirst: 2, practiceSecond: 3, finished: 4 };
@@ -19345,11 +20268,11 @@ function placeValueTradeNext(columns, k) {
   const place5 = columns[columns.length - 1 - k];
   return place5 === void 0 ? `every column is finished at ${columns.length}` : `the next value, ${k + 1}, finishes the ${placeValueColumnName(place5).toLowerCase()}`;
 }
-var FULL_WIDTH3 = /[０-９．，＝]/gu;
-var halfWidth2 = (text5) => text5.replace(FULL_WIDTH3, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
+var FULL_WIDTH4 = /[０-９．，＝]/gu;
+var halfWidth3 = (text5) => text5.replace(FULL_WIDTH4, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
 var STATES_ANSWER = /(?:=|\b(?:equals?|makes?|answer(?:\s+is)?|total(?:\s+is)?|difference(?:\s+is)?|result(?:\s+is)?|is\s+left)|等于|得数是?|答案是?|结果是?|一共是?|还剩)\s*$/iu;
 function placeValueTradeWordsGiveAnswer(words, answer, practice) {
-  const text5 = halfWidth2(String(words));
+  const text5 = halfWidth3(String(words));
   for (const match of text5.matchAll(/\d{1,3}(?:[,   ]\d{3})+(?:\.\d+)?|\d*\.\d+|\d+/gu)) {
     if (placeValueThousandths(Number(match[0].replace(/[,   ]/gu, ""))) !== answer) continue;
     if (!practice.includes(answer)) return true;
@@ -19448,10 +20371,10 @@ function makeTenMoves(state, moves) {
   }
   return { steps };
 }
-var FULL_WIDTH4 = /[０-９＝]/gu;
-var halfWidth3 = (text5) => text5.replace(FULL_WIDTH4, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
+var FULL_WIDTH5 = /[０-９＝]/gu;
+var halfWidth4 = (text5) => text5.replace(FULL_WIDTH5, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
 function makeTenWordsGiveAnswer(words, sum) {
-  for (const match of halfWidth3(String(words)).matchAll(/\d+/gu)) if (Number(match[0]) === sum) return true;
+  for (const match of halfWidth4(String(words)).matchAll(/\d+/gu)) if (Number(match[0]) === sum) return true;
   return false;
 }
 
@@ -19642,6 +20565,25 @@ var MATH_HOOKS = {
     // The count in the bigger frame moves forward from the bigger number to 10; nothing else moves.
     number_moves: { state: makeTenState2, moves: makeTenMoves }
   },
+  place_value_times_ten: {
+    // The card's numbers have no control: the learner works it by its own taps (OLL 0028; the model never names a
+    // control). Each number's range runs from 0 to the most the card takes; counted in runs over every unit (the
+    // demonstration's path is the card's to check). The compiler checks every number and each step itself.
+    fit_numbers(content, plan) {
+      const numbers = content.numbers ?? [];
+      const definitions = numbers.map((number) => plan.numbers?.[number - 1]);
+      if (!definitions.length || definitions.some((definition) => !definition)) return /* @__PURE__ */ new Map();
+      definitions.forEach((definition, position) => {
+        definition.min = 0;
+        definition.max = Math.max(definition.initial, position === TIMES_TEN_NUMBER.countedIn ? 1e6 : 9e6);
+        delete definition.student_control;
+        delete definition.unit;
+      });
+      return /* @__PURE__ */ new Map();
+    },
+    // Counted in moves along the problem's path toward the target; nothing else moves.
+    number_moves: { state: placeValueTimesTenState2, moves: placeValueTimesTenMoves }
+  },
   number_line: { fit_numbers: fitNumberLineNumbers },
   number_line_compare: { fit_numbers: fitComparedNumbers },
   number_line_solution: { fit_numbers: fitSolutionNumbers },
@@ -19726,7 +20668,7 @@ var MATH_HOOKS = {
       delete parameters3.curve_label;
       return { no_numbers: true };
     },
-    validate_parameters(parameters3, { path, numberCount, fail: fail4, record: record8, array: array2, validateMathExpression: validateMathExpression2 }) {
+    validate_parameters(parameters3, { path, numberCount, fail: fail4, record: record9, array: array2, validateMathExpression: validateMathExpression2 }) {
       if (parameters3 === void 0) {
         fail4(
           "LESSON_PLAN_EXPRESSION",
@@ -19734,7 +20676,7 @@ var MATH_HOOKS = {
           "a function plot requires an explicit mathematical expression"
         );
       }
-      const visualParameters = record8(parameters3, `${path}.parameters`);
+      const visualParameters = record9(parameters3, `${path}.parameters`);
       const expressionFields = ["expression", "expressions", "expression_tokens"].filter((field) => visualParameters[field] !== void 0);
       if (expressionFields.length !== 1) {
         fail4(
@@ -19848,7 +20790,7 @@ function lowerPieces(parameters3, numberCount) {
   const path = "$lessonPlanSection.visual.parameters.pieces";
   const raw = parameters3.pieces;
   if (!Array.isArray(raw) || raw.length < 2 || raw.length > 4) formulaError(path, "a piecewise function has two to four pieces");
-  const decimal2 = (value2, where) => {
+  const decimal3 = (value2, where) => {
     if (value2 === void 0 || value2 === null) return null;
     const number = typeof value2 === "number" ? value2 : value2 && typeof value2 === "object" && "mantissa" in value2 ? Number(value2.mantissa) / 10 ** Number(value2.scale ?? 0) : Number.NaN;
     if (!Number.isFinite(number)) formulaError(where, "a piece's end is a finite number, or left out when that side is unbounded");
@@ -19862,7 +20804,7 @@ function lowerPieces(parameters3, numberCount) {
     if (tokens.some((token) => token.kind === "number")) formulaError(`${where}.formula`, "pieces are fixed formulas; use one formula when lesson numbers change the curve");
     const ends = PIECE_ENDS[String(piece.ends)];
     if (!ends) formulaError(`${where}.ends`, "ends is one of [] [) (] ()");
-    const from = decimal2(piece.x_from, `${where}.x_from`), to = decimal2(piece.x_to, `${where}.x_to`);
+    const from = decimal3(piece.x_from, `${where}.x_from`), to = decimal3(piece.x_to, `${where}.x_to`);
     if (from !== null && to !== null && !(from < to)) formulaError(where, "a piece's x_from is below its x_to");
     return { expression: mathExpressionToOll(tokens), from, to, from_closed: ends[0], to_closed: ends[1] };
   });
@@ -20074,7 +21016,7 @@ var teacherExpressions = /* @__PURE__ */ new Set(["neutral", "encouraging", "car
 function fail3(code, path, message) {
   throw new LessonPlanError(code, path, message);
 }
-function record7(value2, path) {
+function record8(value2, path) {
   if (!value2 || typeof value2 !== "object" || Array.isArray(value2)) {
     fail3("LESSON_PLAN_TYPE", path, "expected an object");
   }
@@ -20122,7 +21064,7 @@ function validateParameters(value2, path) {
     value2.forEach((item, index) => validateParameters(item, `${path}[${index}]`));
     return;
   }
-  const object2 = record7(value2, path);
+  const object2 = record8(value2, path);
   for (const [key, item] of Object.entries(object2)) {
     if (FORBIDDEN_PARAMETER_KEYS.has(key) || key.endsWith("_id")) {
       fail3("LESSON_PLAN_MODEL_ID", `${path}.${key}`, "business identity fields are not allowed in model-authored parameters");
@@ -20131,7 +21073,7 @@ function validateParameters(value2, path) {
   }
 }
 function recipeValidationContext(path, numberCount) {
-  return { path, numberCount, fail: fail3, record: record7, array, validateMathExpression };
+  return { path, numberCount, fail: fail3, record: record8, array, validateMathExpression };
 }
 function validateMathExpression(value2, path, numberCount, allowInput = false) {
   const tokens = array(value2, path);
@@ -20140,7 +21082,7 @@ function validateMathExpression(value2, path, numberCount, allowInput = false) {
   const numbers = /* @__PURE__ */ new Set();
   tokens.forEach((entry, index) => {
     const tokenPath = `${path}[${index}]`;
-    const token = record7(entry, tokenPath);
+    const token = record8(entry, tokenPath);
     const kind = token.kind;
     if (kind === "input") {
       allowedKeys(token, ["kind"], tokenPath);
@@ -20186,7 +21128,7 @@ function capability(value2, path) {
   return value2;
 }
 function validatePart(value2, path) {
-  const part = record7(value2, path);
+  const part = record8(value2, path);
   const kind = part.kind;
   if (kind === "capability") {
     allowedKeys(part, ["kind", "role"], path);
@@ -20199,7 +21141,7 @@ function validatePart(value2, path) {
   fail3("LESSON_PLAN_PART", `${path}.kind`, "unsupported part reference");
 }
 function validateReference(value2, path) {
-  const ref = record7(value2, path);
+  const ref = record8(value2, path);
   const part = ref.part === void 0 ? void 0 : validatePart(ref.part, `${path}.part`);
   if (ref.source === "local_board_item" || ref.source === "local_connection" || ref.source === "local_group") {
     allowedKeys(ref, ["source", "moment", "item", "part"], path);
@@ -20230,7 +21172,7 @@ function validateReference(value2, path) {
   fail3("LESSON_PLAN_REFERENCE", `${path}.source`, "unsupported reference source");
 }
 function validatePlacement2(value2, path) {
-  const placement = record7(value2, path);
+  const placement = record8(value2, path);
   allowedKeys(placement, ["relation", "reference", "align", "gap"], path);
   const relation = placement.relation;
   const relations = /* @__PURE__ */ new Set(["new_region", "below", "above", "left_of", "right_of", "near", "inside", "overlay"]);
@@ -20243,7 +21185,7 @@ function validatePlacement2(value2, path) {
   return placement;
 }
 function validateBoardContent(kind, value2, path, numberCount, resourceCount) {
-  const content = record7(value2, path);
+  const content = record8(value2, path);
   if (kind === "text" || kind === "shape") {
     allowedKeys(content, ["text"], path);
     nonEmptyString(content.text, `${path}.text`);
@@ -20319,7 +21261,7 @@ function validateLessonPlanNumbers(value2, path) {
   if (numbers.length > 16) fail3("LESSON_PLAN_NUMBERS", path, "expected at most 16 numeric states");
   numbers.forEach((entry, index) => {
     const numberPath = `${path}[${index}]`;
-    const number = record7(entry, numberPath);
+    const number = record8(entry, numberPath);
     allowedKeys(number, ["initial", "min", "max", "label", "unit", "student_control"], numberPath);
     const initial = finiteNumber(number.initial, `${numberPath}.initial`);
     const min = finiteNumber(number.min, `${numberPath}.min`);
@@ -20331,7 +21273,7 @@ function validateLessonPlanNumbers(value2, path) {
     optionalString(number.unit, `${numberPath}.unit`, 32);
     if (number.student_control === void 0) return;
     const controlPath = `${numberPath}.student_control`;
-    const control = record7(number.student_control, controlPath);
+    const control = record8(number.student_control, controlPath);
     allowedKeys(control, ["kind", "step"], controlPath);
     if (control.kind !== "slider") fail3("LESSON_PLAN_CONTROL", `${controlPath}.kind`, "only slider is supported");
     if (control.step === void 0) return;
@@ -20350,7 +21292,7 @@ function validateLessonPlanNumbers(value2, path) {
   return numbers;
 }
 function resolveLessonPlan(value2, options = {}) {
-  const root2 = record7(value2, "$lessonPlan");
+  const root2 = record8(value2, "$lessonPlan");
   allowedKeys(root2, ["version", "title", "goals", "teaching_strategies", "numbers", "sections", "close"], "$lessonPlan");
   if (root2.version !== LESSON_PLAN_VERSION) fail3("LESSON_PLAN_VERSION", "$lessonPlan.version", `expected '${LESSON_PLAN_VERSION}'`);
   nonEmptyString(root2.title, "$lessonPlan.title", 160);
@@ -20425,14 +21367,14 @@ function resolveLessonPlan(value2, options = {}) {
   rawSections.forEach((rawSection, sectionOffset) => {
     const sectionIndex = sectionOffset + 1;
     const path = `$lessonPlan.sections[${sectionOffset}]`;
-    const section = record7(rawSection, path);
+    const section = record8(rawSection, path);
     allowedKeys(section, ["purpose", "reusable_items", "moments", "student_activities"], path);
     nonEmptyString(section.purpose, `${path}.purpose`, 480);
     const reusableDeclarations = section.reusable_items === void 0 ? [] : array(section.reusable_items, `${path}.reusable_items`);
     if (reusableDeclarations.length > 32) fail3("LESSON_PLAN_REUSABLE", `${path}.reusable_items`, "expected at most 32 reusable items");
     const declarations = reusableDeclarations.map((entry, declarationOffset) => {
       const declarationPath = `${path}.reusable_items[${declarationOffset}]`;
-      const declaration = record7(entry, declarationPath);
+      const declaration = record8(entry, declarationPath);
       allowedKeys(declaration, ["kind", "board_kind", "capability"], declarationPath);
       if (!["board_item", "connection", "group"].includes(String(declaration.kind))) fail3("LESSON_PLAN_REUSABLE", `${declarationPath}.kind`, "unsupported reusable item kind");
       if (declaration.kind === "board_item") {
@@ -20464,7 +21406,7 @@ function resolveLessonPlan(value2, options = {}) {
     rawMoments.forEach((rawMoment, momentOffset) => {
       const momentIndex = momentOffset + 1;
       const momentPath = `${path}.moments[${momentOffset}]`;
-      const moment = record7(rawMoment, momentPath);
+      const moment = record8(rawMoment, momentPath);
       allowedKeys(moment, ["narration", "delivery", "actions", "restart_numbers"], momentPath);
       if (moment.restart_numbers !== void 0) {
         const restarts = array(moment.restart_numbers, `${momentPath}.restart_numbers`);
@@ -20486,7 +21428,7 @@ function resolveLessonPlan(value2, options = {}) {
       let groupIndex = 0;
       actions.forEach((entry, actionOffset) => {
         const itemPath = `${momentPath}.actions[${actionOffset}]`;
-        const action = record7(entry, itemPath);
+        const action = record8(entry, itemPath);
         const actionKind = action.action;
         if (actionKind === "create") {
           allowedKeys(action, ["action", "kind", "role", "content", "timing", "placement", "reusable_item", "distinct_visual"], itemPath);
@@ -20578,7 +21520,7 @@ function resolveLessonPlan(value2, options = {}) {
           requiredVisualNumberUses.push({ number, path: `${itemPath}.number` });
           if (number > rawNumbers.length) fail3("LESSON_PLAN_NUMBER_REFERENCE", `${itemPath}.number`, "number reference is unavailable");
           const end = finiteNumber(action.end_value, `${itemPath}.end_value`);
-          const definition = record7(rawNumbers[number - 1], `$lessonPlan.numbers[${number - 1}]`);
+          const definition = record8(rawNumbers[number - 1], `$lessonPlan.numbers[${number - 1}]`);
           if (!cardMovedNumbers2.has(number) && (end < Number(definition.min) || end > Number(definition.max))) fail3("LESSON_PLAN_ANIMATION", `${itemPath}.end_value`, "animation end is outside the number range");
           if (action.easing !== void 0 && !["linear", "ease_in_out"].includes(String(action.easing))) fail3("LESSON_PLAN_ANIMATION", `${itemPath}.easing`, "unsupported easing");
           if (action.duration_intent !== void 0 && !["brief", "normal", "extended"].includes(String(action.duration_intent))) fail3("LESSON_PLAN_ANIMATION", `${itemPath}.duration_intent`, "unsupported duration intent");
@@ -20605,7 +21547,7 @@ function resolveLessonPlan(value2, options = {}) {
     const activities = section.student_activities === void 0 ? [] : array(section.student_activities, `${path}.student_activities`);
     activities.forEach((entry, index) => {
       const activityPath = `${path}.student_activities[${index}]`;
-      const activity = record7(entry, activityPath);
+      const activity = record8(entry, activityPath);
       if (activity.kind === "reflection") {
         allowedKeys(activity, ["kind", "prompt", "answer", "reference"], activityPath);
         nonEmptyString(activity.prompt, `${activityPath}.prompt`, 480);
@@ -20631,7 +21573,7 @@ function resolveLessonPlan(value2, options = {}) {
         const seenNumbers = /* @__PURE__ */ new Set();
         numberControls.forEach((entry2, controlIndex) => {
           const controlPath = `${activityPath}.number_controls[${controlIndex}]`;
-          const control = record7(entry2, controlPath);
+          const control = record8(entry2, controlPath);
           allowedKeys(control, ["number", "controls"], controlPath);
           const number = positiveIndex(control.number, `${controlPath}.number`);
           requiredVisualNumberUses.push({ number, path: `${controlPath}.number` });
@@ -20708,7 +21650,7 @@ function resolveLessonPlan(value2, options = {}) {
       reusable_items: resolvedReusable
     });
   });
-  const close = record7(root2.close, "$lessonPlan.close");
+  const close = record8(root2.close, "$lessonPlan.close");
   allowedKeys(close, ["summary", "focus"], "$lessonPlan.close");
   nonEmptyString(close.summary, "$lessonPlan.close.summary", 1200);
   const closeFocus = array(close.focus, "$lessonPlan.close.focus");
@@ -20858,7 +21800,7 @@ function validateLessonPlan(value2, options = {}) {
   return resolveLessonPlan(value2, options).plan;
 }
 function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
-  const outline = record7(value2, "$lessonPlanOutline");
+  const outline = record8(value2, "$lessonPlanOutline");
   allowedKeys(outline, ["version", "title", "goals", "teaching_strategies", "numbers", "request_coverage", "course_visuals", "sections", "close"], "$lessonPlanOutline");
   if (expectedRequestParts > 0 && outline.course_visuals === void 0) {
     fail3(
@@ -20885,7 +21827,7 @@ function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
   const declarationsBySection = [];
   sections.forEach((entry, index) => {
     const path = `$lessonPlanOutline.sections[${index}]`;
-    const section = record7(entry, path);
+    const section = record8(entry, path);
     allowedKeys(section, ["purpose", "allowed_capabilities", "reusable_items"], path);
     nonEmptyString(section.purpose, `${path}.purpose`, 480);
     const allowedCapabilities = array(section.allowed_capabilities, `${path}.allowed_capabilities`);
@@ -20899,7 +21841,7 @@ function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
     if (declarations.length > 32) fail3("LESSON_PLAN_REUSABLE", `${path}.reusable_items`, "expected at most 32 reusable items");
     declarationsBySection.push(declarations.map((declarationValue, declarationIndex) => {
       const declarationPath = `${path}.reusable_items[${declarationIndex}]`;
-      const declaration = record7(declarationValue, declarationPath);
+      const declaration = record8(declarationValue, declarationPath);
       allowedKeys(declaration, ["kind", "board_kind", "capability"], declarationPath);
       if (!["board_item", "connection", "group"].includes(String(declaration.kind))) fail3("LESSON_PLAN_REUSABLE", `${declarationPath}.kind`, "unsupported reusable item kind");
       if (declaration.kind === "board_item") {
@@ -20923,7 +21865,7 @@ function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
   const firstVisualByCapability = /* @__PURE__ */ new Map();
   courseVisuals.forEach((entry, index) => {
     const path = `$lessonPlanOutline.course_visuals[${index}]`;
-    const visual = record7(entry, path);
+    const visual = record8(entry, path);
     allowedKeys(visual, ["capability", "create_section", "use_sections", "relation", "related_visual", "reusable_item"], path);
     const visualCapability = capability(visual.capability, `${path}.capability`);
     const createSection = positiveIndex(visual.create_section, `${path}.create_section`);
@@ -20973,7 +21915,7 @@ function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
     const seen = /* @__PURE__ */ new Set();
     coverage.forEach((entry, index) => {
       const path = `$lessonPlanOutline.request_coverage[${index}]`;
-      const item = record7(entry, path);
+      const item = record8(entry, path);
       allowedKeys(item, ["request_part", "treatment", "sections", "reason"], path);
       const requestPart = positiveIndex(item.request_part, `${path}.request_part`);
       if (expectedRequestParts > 0 && requestPart > expectedRequestParts) fail3("LESSON_PLAN_REQUEST_COVERAGE", `${path}.request_part`, "request part is unavailable");
@@ -21002,7 +21944,7 @@ function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
       }
     }
   }
-  const close = record7(outline.close, "$lessonPlanOutline.close");
+  const close = record8(outline.close, "$lessonPlanOutline.close");
   allowedKeys(close, ["summary", "focus"], "$lessonPlanOutline.close");
   nonEmptyString(close.summary, "$lessonPlanOutline.close.summary", 1200);
   const closeFocus = array(close.focus, "$lessonPlanOutline.close.focus");
@@ -21029,7 +21971,7 @@ function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
   return structuredClone(value2);
 }
 function assembleLessonPlan(outlineValue, draftValues, options = {}) {
-  const outline = record7(validateLessonPlanOutline(outlineValue), "$lessonPlanOutline");
+  const outline = record8(validateLessonPlanOutline(outlineValue), "$lessonPlanOutline");
   allowedKeys(outline, ["version", "title", "goals", "teaching_strategies", "numbers", "request_coverage", "course_visuals", "sections", "close"], "$lessonPlanOutline");
   if (outline.version !== LESSON_PLAN_VERSION) {
     fail3("LESSON_PLAN_VERSION", "$lessonPlanOutline.version", `expected '${LESSON_PLAN_VERSION}'`);
@@ -21042,7 +21984,7 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
   }
   sections.forEach((entry, index) => {
     const path = `$lessonPlanOutline.sections[${index}]`;
-    const section = record7(entry, path);
+    const section = record8(entry, path);
     allowedKeys(section, ["purpose", "allowed_capabilities", "reusable_items"], path);
     nonEmptyString(section.purpose, `${path}.purpose`, 480);
     const allowedCapabilities = array(section.allowed_capabilities, `${path}.allowed_capabilities`);
@@ -21054,7 +21996,7 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
     });
     if (section.reusable_items !== void 0) {
       array(section.reusable_items, `${path}.reusable_items`).forEach((entry2, reusableIndex) => {
-        const declaration = record7(entry2, `${path}.reusable_items[${reusableIndex}]`);
+        const declaration = record8(entry2, `${path}.reusable_items[${reusableIndex}]`);
         if (declaration.capability !== void 0) {
           const value2 = capability(declaration.capability, `${path}.reusable_items[${reusableIndex}].capability`);
           if (!seenCapabilities.has(value2)) fail3("LESSON_PLAN_CAPABILITY", `${path}.reusable_items[${reusableIndex}].capability`, "reusable capability is not allowed for this section");
@@ -21062,7 +22004,7 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
       });
     }
   });
-  const close = record7(outline.close, "$lessonPlanOutline.close");
+  const close = record8(outline.close, "$lessonPlanOutline.close");
   allowedKeys(close, ["summary", "focus"], "$lessonPlanOutline.close");
   nonEmptyString(close.summary, "$lessonPlanOutline.close.summary", 1200);
   const outlineFocus = array(close.focus, "$lessonPlanOutline.close.focus");
@@ -21084,7 +22026,7 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
   const bySection = /* @__PURE__ */ new Map();
   drafts.forEach((entry, index) => {
     const path = `$lessonPlanSectionDrafts[${index}]`;
-    const draft = record7(entry, path);
+    const draft = record8(entry, path);
     allowedKeys(draft, ["version", "section", "moments", "student_activities"], path);
     if (draft.version !== LESSON_PLAN_VERSION) fail3("LESSON_PLAN_VERSION", `${path}.version`, `expected '${LESSON_PLAN_VERSION}'`);
     const section = positiveIndex(draft.section, `${path}.section`);
@@ -21095,11 +22037,11 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
     const outlineSection = sections[section - 1];
     const allowedCapabilities = new Set(array(outlineSection.allowed_capabilities, `$lessonPlanOutline.sections[${section - 1}].allowed_capabilities`));
     array(draft.moments, `${path}.moments`).forEach((momentValue, momentIndex) => {
-      const moment = record7(momentValue, `${path}.moments[${momentIndex}]`);
+      const moment = record8(momentValue, `${path}.moments[${momentIndex}]`);
       array(moment.actions, `${path}.moments[${momentIndex}].actions`).forEach((actionValue, actionIndex) => {
-        const action = record7(actionValue, `${path}.moments[${momentIndex}].actions[${actionIndex}]`);
+        const action = record8(actionValue, `${path}.moments[${momentIndex}].actions[${actionIndex}]`);
         if (action.action !== "create" || action.kind !== "visual") return;
-        const content = record7(action.content, `${path}.moments[${momentIndex}].actions[${actionIndex}].content`);
+        const content = record8(action.content, `${path}.moments[${momentIndex}].actions[${actionIndex}].content`);
         if (!allowedCapabilities.has(content.capability)) {
           fail3("LESSON_PLAN_CAPABILITY", `${path}.moments[${momentIndex}].actions[${actionIndex}].content.capability`, "visual capability is not allowed by the course outline");
         }
@@ -21138,9 +22080,9 @@ function cardIdentity(kind, content) {
       return;
     }
     if (!value2 || typeof value2 !== "object") return;
-    const record8 = value2;
-    if (typeof record8.as === "string" && !fragments.has(record8.as)) fragments.set(record8.as, `part-${fragments.size}`);
-    Object.values(record8).forEach(collect);
+    const record9 = value2;
+    if (typeof record9.as === "string" && !fragments.has(record9.as)) fragments.set(record9.as, `part-${fragments.size}`);
+    Object.values(record9).forEach(collect);
   };
   collect(content);
   const localReference = (value2) => {
@@ -21559,8 +22501,8 @@ function planPlotView(input) {
     const structural = features.filter((feature) => feature.kind !== "intercept");
     let region = hull((structural.length ? structural : features).map((feature) => feature.x));
     if (item.quadratic) {
-      const halfWidth4 = quadraticHalfWidth(item.quadratic.a);
-      region = union(region, { min: item.quadratic.vertex - halfWidth4, max: item.quadratic.vertex + halfWidth4 });
+      const halfWidth5 = quadraticHalfWidth(item.quadratic.a);
+      region = union(region, { min: item.quadratic.vertex - halfWidth5, max: item.quadratic.vertex + halfWidth5 });
     }
     return region;
   };
@@ -21600,9 +22542,9 @@ function planPlotView(input) {
     const lower = leftEdge.length ? Math.max(...leftEdge) : -Infinity;
     const upper = rightEdge.length ? Math.min(...rightEdge) : Infinity;
     const turning = new Set(selected.flat().filter((feature) => feature.kind === "extremum").map((feature) => feature.x.toFixed(3))).size >= 2;
-    const short2 = !range || !turning && span2(range) < MIN_SPAN;
-    const wanted = short2 ? MIN_SPAN : span2(range);
-    if (short2) {
+    const short3 = !range || !turning && span2(range) < MIN_SPAN;
+    const wanted = short3 ? MIN_SPAN : span2(range);
+    if (short3) {
       const middle = range ? (range.min + range.max) / 2 : focus;
       const center = Math.abs(middle) < MIN_SPAN / 4 ? 0 : middle;
       range = union(range, { min: center - MIN_SPAN / 2, max: center + MIN_SPAN / 2 });
@@ -21626,8 +22568,8 @@ function planPlotView(input) {
     for (const item of items) {
       const features = item.features.filter((feature) => keptSet.has(feature) || inCluster(feature)).filter((feature) => feature.x >= window.min && feature.x <= window.max);
       if (item.quadratic) {
-        const halfWidth4 = quadraticHalfWidth(item.quadratic.a);
-        const own = { min: Math.max(window.min, item.quadratic.vertex - halfWidth4), max: Math.min(window.max, item.quadratic.vertex + halfWidth4) };
+        const halfWidth5 = quadraticHalfWidth(item.quadratic.a);
+        const own = { min: Math.max(window.min, item.quadratic.vertex - halfWidth5), max: Math.min(window.max, item.quadratic.vertex + halfWidth5) };
         sampled(item, span2(own) > 0 ? own : window);
       } else if (item.period === void 0 && features.some((feature) => feature.kind === "extremum") && !(undefinedBeyond([item], window.min, -1) && undefinedBeyond([item], window.max, 1))) {
         const levels = hull(features.filter((feature) => feature.y !== void 0 && feature.kind !== "intercept").map((feature) => feature.y));
@@ -22061,7 +23003,7 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       }
       return proved;
     };
-    const barsFor = (one) => pieces ? pieceBars2(pieces.map((piece, index) => ({ ...piece, tokens: parseModelFormula(expressions[index], 0, `${path}.pieces[${index}]`, { allowConstant: true }) })), one, path) : formulaBars2(dynamicTokens ?? parseModelFormula(rawExpressions[0], 0, `${path}.expression`), one, { sign }, path);
+    const barsFor = (one2) => pieces ? pieceBars2(pieces.map((piece, index) => ({ ...piece, tokens: parseModelFormula(expressions[index], 0, `${path}.pieces[${index}]`, { allowConstant: true }) })), one2, path) : formulaBars2(dynamicTokens ?? parseModelFormula(rawExpressions[0], 0, `${path}.expression`), one2, { sign }, path);
     for (const axis of ["domain", "range"]) {
       if (want[axis]) leftOutWhenRefused(() => bars.push(...barsFor({ domain: axis === "domain", range: axis === "range" })));
     }
@@ -22812,17 +23754,17 @@ var REGULAR_SIDES = { min: 3, max: 8 };
 var SOLID_MEASURES = ["volume", "surface_area", "counts"];
 function modelSolid(value2, path, adjustments) {
   if (!value2 || typeof value2 !== "object" || Array.isArray(value2)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", path, "expected a solid: its shape and sizes");
-  const record8 = value2;
-  if (!SOLID_SHAPES.includes(record8.shape)) {
+  const record9 = value2;
+  if (!SOLID_SHAPES.includes(record9.shape)) {
     fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.shape`, `expected one of ${SOLID_SHAPES.join(", ")}`);
   }
-  const solid = { shape: record8.shape };
+  const solid = { shape: record9.shape };
   const used = SHAPE_SIZES[solid.shape];
   for (const key of SOLID_SIZES) {
-    const size = record8[key];
+    const size = record9[key];
     if (size === void 0 || size === null) continue;
     const round = solid.shape === "cylinder" || solid.shape === "cone" || solid.shape === "sphere" || solid.shape === "hemisphere";
-    if (!used.includes(key) && (size === 0 || key === "sides" && round || key === "top_radius" && solid.shape === "cylinder" && size === record8.radius)) {
+    if (!used.includes(key) && (size === 0 || key === "sides" && round || key === "top_radius" && solid.shape === "cylinder" && size === record9.radius)) {
       adjustments.push({ reason: "solid_unused_size", detail: `${path}.${key}: ${String(size)} on a ${solid.shape}, not used` });
       continue;
     }
@@ -23001,8 +23943,8 @@ function compileFractionModel(base, content, role, placement, plan, path) {
   if (!Array.isArray(written) || written.length !== count) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions`, `${view} shows ${count === 2 ? "two fractions" : "one fraction"}`);
   const fractions = written.map((item, index) => {
     const at2 = `${path}.fractions[${index}]`;
-    const record8 = item && typeof item === "object" && !Array.isArray(item) ? item : fail2("LESSON_PLAN_CAPABILITY_PARAMETER", at2, "expected {numerator, denominator}");
-    const numerator = record8.numerator, denominator = record8.denominator;
+    const record9 = item && typeof item === "object" && !Array.isArray(item) ? item : fail2("LESSON_PLAN_CAPABILITY_PARAMETER", at2, "expected {numerator, denominator}");
+    const numerator = record9.numerator, denominator = record9.denominator;
     if (typeof numerator !== "number" || !Number.isInteger(numerator) || numerator < 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${at2}.numerator`, "the numerator is a whole number of parts, 0 or more");
     if (typeof denominator !== "number" || !Number.isInteger(denominator) || denominator < 1) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${at2}.denominator`, "the denominator is a whole number of equal parts, 1 or more");
     return { numerator, denominator };
@@ -23555,6 +24497,105 @@ function compileMakeTen(base, content, role, placement, plan, path) {
     }
   };
 }
+var TIMES_TEN_TEXT = {
+  "en-US": { amount: "the amount", target: "the target", counted_in: "counted in", moved_once: "rows moved once", moved_twice: "rows moved twice" },
+  "zh-CN": { amount: "\u8981\u6570\u7684\u6570", target: "\u7528\u4EC0\u4E48\u6765\u6570", counted_in: "\u73B0\u5728\u7528\u4EC0\u4E48\u5355\u4F4D\u5728\u6570", moved_once: "\u52A8\u8FC7\u4E00\u6B21\u7684\u884C", moved_twice: "\u52A8\u8FC7\u4E24\u6B21\u7684\u884C" }
+};
+function compilePlaceValueTimesTen(base, content, role, placement, plan, path) {
+  allowParameterKeys(parameters(content), [], path);
+  const numbers = content.numbers ?? [];
+  const values = numbers.map((number, index) => numberDefinition(plan, number, `${path}.numbers[${index}]`).initial);
+  const sharesNumbers = (action) => action.action === "create" && action.kind === "visual" && action.content.capability !== "place_value_times_ten" && (action.content.numbers ?? []).some((number) => numbers.includes(number));
+  const sharingAt = plan.sections.findIndex((section) => section.moments.some((moment) => moment.actions.some(sharesNumbers)));
+  if (sharingAt >= 0) {
+    const sharing = plan.sections[sharingAt].moments.flatMap((moment) => moment.actions).find(sharesNumbers);
+    const cardAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
+    const sharingCapability = sharing.content.capability;
+    fail2(
+      "LESSON_PLAN_SHARED_NUMBER",
+      `${path}.numbers`,
+      `the times-ten card needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the numbers on the card only, or in words`,
+      sharingAt > cardAt ? sharingCapability : "place_value_times_ten"
+    );
+  }
+  const found = timesTenStartProblem(values);
+  if ("fault" in found) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, found.fault, "place_value_times_ten");
+  const { problem, practice } = found;
+  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "place_value_times_ten");
+  if (first && JSON.stringify(first.content.numbers ?? []) !== JSON.stringify(numbers)) {
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a lesson has one times-ten card: use the same lesson numbers each time, or write another amount in words", "place_value_times_ten");
+  }
+  const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
+  const text5 = TIMES_TEN_TEXT[language];
+  const stem = base.replace(/[^A-Za-z0-9]+/gu, "_").toLowerCase();
+  const name = (field) => `${stem}_${field}`;
+  const rowFields = placeValueTimesTenRowFields(problem.g);
+  const built = buildPlaceValueTimesTen({
+    as: base,
+    role,
+    place: placement,
+    ...language === "zh-CN" ? { language } : {},
+    amount: { expression: name("amount"), initial: problem.amount },
+    target: { expression: name("target"), initial: problem.target },
+    ...problem.question === "count" ? { start: problem.start } : {},
+    counted_in: { expression: name("counted_in"), initial: problem.start },
+    moved_once: { expression: name("moved_once"), initial: 0 },
+    ...problem.g === 2 ? { moved_twice: { expression: name("moved_twice"), initial: 0 } } : {}
+  });
+  const span3 = (...items) => ({ min: Math.min(...items), max: Math.max(...items) + (Math.min(...items) === Math.max(...items) ? 1 : 0) });
+  const variables = [
+    { as: name("amount"), initial: problem.amount, ...span3(problem.amount, practice.amount), label: text5.amount },
+    { as: name("target"), initial: problem.target, ...span3(problem.target, practice.target), label: text5.target },
+    { as: name("counted_in"), initial: problem.start, ...span3(...placeValueTimesTenPath(problem), ...placeValueTimesTenPath(practice)), label: text5.counted_in },
+    ...rowFields.map((field) => ({ as: name(field), initial: 0, min: 0, max: PLACE_VALUE_TIMES_TEN_MAX_ROWS, label: text5[field] }))
+  ];
+  return {
+    actions: built.actions,
+    whole: built.whole,
+    parts: new Map(Object.entries(built.parts)),
+    variables,
+    mover: {
+      unbound: true,
+      numbers: [...numbers],
+      // A step moves counted in along the path: the card plays each row's move. Nothing else moves.
+      play(steps) {
+        const actions = [];
+        for (const step of steps) {
+          if (step.position !== TIMES_TEN_NUMBER.countedIn || step.to[step.position] === step.from[step.position]) continue;
+          actions.push({ do: "animate", variable: name("counted_in"), value: placeValueThousandths(step.to[step.position]) });
+        }
+        return actions;
+      },
+      // The model's practice is "the learner counts the practice's amount in its target": the card starts again,
+      // fresh, on that problem at its own start unit; the task ends on the tap that completes the chart (no "done"),
+      // and the program asks the card's own answer row right after it (OLL ties that row to the card: a model's own
+      // question there would cost the lesson). The value the model wrote is not read. Words that write the practice's
+      // count give it away: that task is dropped and recorded, never the lesson.
+      task(_position, _value, _end, words = []) {
+        if (words.some((each) => placeValueTimesTenWordsGiveAnswer(each, practice))) {
+          return { drop: "the task's words write the count the learner is to find on the card", reason: "practice_answer_in_words" };
+        }
+        const start = { [name("amount")]: practice.amount, [name("target")]: practice.target, [name("counted_in")]: practice.start };
+        for (const field of rowFields) start[name(field)] = 0;
+        return {
+          task: {
+            start: { kind: "practice", variables: Object.keys(start), values: start },
+            allowed_operations: [{ kind: "card_tap", node: base }],
+            completion: { kind: "card_fact", node: base, fact: "complete" }
+          },
+          then: [{
+            prompt: compileText(plan, practice.question === "times" ? "\u5199\u51FA\u7B54\u6848\u3002" : "\u5199\u51FA\u6709\u591A\u5C11\u4E2A\u3002"),
+            hints: [compileText(plan, practice.question === "times" ? "\u5148\u6570\u4E00\u4E2A\u5C0F\u7684\u6570\u91CC\u6709\u51E0\u4E2A\uFF0C\u518D\u6570\u6709\u51E0\u4E2A\u5C0F\u7684\u6570\u3002" : "\u6570\u4E00\u6570\u76EE\u6807\u90A3\u4E00\u5217\u3002")],
+            anchor: base,
+            allowed_operations: [{ kind: "row_entry" }],
+            completion: { kind: "numeric_row", parts: placeValueTimesTenAnswerParts(practice, language).map((part) => "blank" in part ? { blank: { as: part.blank.as, answer: String(part.blank.answer) } } : part) },
+            success_message: placeValueTimesTenDoneText(practice, language)
+          }]
+        };
+      }
+    }
+  };
+}
 var MATH_COMPILERS = {
   number_line: compileNumberLine,
   number_line_compare: compileNumberLineCompare,
@@ -23577,7 +24618,8 @@ var MATH_COMPILERS = {
   base_ten_trade: compileBaseTenTrade,
   place_value_chart: compilePlaceValueChart,
   place_value_trade: compilePlaceValueTrade,
-  make_ten: compileMakeTen
+  make_ten: compileMakeTen,
+  place_value_times_ten: compilePlaceValueTimesTen
 };
 
 // src/plugins/physics-compilers.ts
@@ -23714,7 +24756,7 @@ var add4 = (a, b) => fraction2(a.n * b.d + b.n * a.d, a.d * b.d);
 var sub3 = (a, b) => fraction2(a.n * b.d - b.n * a.d, a.d * b.d);
 var mul2 = (a, b) => fraction2(a.n * b.n, a.d * b.d);
 var div = (a, b) => b.n === 0n ? void 0 : fraction2(a.n * b.d, a.d * b.n);
-function decimal(text5, negative) {
+function decimal2(text5, negative) {
   const plain2 = text5.replace(/,/g, "");
   const [whole2, part = ""] = plain2.split(".");
   const n = BigInt(`${whole2}${part}`) * (negative ? -1n : 1n);
@@ -23794,7 +24836,7 @@ function tokenize2(text5) {
       const length2 = number[0].length + (signed ? 1 : 0);
       const before = text5[i - 1] ?? "";
       const after = text5[i + length2] ?? "";
-      const value2 = fractionNumber ? div(decimal(fractionNumber[1], signed), decimal(fractionNumber[2], false)) : decimal(number[0], signed);
+      const value2 = fractionNumber ? div(decimal2(fractionNumber[1], signed), decimal2(fractionNumber[2], false)) : decimal2(number[0], signed);
       if (!value2) {
         push({ kind: "other", text: number[0] }, length2);
         continue;
@@ -24928,16 +25970,16 @@ function vertexCompatible(value2) {
   let usesDecimal = false;
   const visit = (candidate) => {
     if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return;
-    const record8 = candidate;
-    delete record8.minItems;
-    delete record8.maxItems;
-    if (record8.type === "number") {
+    const record9 = candidate;
+    delete record9.minItems;
+    delete record9.maxItems;
+    if (record9.type === "number") {
       usesDecimal = true;
-      for (const key of Object.keys(record8)) delete record8[key];
-      record8.$ref = "#/$defs/modelDecimal";
+      for (const key of Object.keys(record9)) delete record9[key];
+      record9.$ref = "#/$defs/modelDecimal";
       return;
     }
-    for (const child of Object.values(record8)) {
+    for (const child of Object.values(record9)) {
       if (Array.isArray(child)) child.forEach(visit);
       else visit(child);
     }
@@ -24969,11 +26011,11 @@ function coerceModelNumbers(value2, schema, path) {
     if (!value2 || typeof value2 !== "object" || Array.isArray(value2)) {
       throw new LessonPlanError("LESSON_PLAN_MODEL_NUMBER", path, "expected { mantissa, scale } for a decimal number");
     }
-    const decimal2 = value2;
-    if (Object.keys(decimal2).some((key) => key !== "mantissa" && key !== "scale") || !Number.isInteger(decimal2.mantissa) || Math.abs(Number(decimal2.mantissa)) > 1e12 || !Number.isInteger(decimal2.scale) || Number(decimal2.scale) < 0 || Number(decimal2.scale) > 12) {
+    const decimal3 = value2;
+    if (Object.keys(decimal3).some((key) => key !== "mantissa" && key !== "scale") || !Number.isInteger(decimal3.mantissa) || Math.abs(Number(decimal3.mantissa)) > 1e12 || !Number.isInteger(decimal3.scale) || Number(decimal3.scale) < 0 || Number(decimal3.scale) > 12) {
       throw new LessonPlanError("LESSON_PLAN_MODEL_NUMBER", path, "expected bounded integer mantissa and scale from 0 to 12");
     }
-    const number = Number(decimal2.mantissa) / 10 ** Number(decimal2.scale);
+    const number = Number(decimal3.mantissa) / 10 ** Number(decimal3.scale);
     if (!Number.isFinite(number)) {
       throw new LessonPlanError("LESSON_PLAN_MODEL_NUMBER", path, "expected a finite decimal number");
     }
@@ -25640,6 +26682,38 @@ var MATH_SECTION_FACTS = {
       frames_now: [makeTenFrame(card, 0).count, makeTenFrame(card, 1).count],
       ...filled < MAKE_TEN_PLACES ? { next: { value: filled + 1, does: makeTenNext(a, b, filled), says: makeTenStepSentences(problem, filled, filled + 1, cardLanguage) } } : { ten_made: true },
       practice_pair: [pa, pb]
+    } };
+  },
+  // The times-ten card in its own terms (OLL 0028), once it is drawn: the question (a count or a times pair), the
+  // amount and the target, the answer, the path "counted in" takes, where the demonstration stands (counted in now,
+  // and each column's disks, rows of ten and squares), each later value of counted in with what it does in the
+  // card's own sentences, and the practice. Everything as the lesson writes it (0.01, never thousandths). Facts,
+  // not instructions: a lesson may rightly stop before the target.
+  place_value_times_ten: ({ established, numbers, state, language }) => {
+    if (!numbers || !established?.numbers?.length) return {};
+    const lessonNumbers = established.numbers;
+    const found = timesTenStartProblem(lessonNumbers.map((number) => Number(numbers[number - 1]?.initial ?? 0)));
+    if ("fault" in found) return {};
+    const { problem, practice } = found;
+    const cardLanguage = /^en(?:-|$)/iu.test(language ?? "") ? "en-US" : "zh-CN";
+    const path = placeValueTimesTenPath(problem);
+    const now = Number(state.get(lessonNumbers[TIMES_TEN_NUMBER.countedIn]) ?? timesTenDecimal(problem.start));
+    const position = Number.isFinite(now) ? Math.floor(placeValueTimesTenPosition(problem, Math.round(now * 1e3)) + 1e-9) : 0;
+    const k = Math.min(path.length - 1, Math.max(0, position));
+    const chart = placeValueTimesTenFacts(placeValueTimesTenDemoState(problem, k));
+    const does = placeValueTimesTenStepSentences(problem, cardLanguage);
+    const name = (place5) => placeValueColumnName(place5, cardLanguage);
+    return { facts: {
+      numbers: lessonNumbers,
+      question: problem.question,
+      amount: timesTenDecimal(problem.amount),
+      target: timesTenDecimal(problem.target),
+      answer: problem.question === "times" ? { renamed: problem.renamed, times: problem.result } : { count: problem.result },
+      counted_in_path: path.map(timesTenDecimal),
+      counted_in_now: timesTenDecimal(path[k]),
+      chart_now: chart.columns.map((column) => ({ column: name(column.place), disks: column.disks, rows_of_ten: column.rows, squares: column.squares })),
+      ...k < path.length - 1 ? { next: path.slice(k + 1).map((value2, i) => ({ value: timesTenDecimal(value2), does: does[k + i] })) } : { reached_target: true },
+      practice: [timesTenDecimal(practice.amount), timesTenDecimal(practice.target)]
     } };
   },
   function_plot: ({ established }) => established && fixedLineSamples(established) ? { lead: { sample_slope: "constant" } } : {},
@@ -26616,14 +27690,14 @@ function lowerModelActionReferences(actionName, action, currentMoment, numberCou
   }
   return lowered;
 }
-function lowerIntegerDecimal(record8, prefix, path) {
-  const mantissa = record8[`${prefix}_mantissa`];
-  const scale2 = record8[`${prefix}_scale`];
+function lowerIntegerDecimal(record9, prefix, path) {
+  const mantissa = record9[`${prefix}_mantissa`];
+  const scale2 = record9[`${prefix}_scale`];
   if (!Number.isInteger(mantissa) || Math.abs(Number(mantissa)) > 1e12 || !Number.isInteger(scale2) || Number(scale2) < 0 || Number(scale2) > 12) {
     throw new LessonPlanError("LESSON_PLAN_MODEL_NUMBER", path, "expected bounded integer mantissa and scale from 0 to 12");
   }
-  delete record8[`${prefix}_mantissa`];
-  delete record8[`${prefix}_scale`];
+  delete record9[`${prefix}_mantissa`];
+  delete record9[`${prefix}_scale`];
   return Number(mantissa) / 10 ** Number(scale2);
 }
 function cardMovedNumbers(actions) {
@@ -28478,8 +29552,8 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
 
 // src/raw-reply.ts
 var RAW_REPLY_PREFIX = "learning-coach: raw ";
-function frameRawReply(record8) {
-  return `${RAW_REPLY_PREFIX}${JSON.stringify(record8)}
+function frameRawReply(record9) {
+  return `${RAW_REPLY_PREFIX}${JSON.stringify(record9)}
 `;
 }
 function envelopeText(payload) {
@@ -28492,9 +29566,9 @@ function modelTextFromRawReply(line) {
   const rest = line.startsWith(RAW_REPLY_PREFIX) ? line.slice(RAW_REPLY_PREFIX.length) : line;
   if (rest.startsWith("{")) {
     try {
-      const record8 = JSON.parse(rest);
-      if (record8.kind === "content" && typeof record8.body === "string") return record8.body;
-      if (record8.kind === "payload") return envelopeText(record8.body);
+      const record9 = JSON.parse(rest);
+      if (record9.kind === "content" && typeof record9.body === "string") return record9.body;
+      if (record9.kind === "payload") return envelopeText(record9.body);
     } catch {
     }
   }

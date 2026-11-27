@@ -68,7 +68,10 @@ function timesTenLesson({ amount, target, start, language = "en-US", cardLanguag
   };
 }
 
-const failed = (verdict) => verdict.checks.filter((check) => !check.pass).map((check) => check.check);
+// The judge names each fault itself; OLL refuses most of these lessons too ("the lesson plays"), left out here and
+// tested on its own.
+const failedAll = (verdict) => verdict.checks.filter((check) => !check.pass).map((check) => check.check);
+const failed = (verdict) => failedAll(verdict).filter((check) => check !== "the lesson plays");
 const noted = (verdict) => verdict.notes.filter((check) => !check.pass).map((check) => check.check);
 const cases = JSON.parse(await readFile(new URL("../testsuite/place-value-times-ten-dev-cases.json", import.meta.url), "utf8")).cases;
 const blueprint = JSON.parse(await readFile(new URL("../testsuite/place-value-times-ten-blueprint.json", import.meta.url), "utf8"));
@@ -120,10 +123,10 @@ test("a near miss that draws the card fails; a served case drawn on the chart fa
   const near = judgePlaceValueTimesTen(byId["PF-17"], lesson);
   assert.equal(near.pass, false);
   assert.deepEqual(failed(near), ["no times-ten card for this question"]);
-  assert.equal(judgePlaceValueTimesTen(byId["PF-17"], { lesson: {}, steps: [] }).pass, true);
+  assert.deepEqual(failed(judgePlaceValueTimesTen(byId["PF-17"], { lesson: {}, steps: [] })), [], "no card: the near miss holds");
   const chart = { lesson: { language: "en-US", tasks: [] }, steps: [{ beats: [{ actions: [{ do: "write", as: "c", kind: "place_value_chart", content: {} }] }] }] };
   const served = judgePlaceValueTimesTen(byId["PF-12"], chart);
-  assert.deepEqual(served.checks.map((check) => check.detail), ["no times-ten card; drawn instead: the place-value chart"]);
+  assert.deepEqual(served.checks.filter((check) => check.check !== "the lesson plays").map((check) => check.detail), ["no times-ten card; drawn instead: the place-value chart"]);
 });
 
 test("a card that is not the question's fails: the numbers, the question, the start unit, the language, opening fresh", () => {
@@ -194,4 +197,17 @@ test("the demonstration stays on its path, forward; a practice start sets every 
   delete start.values.moved_twice;
   start.variables = start.variables.filter((variable) => variable !== "moved_twice");
   assert.deepEqual(failed(judgePlaceValueTimesTen(byId["PF-12"], lesson)), ["practice-1: the practice start sets every field the card binds"]);
+});
+
+test("the lesson plays through OLL: a served lesson plays; OLL's own refusals are reported as such", () => {
+  const plays = (item, lesson) => !failedAll(judgePlaceValueTimesTen(byId[item], lesson)).includes("the lesson plays");
+  assert.ok(plays("PF-12", timesTenLesson({ amount: "0.2", target: "0.001", practice: [["5", "0.01"]], counted: [10, 1] })));
+  assert.ok(plays("PF-07", timesTenLesson({ amount: "700", target: "70", practice: [["4000", "400"]], counted: [70_000] })));
+  assert.ok(plays("PF-05", timesTenLesson({ amount: "0.4", target: "0.1", start: "0.01", language: "zh-CN", practice: [["0.06", "0.01"]], counted: [100] })));
+  // OLL refuses each of these too: a card that opens with rows moved, a times pair smaller first, the lesson's own
+  // pair as the practice, counted in off its path.
+  assert.equal(plays("PF-12", timesTenLesson({ amount: "0.2", target: "0.001", practice: [["5", "0.01"]], cardStart: { moved_once: 1 } })), false);
+  assert.equal(plays("PF-14", timesTenLesson({ amount: "0.3", target: "3", practice: [["0.6", "0.06"]], asWritten: true })), false);
+  assert.equal(plays("PF-07", timesTenLesson({ amount: "700", target: "70", practice: [["70", "700"]], asWritten: true })), false);
+  assert.equal(plays("PF-12", timesTenLesson({ amount: "0.2", target: "0.001", practice: [["5", "0.01"]], counted: [50] })), false);
 });
