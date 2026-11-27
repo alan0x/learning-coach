@@ -3,14 +3,18 @@
 // bigger frame and the count moved bound bare, a `complete` task by taps on a practice pair, then the row of four
 // blanks anchored to the card). A served lesson passes, also one whose demonstration stops partway; a near miss
 // with a make-ten card fails; a served question drawn on the trading mat or a number line fails; and a card or a
-// task that is not the question's, or a goal the learner cannot reach, fails.
+// task that is not the question's, or a goal the learner cannot reach, fails; a lesson OLL refuses fails "the lesson
+// plays". Lessons the recipe makes are judged in test/make-ten-recipe.test.mjs.
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { judgeMakeTen, makeTenPairFault, makeTenRowAnswers } from "../scripts/make-ten-judge.mjs";
 
+/** A pair's row answers, or a placeholder for a pair the card refuses (it has no row). */
+const rowAnswers = (a, b) => { try { return makeTenRowAnswers(a, b); } catch { return [0, 0, 0, a + b]; } };
+
 /** The row of four blanks for a pair, as OLL's makeTenRow writes it. */
-function row(a, b, answers = makeTenRowAnswers(a, b)) {
+function row(a, b, answers = rowAnswers(a, b)) {
   const big = Math.max(a, b);
   const [first, second, third, total] = answers.map(String);
   return a >= b
@@ -112,18 +116,25 @@ test("a near miss that draws the card fails; a served question drawn otherwise f
   elsewhere.lesson.tasks = [];
   const verdict = judgeMakeTen(byId["MT-01"], elsewhere);
   assert.equal(verdict.pass, false);
-  assert.match(verdict.checks[0].detail, /drawn instead: a number line/);
-  assert.ok(judgeMakeTen(byId["MT-19"], elsewhere).pass, "a near miss without the card passes");
+  assert.match(verdict.checks.find((check) => check.check === "a make-ten card is drawn").detail, /drawn instead: a number line/);
+  const words = makeTenLesson({ a: 8, b: 6 });
+  words.steps[0].beats[0].actions[0] = { do: "write", as: "note", kind: "text", role: "note", content: { text: "27 sticks: 2 bundles of ten and 7." }, place: { relation: "new_region" } };
+  words.lesson.tasks = [];
+  words.lesson.variables = [];
+  words.close.focus = ["note"];
+  assert.deepEqual(failed(judgeMakeTen(byId["MT-19"], words)), [], "a near miss without the card passes");
 });
 
 test("the card or a task that is not the question's, or a goal the learner cannot reach, fails", () => {
-  const fails = (item, lesson, expected) => assert.deepEqual(failed(judgeMakeTen(item, lesson)), expected);
+  // The judge names each fault itself; OLL refuses most of these lessons too ("the lesson plays"), left out here.
+  const fails = (item, lesson, expected) => assert.deepEqual(failed(judgeMakeTen(item, lesson)).filter((check) => check !== "the lesson plays"), expected);
   fails(byId["MT-01"], makeTenLesson({ a: 8, b: 5, practice: [[7, 5]] }), ["the card's pair is the question's (either order)"]);
   fails(byId["MT-02"], makeTenLesson({ a: 7, b: 5, language: "zh-CN", cardLanguage: "en-US", practice: [[8, 6]] }), ["the card speaks the lesson's language"]);
   // The card opens with the ten already made.
   const made = makeTenLesson({ a: 8, b: 6, practice: [[7, 5]] });
   made.lesson.variables[2].initial = 10;
   fails(byId["MT-01"], made, ["the card opens fresh"]);
+  assert.ok(failed(judgeMakeTen(byId["MT-01"], made)).includes("the lesson plays"), "OLL refuses a card that opens with the ten made");
   // Practice pairs: the card refuses it; the lesson's own pair, in either order; not fresh.
   fails(byId["MT-01"], makeTenLesson({ a: 8, b: 6, practice: [[5, 4]] }), ["practice-1: the practice pair is one the card takes", "row-1: the row after the card's task asks its pair's chain"]);
   fails(byId["MT-01"], makeTenLesson({ a: 8, b: 6, practice: [[6, 8]] }), ["practice-1: the practice pair is not the lesson's (either order)"]);
@@ -140,4 +151,26 @@ test("the card or a task that is not the question's, or a goal the learner canno
   const bare = judgeMakeTen(byId["MT-01"], makeTenLesson({ a: 8, b: 6, filled: [10] }));
   assert.ok(bare.pass);
   assert.deepEqual(noted(bare), ["the learner has a task on the card", "a row of blanks follows"]);
+});
+
+test("the lesson plays through OLL; a practice start of another kind fails; a row elsewhere and a second card's task are noted", () => {
+  // Every hand-written lesson above plays (OLL #122's SPEC shape).
+  assert.ok(judgeMakeTen(byId["MT-01"], makeTenLesson({ a: 8, b: 6, practice: [[7, 5]], filled: [10] })).checks.find((check) => check.check === "the lesson plays").pass);
+  const replay = makeTenLesson({ a: 8, b: 6, practice: [[7, 5]] });
+  replay.lesson.tasks[0].start.kind = "replay";
+  assert.ok(failed(judgeMakeTen(byId["MT-01"], replay)).includes("practice-1: the task on the card starts on a practice"));
+  // A row anchored to the card that does not follow a task on it: noted against the pair the card holds then.
+  const loose = makeTenLesson({ a: 8, b: 6, practice: [[7, 5]], filled: [10] });
+  loose.lesson.tasks.push({ as: "extra", anchor: "frames", prompt: "And 8 + 6?", availability: { kind: "after_lesson" }, allowed_operations: [{ kind: "row_entry" }],
+    completion: { kind: "numeric_row", parts: row(8, 6) }, hints: ["Look again."] });
+  const looseVerdict = judgeMakeTen(byId["MT-01"], loose);
+  assert.deepEqual(failed(looseVerdict), []);
+  assert.deepEqual(noted(looseVerdict), ["extra: a row by the card asks about the pair on it"]);
+  // A task on a second make-ten card: the judge reads the first card only.
+  const twice = makeTenLesson({ a: 8, b: 6, practice: [[7, 5]] });
+  const second = structuredClone(twice.steps[0].beats[0].actions[0]);
+  second.as = "frames-2";
+  twice.steps[0].beats.push({ key: "again", say: "Again.", actions: [second] });
+  twice.lesson.tasks.push({ ...structuredClone(twice.lesson.tasks[0]), as: "practice-2", allowed_operations: [{ kind: "card_tap", node: "frames-2" }], completion: { kind: "card_fact", node: "frames-2", fact: "complete" } });
+  assert.ok(noted(judgeMakeTen(byId["MT-01"], twice)).includes("practice-2: a task on the lesson's first make-ten card"));
 });

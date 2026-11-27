@@ -10,6 +10,8 @@ import {
   placeValueTradeDemoState, placeValueTradeFacts, placeValueTradeProblemOn, placeValueTradeStepSentences,
 } from "octos-lesson-language/plugin-math";
 import { TRADE_NUMBER, placeValueTradeColumnsOf, placeValueTradeStartFault, placeValueTradeThousandths, tradeDecimal } from "./place-value-trade-moves.js";
+import { MAKE_TEN_PLACES, makeTenFrame, makeTenFreshCount, makeTenProblemOf, makeTenStepSentences, makeTenToTen } from "octos-lesson-language/plugin-math";
+import { MAKE_TEN_NUMBER, makeTenNext, makeTenStartFault, makeTenStartValues } from "./make-ten-moves.js";
 
 export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
   // The trading mat in its own terms (owner, 2026-11-24): where practice starts, the amount no trade changes,
@@ -99,6 +101,40 @@ export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
         ? { next: { value: card.next.finished, finishes: name(card.next.place), does: placeValueTradeStepSentences(problem, card.next.finished, cardLanguage) } }
         : { every_column_finished: true }),
       practice_pair: [tradeDecimal(pa), tradeDecimal(pb)],
+    } };
+  },
+  // The make-ten card in its own terms (OLL 0027), once it is drawn: the pair and its sum, which frame fills (the
+  // bigger number's) and which gives, how many cross to make ten and the ones left then, where the demonstration
+  // stands (the count in the bigger frame now, each frame's count), what the next value does in the card's own
+  // sentences, and the practice pair. Facts, not instructions: a lesson may rightly stop before the frame is full.
+  make_ten: ({ established, numbers, state, language }) => {
+    if (!numbers || !established?.numbers?.length) return {};
+    const lessonNumbers = established.numbers;
+    const values = makeTenStartValues(lessonNumbers.map((number) => Number(numbers[number - 1]?.initial ?? 0)));
+    if (makeTenStartFault(values)) return {};
+    const cardLanguage = /^en(?:-|$)/iu.test(language ?? "") ? "en-US" : "zh-CN";
+    const [a, b, pa, pb] = values as [number, number, number, number];
+    const problem = makeTenProblemOf(a, b);
+    const start = makeTenFreshCount(a, b);
+    // The count is the bigger number when the card is drawn; a step the card refuses does not change it. It is read
+    // as the card reads its own field: a whole number from the bigger number to 10 (OLL's makeTenState).
+    const now = Number(state.get(lessonNumbers[MAKE_TEN_NUMBER.filled]!) ?? start);
+    const filled = Number.isFinite(now) ? Math.min(MAKE_TEN_PLACES, Math.max(start, Math.floor(now + 1e-9))) : start;
+    const card = { problem, moved: filled - start };
+    return { facts: {
+      numbers: lessonNumbers,
+      pair: [a, b],
+      sum: a + b,
+      fills: { number: Math.max(a, b), frame: problem.big === 0 ? "first" : "second" },
+      gives: Math.min(a, b) === Math.max(a, b) ? b : Math.min(a, b),
+      to_make_ten: makeTenToTen(problem),
+      ones_left: problem.left,
+      in_bigger_frame_now: filled,
+      frames_now: [makeTenFrame(card, 0).count, makeTenFrame(card, 1).count],
+      ...(filled < MAKE_TEN_PLACES
+        ? { next: { value: filled + 1, does: makeTenNext(a, b, filled), says: makeTenStepSentences(problem, filled, filled + 1, cardLanguage) } }
+        : { ten_made: true }),
+      practice_pair: [pa, pb],
     } };
   },
   function_plot: ({ established }) => (established && fixedLineSamples(established) ? { lead: { sample_slope: "constant" } } : {}),

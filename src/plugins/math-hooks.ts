@@ -11,6 +11,7 @@ import { formulaError, formulaFunctions, parseModelFormula } from "./math-formul
 import { BASE_TEN_DRAWN, baseTenColumns, baseTenMoves, baseTenState } from "./base-ten-moves.js";
 import { placeValueMoves, placeValueState } from "./place-value-moves.js";
 import { TRADE_NUMBER, placeValueTradeColumnsOf, placeValueTradeMoves, placeValueTradeStartFault, placeValueTradeState, placeValueTradeThousandths } from "./place-value-trade-moves.js";
+import { MAKE_TEN_NUMBER, makeTenMoves, makeTenState } from "./make-ten-moves.js";
 import { plotCurveNumbers, plotSampleNumbers, validatePlotSampleNumbers, normalizePlotDraftBindings } from "./plot-bindings.js";
 
 /**
@@ -201,6 +202,25 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
     },
     // Columns finished moves forward from 0; the two numbers and the practice pair never move.
     number_moves: { state: placeValueTradeState, moves: placeValueTradeMoves },
+  },
+  make_ten: {
+    // The card's numbers have no control: the learner works it by its own taps (OLL 0027; owner, 2026-11-24: the
+    // model never names a control). Each number's range is its own value; the count in the bigger frame runs to 10
+    // and the count moved to 4 (the program's own numbers). The compiler checks every number and each step itself.
+    fit_numbers(content, plan) {
+      const numbers = content.numbers ?? [];
+      const definitions = numbers.map((number) => plan.numbers?.[number - 1]);
+      if (!definitions.length || definitions.some((definition) => !definition)) return new Map();
+      definitions.forEach((definition, position) => {
+        definition!.min = position >= MAKE_TEN_NUMBER.filled ? 0 : Math.min(0, definition!.initial);
+        definition!.max = position === MAKE_TEN_NUMBER.filled ? 10 : position === MAKE_TEN_NUMBER.moved ? 4 : Math.max(0, definition!.initial);
+        delete definition!.student_control;
+        delete definition!.unit;
+      });
+      return new Map();
+    },
+    // The count in the bigger frame moves forward from the bigger number to 10; nothing else moves.
+    number_moves: { state: makeTenState, moves: makeTenMoves },
   },
   number_line: { fit_numbers: fitNumberLineNumbers },
   number_line_compare: { fit_numbers: fitComparedNumbers },

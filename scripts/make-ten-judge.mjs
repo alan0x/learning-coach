@@ -19,9 +19,12 @@
 //   the frame (a lesson may stop partway: no hard rule); the learner has a task on the card; a row follows,
 //   anchored to the card; the task's words name no control.
 //
-// The card is read from the lesson as written, its bound fields at the variables' values. The rules are 0027's
-// (the accepted sketch's), written here until Coach pins an OLL that has the card; then the lesson is also played
-// through OLL ("the lesson plays") and the card's own rules replace these. Narration is not judged.
+// The lesson plays through OLL itself (normalized and reduced, as the player plays it), and a pair and its row are
+// judged by the card's own rules (OLL's makeTenFault and makeTenRow). The card is read from the lesson as written,
+// its bound fields at the variables' values. Narration is not judged.
+
+import { normalizeAuthoringLesson, reduceCanonicalEvents } from "octos-lesson-language";
+import { makeTenFault, makeTenRow } from "octos-lesson-language/plugin-math";
 
 const KIND = "make_ten";
 /** Cards a served case may draw instead, named in its failure. */
@@ -29,21 +32,14 @@ const INSTEAD = { base_ten_trade: "the trading mat", number_line: "a number line
 const PLACES = 10;
 
 /** Why the card refuses a pair, or undefined: two whole numbers 1 to 9 whose sum is more than ten (0027 §5). */
-export function makeTenPairFault(a, b) {
-  if (!Number.isInteger(a) || !Number.isInteger(b)) return "unreadable";
-  if (a < 1 || a > 9 || b < 1 || b > 9) return "not_one_digit";
-  if (a + b < PLACES) return "under_ten";
-  if (a + b === PLACES) return "exactly_ten";
-  return undefined;
-}
+export const makeTenPairFault = (a, b) => makeTenFault(a, b);
 
 /**
  * The row's answers for a pair, in the row's order, the part beside the bigger addend making ten with it:
  * 8 + 6 -> [2, 4, 4, 14] (8 + 2 + 4 = 10 + 4 = 14); 3 + 8 -> [1, 2, 1, 11] (1 + 2 + 8 = 1 + 10 = 11).
  */
 export function makeTenRowAnswers(a, b) {
-  const big = Math.max(a, b), moved = PLACES - big, left = a + b - PLACES;
-  return a >= b ? [moved, left, left, a + b] : [left, moved, left, a + b];
+  return makeTenRow(a, b).filter((part) => "blank" in part).map((part) => Number(part.blank.answer));
 }
 
 /** A written whole number ("14", "１４") or undefined. */
@@ -75,7 +71,14 @@ export function makeTenIn(lesson) {
   const writes = written.filter((action) => action.kind === KIND);
   const instead = [...new Set(written.map((action) => INSTEAD[action.kind]).filter(Boolean))];
   const tasks = lesson?.lesson?.tasks ?? [];
-  if (!writes.length) return { cards: 0, instead, tasks };
+  // The lesson plays as the player plays it. A lesson OLL refuses is still read, so each fault is named too.
+  let error;
+  try {
+    reduceCanonicalEvents(normalizeAuthoringLesson(lesson, { lessonId: "judge", boardId: "judge", baseRevision: 0, regionIntent: "new_topic" }));
+  } catch (caught) {
+    error = `${caught.code ?? "error"}: ${String(caught.message).slice(0, 160)}`;
+  }
+  if (!writes.length) return { cards: 0, instead, tasks, ...(error ? { error } : {}) };
   const write = writes[0];
   const declared = Object.fromEntries((lesson.lesson?.variables ?? []).map((variable) => [variable.as, variable.initial]));
   const start = cardAt(write.content, declared);
@@ -84,7 +87,7 @@ export function makeTenIn(lesson) {
   if (start.filledVariable !== undefined) {
     for (const action of actions) if (action.do === "animate" && action.variable === start.filledVariable && typeof action.value === "number") shown = Math.max(shown, action.value);
   }
-  return { cards: writes.length, instead, as: write.as, content: write.content, declared, start, shown, tasks };
+  return { cards: writes.length, others: writes.slice(1).map((other) => other.as), instead, as: write.as, content: write.content, declared, start, shown, tasks, ...(error ? { error } : {}) };
 }
 
 /** Judges one case's lesson. Returns { pass, checks: [{ check, pass, detail? }], notes: [...] }. */
@@ -95,6 +98,7 @@ export function judgeMakeTen(item, lesson) {
   const note = (name, holds, detail) => notes.push({ check: name, pass: Boolean(holds), ...(holds ? {} : { detail }) });
   const done = () => ({ pass: checks.every((each) => each.pass), checks, notes });
   const card = makeTenIn(lesson);
+  check("the lesson plays", !card.error, card.error);
   if (item.expect?.forbid) {
     if (item.expect.forbid.includes(KIND)) check("no make-ten card for this question", card.cards === 0, `${card.cards} make-ten card(s) drawn`);
     return done();
@@ -130,6 +134,7 @@ export function judgeMakeTen(item, lesson) {
       const ops = (task.allowed_operations ?? []).map((operation) => `${operation.kind}${operation.node && operation.node !== card.as ? `@${operation.node}` : ""}`).sort().join(",");
       check(`${label}: the task on the card is its complete fact, by taps`, completion.fact === "complete" && ops === "card_tap", JSON.stringify([task.allowed_operations, completion]));
       const values = task.start?.values;
+      check(`${label}: the task on the card starts on a practice`, task.start?.kind === "practice", `start ${JSON.stringify(task.start?.kind)}`);
       if (!values) {
         check(`${label}: the task on the card starts on its own pair`, false, "no start");
         holds = undefined;
@@ -145,7 +150,7 @@ export function judgeMakeTen(item, lesson) {
       note(`${label}: the task's words name no control`, !/滑|拖|slid|drag|按钮|button/i.test(words), words);
     } else if (follows && completion.kind === "numeric_row") {
       // The row after a task on the card asks that pair's chain, in the owner's order (0027).
-      const expected = holds ? makeTenRowAnswers(holds.a, holds.b) : undefined;
+      const expected = holds && !makeTenPairFault(holds.a, holds.b) ? makeTenRowAnswers(holds.a, holds.b) : undefined;
       const answers = (completion.parts ?? []).filter((part) => part?.blank).map((part) => whole(part.blank.answer));
       check(`${label}: the row after the card's task asks its pair's chain`, expected !== undefined && JSON.stringify(answers) === JSON.stringify(expected),
         `row answers ${JSON.stringify(answers)}, ${holds ? `${pairText(holds)} gives ${JSON.stringify(expected)}` : "no pair the card takes"}`);
@@ -155,6 +160,19 @@ export function judgeMakeTen(item, lesson) {
       check(`${label}: the typed answer after the card's task is its pair's sum`, expected !== undefined && whole(completion.answer) === expected,
         `answer ${completion.answer}, ${holds ? `${pairText(holds)} = ${expected}` : "no pair the card takes"}`);
       note(`${label}: the typed answer is anchored to the card`, task.anchor === card.as, `anchor ${task.anchor}`);
+    } else if (completion.kind === "card_fact" && card.others.includes(completion.node)) {
+      // A task on a second make-ten card: the judge reads the first card only, so this is noted, not judged.
+      note(`${label}: a task on the lesson's first make-ten card`, false, `task on ${completion.node}, a second make-ten card`);
+    } else if ((completion.kind === "numeric_row" || completion.kind === "numeric_answer") && task.anchor === card.as) {
+      // A row or typed question placed by the card, not right after a task on it, may ask what its own words say:
+      // noted against the pair the card holds then, not judged (as the trade judge notes its typed questions).
+      const expected = holds && !makeTenPairFault(holds.a, holds.b)
+        ? (completion.kind === "numeric_row" ? JSON.stringify(makeTenRowAnswers(holds.a, holds.b)) : String(holds.a + holds.b)) : undefined;
+      const asked = completion.kind === "numeric_row"
+        ? JSON.stringify((completion.parts ?? []).filter((part) => part?.blank).map((part) => whole(part.blank.answer)))
+        : String(whole(completion.answer));
+      note(`${label}: a ${completion.kind === "numeric_row" ? "row" : "typed question"} by the card asks about the pair on it`, expected !== undefined && asked === expected,
+        `asks ${asked}, ${holds ? `${pairText(holds)} gives ${expected}` : "no pair the card takes"}`);
     }
   }
   note("the learner has a task on the card", cardTasks > 0, "no task on the card");

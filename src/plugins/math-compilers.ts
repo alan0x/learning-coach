@@ -9,6 +9,7 @@ import {
   buildPlaceValueChart, placeValueColumnName, placeValueColumns, placeValueColumnsFor, placeValueDigitAt, placeValueNumeral,
   placeValueParts, PLACE_VALUE_PLACE_ALIASES,
   buildPlaceValueTrade, placeValueTradeMaxStatus, PLACE_VALUE_TRADE_WORDS,
+  buildMakeTen, makeTenChainText, makeTenFreshCount, makeTenProblemOf, makeTenRow, MAKE_TEN_MAX_MOVED, MAKE_TEN_PLACES,
   type BuiltRecipe, type RearrangementConstruction, type Solid, type SolidMeasureKind,
 } from "octos-lesson-language/plugin-math";
 import { compileText, lessonTextLanguage } from "../lesson-text.js";
@@ -18,6 +19,7 @@ import { PLACE_VALUE_GIVENS, placeValuePlain, placeValueStepPlaces, placeValueSt
 import {
   PLACE_VALUE_TRADE_OPERATIONS, TRADE_NUMBER, placeValueTradeColumnsOf, placeValueTradeStartFault, placeValueTradeThousandths, placeValueTradeWordsGiveAnswer,
 } from "./place-value-trade-moves.js";
+import { MAKE_TEN_NUMBER, makeTenStartFault, makeTenStartValues, makeTenSum, makeTenWordsGiveAnswer } from "./make-ten-moves.js";
 import { plotCurveNumbers, plotSampleNumbers } from "./plot-bindings.js";
 import { planPlotView, type PlotView } from "../plot-view-planner.js";
 import { parseModelFormula } from "./math-formulas.js";
@@ -2107,6 +2109,122 @@ function compilePlaceValueTrade(
   };
 }
 
+/** The make-ten card's own words: the labels of the variables it creates. Everything said is the model's. */
+const MAKE_TEN_TEXT = {
+  "en-US": { a: "the first number", b: "the second number", filled: "in the bigger number's frame", moved: "moved across" },
+  "zh-CN": { a: "第一个数", b: "第二个数", filled: "大数那一框里有几个", moved: "移过去几个" },
+} as const;
+
+/**
+ * The make-ten card (OLL decision 0027, need K2N-19): two ten frames; the smaller number's counters fill the
+ * bigger number's frame, so 8 + 6 becomes 10 + 4. The model writes four lesson numbers, the question's pair and a
+ * practice pair; the program supplies two more, the count in the bigger number's frame (the bigger number at the
+ * start) and the count moved (0), and the demonstration animates the first of them (the card moves one counter
+ * at a time). The program binds the card's own variables (each field to one plain variable), plays each value of
+ * the count, and turns the model's practice into the learner's task on the practice pair (the tap that makes the
+ * ten ends it), then the row of four blanks anchored on the card, which OLL's `makeTenRow` writes. Every fault OLL
+ * would refuse at the card is refused here first and names the card, so only the picture can be lost.
+ */
+function compileMakeTen(
+  base: string,
+  content: LessonPlanVisualContent,
+  role: string,
+  placement: ReturnType<typeof place>,
+  plan: LessonPlan,
+  path: string,
+): CompiledVisual {
+  allowParameterKeys(parameters(content), [], path);
+  const numbers = content.numbers ?? [];
+  // The two counts start where the pair puts them whatever the outline declared for them (the program's own
+  // numbers): the card is built fresh, so a declared start is read over, never refused (review of #184).
+  const values = makeTenStartValues(numbers.map((number, index) => numberDefinition(plan, number, `${path}.numbers[${index}]`).initial));
+  // The card's numbers are its own: they change only by its rules, so another visual cannot also show them.
+  const sharesNumbers = (action: LessonPlan["sections"][number]["moments"][number]["actions"][number]) => action.action === "create"
+    && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability !== "make_ten"
+    && ((action.content as LessonPlanVisualContent).numbers ?? []).some((number) => numbers.includes(number));
+  const sharingAt = plan.sections.findIndex((section) => section.moments.some((moment) => moment.actions.some(sharesNumbers)));
+  if (sharingAt >= 0) {
+    const sharing = plan.sections[sharingAt]!.moments.flatMap((moment) => moment.actions).find(sharesNumbers)!;
+    const cardAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
+    const sharingCapability = (sharing.content as LessonPlanVisualContent).capability;
+    fail("LESSON_PLAN_SHARED_NUMBER", `${path}.numbers`, `the make-ten card needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the numbers on the card only, or in words`,
+      sharingAt > cardAt ? sharingCapability : "make_ten");
+  }
+  const fault = makeTenStartFault(values);
+  if (fault) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault, "make_ten");
+  // One card per lesson: a later card on other numbers is refused at its own path.
+  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions)
+    .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "make_ten");
+  if (first && JSON.stringify((first.content as LessonPlanVisualContent).numbers ?? []) !== JSON.stringify(numbers)) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a lesson has one make-ten card: use the same lesson numbers each time, or write another sum in words", "make_ten");
+  }
+  const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
+  const text = MAKE_TEN_TEXT[language];
+  const [a, b, pa, pb] = values.slice(0, 4) as [number, number, number, number];
+  const stem = base.replace(/[^A-Za-z0-9]+/gu, "_").toLowerCase();
+  const aVariable = `${stem}_a`, bVariable = `${stem}_b`, filledVariable = `${stem}_filled`, movedVariable = `${stem}_moved`;
+  const built = buildMakeTen({
+    as: base, role, place: placement,
+    ...(language === "zh-CN" ? { language } : {}),
+    a: { expression: aVariable, initial: a },
+    b: { expression: bVariable, initial: b },
+    filled: { expression: filledVariable, initial: makeTenFreshCount(a, b) },
+    moved: { expression: movedVariable, initial: 0 },
+  });
+  // The pair, the count in the bigger frame and the count moved: 4 of a lesson's 16 (OLL). The addends run 1 to 9
+  // (the lesson's pair and the practice's), the count in the bigger frame 0 to 10, the count moved exactly 0 to 4.
+  const variables: NonNullable<CompiledVisual["variables"]> = [
+    { as: aVariable, initial: a, min: 1, max: 9, label: text.a },
+    { as: bVariable, initial: b, min: 1, max: 9, label: text.b },
+    { as: filledVariable, initial: makeTenFreshCount(a, b), min: 0, max: MAKE_TEN_PLACES, label: text.filled },
+    { as: movedVariable, initial: 0, min: 0, max: MAKE_TEN_MAX_MOVED, label: text.moved },
+  ];
+  const sum = makeTenSum(pa, pb);
+  return {
+    actions: built.actions, whole: built.whole, parts: new Map(Object.entries(built.parts)), variables,
+    mover: {
+      unbound: true,
+      numbers: [...numbers],
+      // A step moves the count in the bigger frame forward: the card moves one counter for each. Nothing else moves.
+      play(steps) {
+        const actions: AuthoringAction[] = [];
+        for (const step of steps) {
+          if (step.position !== MAKE_TEN_NUMBER.filled || step.to[step.position] === step.from[step.position]) continue;
+          actions.push({ do: "animate", variable: filledVariable, value: step.to[step.position]! } as AuthoringAction);
+        }
+        return actions;
+      },
+      // The model's practice is "the learner makes the ten with the practice pair": the card starts again, fresh,
+      // on that pair; the task ends on the tap that makes the ten (no "done"), and the program asks the row of four
+      // blanks the card's pair gives (OLL's makeTenRow, the part beside the bigger number first). The value the
+      // model wrote is not read. Words that write the practice's sum give it away: that task is dropped and
+      // recorded, never the lesson.
+      task(_position, _value, _end, words = []) {
+        if (words.some((each) => makeTenWordsGiveAnswer(each, sum))) {
+          return { drop: `the task's words write ${sum}, the sum the learner is to find on the card`, reason: "practice_answer_in_words" };
+        }
+        const values: Record<string, number> = { [aVariable]: pa, [bVariable]: pb, [filledVariable]: makeTenFreshCount(pa, pb), [movedVariable]: 0 };
+        return {
+          task: {
+            start: { kind: "practice", variables: Object.keys(values), values },
+            allowed_operations: [{ kind: "card_tap", node: base }],
+            completion: { kind: "card_fact", node: base, fact: "complete" },
+          },
+          then: [{
+            prompt: compileText(plan, "写成算式。"),
+            // The row reads in the order the pair is written: the bigger number first, its full frame first.
+            hints: [compileText(plan, pa >= pb ? "先读满十的那一框，再读另一框。" : "先读另一框剩下的，再读满十的那一框。")],
+            anchor: base,
+            allowed_operations: [{ kind: "row_entry" }],
+            completion: { kind: "numeric_row", parts: makeTenRow(pa, pb, language) },
+            success_message: makeTenChainText(makeTenProblemOf(pa, pb)),
+          }],
+        };
+      },
+    },
+  };
+}
+
 export const MATH_COMPILERS = {
   number_line: compileNumberLine,
   number_line_compare: compileNumberLineCompare,
@@ -2129,4 +2247,5 @@ export const MATH_COMPILERS = {
   base_ten_trade: compileBaseTenTrade,
   place_value_chart: compilePlaceValueChart,
   place_value_trade: compilePlaceValueTrade,
+  make_ten: compileMakeTen,
 } satisfies Record<string, VisualCompiler>;

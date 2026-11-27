@@ -7174,8 +7174,8 @@ import { appendFileSync, mkdirSync, realpathSync, writeFileSync } from "node:fs"
 
 // src/raw-reply.ts
 var RAW_REPLY_PREFIX = "learning-coach: raw ";
-function frameRawReply(record4) {
-  return `${RAW_REPLY_PREFIX}${JSON.stringify(record4)}
+function frameRawReply(record5) {
+  return `${RAW_REPLY_PREFIX}${JSON.stringify(record5)}
 `;
 }
 
@@ -7627,7 +7627,7 @@ var v0_1_schema_default = {
         do: { enum: ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate", "hide", "view", "tap"] },
         when: { enum: ["before_speech", "during_speech", "after_speech"] },
         as: { $ref: "#/$defs/alias" },
-        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model", "base_ten_trade", "place_value_chart", "place_value_trade"] },
+        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model", "base_ten_trade", "place_value_chart", "place_value_trade", "make_ten"] },
         role: { type: "string" },
         content: { type: "object" },
         place: { $ref: "#/$defs/placement" },
@@ -7734,6 +7734,13 @@ var v0_1_schema_default = {
             properties: { do: { const: "write" }, kind: { const: "place_value_trade" } }
           },
           then: { properties: { content: { $ref: "#/$defs/placeValueTradeContent" } } }
+        },
+        {
+          if: {
+            required: ["do", "kind"],
+            properties: { do: { const: "write" }, kind: { const: "make_ten" } }
+          },
+          then: { properties: { content: { $ref: "#/$defs/makeTenContent" } } }
         },
         {
           if: { properties: { do: { const: "revise" } } },
@@ -8076,6 +8083,24 @@ var v0_1_schema_default = {
         }
       }
     },
+    makeTenContent: {
+      type: "object",
+      required: ["a", "b", "filled", "moved"],
+      additionalProperties: false,
+      properties: {
+        language: { enum: ["en-US", "zh-CN"] },
+        a: { type: "integer", minimum: 1, maximum: 9 },
+        b: { type: "integer", minimum: 1, maximum: 9 },
+        filled: { type: "integer", minimum: 0, maximum: 10 },
+        moved: { type: "integer", minimum: 0, maximum: 4 },
+        bindings: {
+          type: "array",
+          minItems: 1,
+          maxItems: 64,
+          items: { $ref: "#/$defs/valueBinding" }
+        }
+      }
+    },
     scene3dContent: {
       type: "object",
       required: ["objects", "camera", "fallback"],
@@ -8227,7 +8252,7 @@ var v0_1_schema_default = {
       required: ["target", "expression"],
       additionalProperties: false,
       properties: {
-        target: { type: "string", pattern: "^(?:[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*|target|a|b|finished)$" },
+        target: { type: "string", pattern: "^(?:[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*|target|a|b|finished|filled|moved)$" },
         expression: { type: "string", minLength: 1, maxLength: 256 },
         allow_zero: { const: true },
         hide_when_undefined: { const: true },
@@ -9686,7 +9711,263 @@ function placeValueTradeRefusalText(state, tap, language = "en-US") {
   }
 }
 
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/make-ten.js
+var MAKE_TEN_KIND = "make_ten";
+var MAKE_TEN_FEATURE = "plugin:math/make-ten@1";
+var MAKE_TEN_PLUGIN_VERSION = "0.10.0";
+var MAKE_TEN_LANGUAGES = BASE_TEN_TRADE_LANGUAGES;
+var MAKE_TEN_PLACES = 10;
+var MAKE_TEN_MIN_ADDEND = 1;
+var MAKE_TEN_MAX_ADDEND = 9;
+var MAKE_TEN_MAX_MOVED = 4;
+var MAKE_TEN_CARD_BINDINGS = ["a", "b", "filled", "moved"];
+var MAKE_TEN_CARD_FIELDS = ["a", "b", "filled"];
+var MAKE_TEN_PROBLEM_FIELDS = ["a", "b"];
+var MAKE_TEN_TAP_FIELD = "moved";
+var MAKE_TEN_TAP_PLACES = ["first", "second"];
+var MAKE_TEN_TAPS = ["give", "back"];
+function makeTenFault(a, b) {
+  if (typeof a !== "number" || typeof b !== "number" || !Number.isInteger(a) || !Number.isInteger(b))
+    return "unreadable";
+  if (a < MAKE_TEN_MIN_ADDEND || a > MAKE_TEN_MAX_ADDEND || b < MAKE_TEN_MIN_ADDEND || b > MAKE_TEN_MAX_ADDEND)
+    return "not_one_digit";
+  if (a + b < MAKE_TEN_PLACES)
+    return "under_ten";
+  if (a + b === MAKE_TEN_PLACES)
+    return "exactly_ten";
+  return void 0;
+}
+function makeTenProblemOf(a, b) {
+  return { a, b, sum: a + b, left: a + b - MAKE_TEN_PLACES, big: a >= b ? 0 : 1 };
+}
+var makeTenAddend = (problem, frame) => frame === 0 ? problem.a : problem.b;
+var makeTenGiver = (problem) => problem.big === 0 ? 1 : 0;
+var makeTenFreshCount = (a, b) => Math.max(a, b);
+var makeTenToTen = (problem) => MAKE_TEN_PLACES - makeTenAddend(problem, problem.big);
+var makeTenProblemText = (problem) => `${problem.a} + ${problem.b}`;
+function makeTenFrame(state, frame) {
+  const { problem, moved } = state;
+  const filling = frame === problem.big;
+  const home = makeTenAddend(problem, frame) - (filling ? 0 : moved);
+  const visitors = filling ? moved : 0;
+  return { home, visitors, count: home + visitors, empty: MAKE_TEN_PLACES - home - visitors };
+}
+function makeTenFullFrame(state) {
+  for (const frame of [0, 1])
+    if (makeTenFrame(state, frame).count === MAKE_TEN_PLACES)
+      return frame;
+  return -1;
+}
+var makeTenComplete = (state) => makeTenFullFrame(state) !== -1;
+var makeTenDemonstrating = (state) => (state.filled ?? makeTenAddend(state.problem, state.problem.big)) > makeTenAddend(state.problem, state.problem.big);
+var withMoved = (state, moved) => ({ ...state, moved });
+function applyMakeTenTap(state, tap) {
+  const f = tap.place;
+  if (f !== 0 && f !== 1)
+    return { ok: false, reason: "none" };
+  if (makeTenDemonstrating(state))
+    return { ok: false, reason: "demonstrating" };
+  const here = makeTenFrame(state, f), other = makeTenFrame(state, 1 - f);
+  if (tap.tap === "back") {
+    if (!here.visitors)
+      return { ok: false, reason: "none" };
+    return { ok: true, state: withMoved(state, state.moved - 1), to: 1 - f };
+  }
+  if (!here.home)
+    return { ok: false, reason: "none" };
+  if (f === state.problem.big)
+    return { ok: false, reason: "stays" };
+  if (!other.empty)
+    return { ok: false, reason: "full" };
+  return { ok: true, state: withMoved(state, state.moved + 1), to: 1 - f };
+}
+function record4(value, path, fail) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    fail(path, "Expected an object");
+  return value;
+}
+function wholeNumber4(raw, path, low, high, fail, what) {
+  if (typeof raw !== "number" || !Number.isInteger(raw) || raw < low || raw > high)
+    fail(path, `${what} is a whole number from ${low} to ${high}`);
+  return raw;
+}
+function makeTenFaultText(fault, a, b) {
+  const pair = typeof a === "number" && typeof b === "number" ? `${a} + ${b}` : "This pair";
+  switch (fault) {
+    case "not_one_digit":
+      return `${pair}: each number is from 1 to 9 (not_one_digit)`;
+    case "under_ten":
+      return `${pair} is less than ten: there is no ten to make (under_ten)`;
+    case "exactly_ten":
+      return `${pair} is exactly ten: nothing is left over; that is partners of ten, not this card (exactly_ten)`;
+    default:
+      return "The two numbers are whole numbers from 1 to 9 (unreadable)";
+  }
+}
+function validateMakeTenContent(raw, path, fail, options = {}) {
+  const content = record4(raw, path, fail);
+  for (const key of Object.keys(content)) {
+    if (!["language", "a", "b", "filled", "moved", "bindings"].includes(key))
+      fail(`${path}/${key}`, `Unknown make-ten field '${key}'`);
+  }
+  if (content.language !== void 0 && !MAKE_TEN_LANGUAGES.includes(content.language)) {
+    fail(`${path}/language`, `The card speaks ${MAKE_TEN_LANGUAGES.join(" or ")}`);
+  }
+  const a = wholeNumber4(content.a, `${path}/a`, MAKE_TEN_MIN_ADDEND, MAKE_TEN_MAX_ADDEND, fail, "The first number");
+  const b = wholeNumber4(content.b, `${path}/b`, MAKE_TEN_MIN_ADDEND, MAKE_TEN_MAX_ADDEND, fail, "The second number");
+  const filled = wholeNumber4(content.filled, `${path}/filled`, 0, MAKE_TEN_PLACES, fail, "The count in the bigger addend's frame (filled)");
+  const moved = wholeNumber4(content.moved, `${path}/moved`, 0, MAKE_TEN_MAX_MOVED, fail, "The counters moved");
+  if (options.boundValues)
+    return;
+  const fault = makeTenFault(a, b);
+  if (fault)
+    fail(`${path}/b`, makeTenFaultText(fault, a, b));
+  const problem = makeTenProblemOf(a, b);
+  const start = makeTenFreshCount(a, b);
+  if (filled < start) {
+    fail(`${path}/filled`, `'filled' counts the counters in the bigger addend's frame: for ${makeTenProblemText(problem)} it starts at ${start}, the bigger addend, not ${filled}`);
+  }
+  if (moved > makeTenToTen(problem)) {
+    fail(`${path}/moved`, `${makeTenProblemText(problem)} fills its ten with ${makeTenToTen(problem)} moved; ${moved} cannot be`);
+  }
+  if (filled > start && moved !== 0) {
+    fail(`${path}/filled`, "A demonstration (filled above the bigger addend) plays on fresh frames: moved is 0");
+  }
+  if (options.start && filled !== start) {
+    fail(`${path}/filled`, `A card opens fresh: for ${makeTenProblemText(problem)} 'filled' starts at ${start}, the bigger addend, not ${filled}`);
+  }
+  if (options.start && moved !== 0)
+    fail(`${path}/moved`, `A card opens fresh: nothing moved, not ${moved}`);
+}
+var makeTenLanguage = (raw) => baseTenLanguage(raw);
+function makeTenState(raw) {
+  const content = raw ?? {};
+  const int = (value, low, high, fallback = low) => typeof value === "number" && Number.isFinite(value) ? Math.min(high, Math.max(low, Math.floor(value + 1e-9))) : fallback;
+  const a = int(content.a, MAKE_TEN_MIN_ADDEND, MAKE_TEN_MAX_ADDEND, MAKE_TEN_MAX_ADDEND);
+  const b = int(content.b, MAKE_TEN_MIN_ADDEND, MAKE_TEN_MAX_ADDEND, MAKE_TEN_MAX_ADDEND);
+  const problem = makeTenProblemOf(a, b);
+  const start = makeTenAddend(problem, problem.big);
+  const most = Math.max(0, Math.min(MAKE_TEN_PLACES - start, makeTenAddend(problem, makeTenGiver(problem))));
+  const filled = int(content.filled, start, start + most, start);
+  if (filled > start)
+    return { problem, moved: filled - start, filled };
+  return { problem, moved: int(content.moved, 0, most), filled };
+}
+function makeTenStartFault(state) {
+  const start = makeTenAddend(state.problem, state.problem.big);
+  if ((state.filled ?? start) !== start)
+    return `A practice card starts with nothing demonstrated: filled is ${state.filled}, not ${start} (${makeTenProblemText(state.problem)}'s bigger addend)`;
+  if (state.moved !== 0)
+    return `A practice card starts fresh: moved is ${state.moved}, not 0`;
+  return void 0;
+}
+function makeTenChanges(before, after) {
+  return before.moved === after.moved ? [] : [{ place: 0, field: "moved", before: before.moved, after: after.moved }];
+}
+var MAKE_TEN_VARIABLE_COUNT = MAKE_TEN_CARD_BINDINGS.length;
+var MAKE_TEN_WORDS = {
+  "en-US": {
+    cardLabel: "Making ten on two ten frames",
+    howto: {
+      start: "Make a ten: tap a {c} counter to fill the empty places.",
+      going: "Keep tapping {c} counters until the frame is full.",
+      done: "The frame is a ten. Fill in the blanks.",
+      shown: "The frame is a ten."
+    },
+    colour: ["red", "blue"],
+    refusal: {
+      stays: "{K} counters stay in their frame.",
+      full: "That frame is full: a frame has ten places.",
+      demonstrating: "These frames show the demonstration.",
+      none: "That can't be done here."
+    },
+    moveAway: "Move this counter to the other frame",
+    moveBack: "Move this counter back to its own frame",
+    frameName: (n) => `Ten frame of the ${n}`,
+    toTen: "to make ten",
+    demo: {
+      start: (big) => `Fill the ${big}'s frame to make a ten.`,
+      move: (small) => `Move one of the ${small} across.`,
+      ten: (left) => `A full frame is ten, and ${left} ${left === 1 ? "is" : "are"} left: 10 + ${left}.`
+    },
+    fixedHowTo: "Tap a {c} counter to move it into an empty place of the other frame; tap it again to bring it back. When that frame holds ten, fill in the blanks."
+  },
+  "zh-CN": {
+    cardLabel: "\u4E24\u4E2A\u5341\u683C\u6846\u51D1\u5341",
+    howto: {
+      start: "\u51D1\u6210\u5341\uFF1A\u70B9{c}\u7684\u5706\u7247\uFF0C\u628A\u7A7A\u4F4D\u586B\u6EE1\u3002",
+      going: "\u63A5\u7740\u70B9{c}\u7684\u5706\u7247\uFF0C\u76F4\u5230\u6846\u6EE1\u4E86\u3002",
+      done: "\u6846\u6EE1\u5341\u4E86\u3002\u5728\u4E0B\u9762\u586B\u7A7A\u3002",
+      shown: "\u6846\u6EE1\u5341\u4E86\u3002"
+    },
+    colour: ["\u7EA2\u8272", "\u84DD\u8272"],
+    refusal: {
+      stays: "{K}\u7684\u5706\u7247\u7559\u5728\u81EA\u5DF1\u7684\u6846\u91CC\u3002",
+      full: "\u90A3\u4E2A\u6846\u6EE1\u4E86\uFF1A\u4E00\u4E2A\u6846\u53EA\u6709\u5341\u4E2A\u683C\u5B50\u3002",
+      demonstrating: "\u8FD9\u662F\u6F14\u793A\u3002",
+      none: "\u8FD9\u91CC\u4E0D\u80FD\u8FD9\u6837\u505A\u3002"
+    },
+    moveAway: "\u628A\u8FD9\u4E2A\u5706\u7247\u79FB\u5230\u53E6\u4E00\u4E2A\u6846",
+    moveBack: "\u628A\u8FD9\u4E2A\u5706\u7247\u79FB\u56DE\u5B83\u81EA\u5DF1\u7684\u6846",
+    frameName: (n) => `${n} \u7684\u5341\u683C\u6846`,
+    toTen: "\u51D1\u6210\u5341",
+    demo: {
+      start: (big) => `\u628A ${big} \u7684\u6846\u8865\u6EE1\uFF0C\u51D1\u6210\u5341\u3002`,
+      move: (small) => `\u4ECE ${small} \u91CC\u79FB\u4E00\u4E2A\u8FC7\u53BB\u3002`,
+      ten: (left) => `\u6EE1\u6846\u662F\u5341\uFF0C\u53E6\u4E00\u4E2A\u6846\u8FD8\u5269 ${left} \u4E2A\uFF1A10 + ${left}\u3002`
+    },
+    fixedHowTo: "\u70B9{c}\u7684\u5706\u7247\uFF0C\u628A\u5B83\u79FB\u5230\u53E6\u4E00\u4E2A\u6846\u7684\u7A7A\u4F4D\u91CC\uFF1B\u518D\u70B9\u4E00\u4E0B\u5C31\u79FB\u56DE\u6765\u3002\u90A3\u4E2A\u6846\u6EE1\u5341\u4E86\uFF0C\u5C31\u5728\u4E0B\u9762\u586B\u7A7A\u3002"
+  }
+};
+function makeTenRich(sentence, problem, language = "en-US") {
+  const words2 = MAKE_TEN_WORDS[language] ?? MAKE_TEN_WORDS["en-US"];
+  const give = makeTenGiver(problem), keep = problem.big;
+  const cap = (word) => word.charAt(0).toUpperCase() + word.slice(1);
+  return sentence.split(/(\{[cK]\})/u).filter(Boolean).map((part) => {
+    if (part === "{c}")
+      return { word: words2.colour[give], frame: give };
+    if (part === "{K}")
+      return { word: cap(words2.colour[keep]), frame: keep };
+    return part;
+  });
+}
+var makeTenPlain = (rich) => rich.map((part) => typeof part === "string" ? part : part.word).join("");
+function makeTenHowTo(raw) {
+  const language = makeTenLanguage(raw);
+  return makeTenPlain(makeTenRich(MAKE_TEN_WORDS[language].fixedHowTo, makeTenState(raw).problem, language));
+}
+function makeTenRefusalRich(state, reason, language = "en-US") {
+  const words2 = MAKE_TEN_WORDS[language] ?? MAKE_TEN_WORDS["en-US"];
+  const sentence = words2.refusal[reason] ?? words2.refusal.none;
+  return makeTenRich(sentence, state.problem, language);
+}
+var makeTenRefusalText = (state, reason, language = "en-US") => makeTenPlain(makeTenRefusalRich(state, reason, language));
+
 // node_modules/octos-lesson-language/dist/packages/core/src/cards.js
+function wholeForwardDemonstration(spec) {
+  return Object.freeze({
+    range: spec.range,
+    next: spec.next,
+    field: spec.field,
+    tapState: spec.tapState,
+    shows: spec.shows,
+    fresh: spec.fresh,
+    ...spec.opensAtStart ? { opensAtStart: true } : {},
+    start: spec.start,
+    refuseStep(content, from, to) {
+      if (!Number.isInteger(to))
+        return `${spec.counts}: a whole number, not ${to}; from ${from}, ${spec.next(content, from)}`;
+      if (to < from)
+        return `${spec.counts}: it goes forward, not from ${from} back to ${to}; ${spec.next(content, from)}`;
+      return void 0;
+    },
+    refuseReplay: (_content, value) => Number.isInteger(value) ? void 0 : `${spec.counts}: a whole number, not ${value}`,
+    outside(content, value) {
+      const { min, max } = spec.range(content);
+      return `${spec.counts}: ${min} to ${max}, not ${value}`;
+    }
+  });
+}
 var placeName = (content, place) => {
   const places = content?.places;
   const item = Array.isArray(places) ? places[place] : void 0;
@@ -9970,22 +10251,28 @@ var tradeContentAt = (content, value) => {
   }
   return at;
 };
+var PLACE_VALUE_TRADE_DEMONSTRATION = wholeForwardDemonstration({
+  field: "finished",
+  counts: `counts the columns a ${PLACE_VALUE_TRADE_KIND} card has finished`,
+  tapState: "a column's state",
+  shows: "(columns finished, counting from the right), and the program plays each column",
+  fresh: "chart",
+  start: () => 0,
+  range: (content) => ({ min: 0, max: placeValueTradeState(content).problem.columns.length }),
+  next(content, value) {
+    const columns = placeValueTradeState(content).problem.columns;
+    const k = Math.max(0, Math.floor(value));
+    const place = columns[columns.length - 1 - k];
+    return place === void 0 ? `every column is finished at ${columns.length}` : `the next value, ${k + 1}, finishes the ${placeValueColumnName(place).toLowerCase()}`;
+  }
+});
 var PLACE_VALUE_TRADE_CARD = Object.freeze({
   kind: PLACE_VALUE_TRADE_KIND,
   taps: PLACE_VALUE_TRADE_TAPS,
   places: PLACE_VALUE_TAP_PLACES,
   cardFields: PLACE_VALUE_TRADE_CARD_BINDINGS,
   practiceFields: PLACE_VALUE_TRADE_PROBLEM_FIELDS,
-  demonstration: Object.freeze({
-    field: "finished",
-    range: (content) => ({ min: 0, max: placeValueTradeState(content).problem.columns.length }),
-    next(content, value) {
-      const columns = placeValueTradeState(content).problem.columns;
-      const k = Math.max(0, Math.floor(value));
-      const place = columns[columns.length - 1 - k];
-      return place === void 0 ? `every column is finished at ${columns.length}` : `the next value, ${k + 1}, finishes the ${placeValueColumnName(place).toLowerCase()}`;
-    }
-  }),
+  demonstration: PLACE_VALUE_TRADE_DEMONSTRATION,
   fieldsAtOnce: true,
   validateContent: (raw, path, fail) => validatePlaceValueTradeContent(raw, path, fail),
   state: placeValueTradeState,
@@ -10063,10 +10350,104 @@ var PLACE_VALUE_TRADE_CARD = Object.freeze({
     }
   })
 });
+var makeTenContentAt = (content, value) => {
+  const at = structuredClone(content);
+  delete at.bindings;
+  for (const field of [...MAKE_TEN_CARD_FIELDS, MAKE_TEN_TAP_FIELD]) {
+    const v = value(field);
+    if (v !== void 0)
+      at[field] = v;
+  }
+  return at;
+};
+var MAKE_TEN_DEMONSTRATION = wholeForwardDemonstration({
+  field: "filled",
+  counts: `counts the counters in the bigger addend's frame of a ${MAKE_TEN_KIND} card`,
+  tapState: "the count the learner moved",
+  shows: "(the count in the bigger addend's frame, from the bigger addend up to 10), and the program moves each counter",
+  fresh: "card",
+  opensAtStart: true,
+  start: (content) => {
+    const { problem } = makeTenState(content);
+    return makeTenFreshCount(problem.a, problem.b);
+  },
+  range: (content) => {
+    const { problem } = makeTenState(content);
+    return { min: makeTenFreshCount(problem.a, problem.b), max: MAKE_TEN_PLACES };
+  },
+  next(content, value) {
+    const { problem } = makeTenState(content);
+    const k = Math.max(makeTenFreshCount(problem.a, problem.b), Math.floor(value));
+    const big = makeTenAddend(problem, problem.big), small = makeTenAddend(problem, makeTenGiver(problem));
+    return k >= MAKE_TEN_PLACES ? `the ${big}'s frame holds ten at ${MAKE_TEN_PLACES}` : `the next value, ${k + 1}, moves one of the ${small} into the ${big}'s frame`;
+  }
+});
+var MAKE_TEN_CARD = Object.freeze({
+  kind: MAKE_TEN_KIND,
+  taps: MAKE_TEN_TAPS,
+  places: MAKE_TEN_TAP_PLACES,
+  cardFields: MAKE_TEN_CARD_FIELDS,
+  practiceFields: MAKE_TEN_PROBLEM_FIELDS,
+  demonstration: MAKE_TEN_DEMONSTRATION,
+  fieldsAtOnce: true,
+  validateContent: (raw, path, fail, options) => validateMakeTenContent(raw, path, fail, options?.start ? { start: true } : {}),
+  state: makeTenState,
+  apply: (state, tap) => {
+    const result = applyMakeTenTap(state, { tap: tap.kind, place: tap.place });
+    return result.ok ? { ok: true, state: result.state } : { ok: false, reason: result.reason };
+  },
+  refusalText(reason, _place, language, state) {
+    return makeTenRefusalText(state ?? makeTenState({}), reason, language === "zh-CN" ? "zh-CN" : "en-US");
+  },
+  language: makeTenLanguage,
+  changes: (before, after) => makeTenChanges(before, after),
+  tapFields: () => [{ place: 0, field: MAKE_TEN_TAP_FIELD, min: 0, max: MAKE_TEN_MAX_MOVED }],
+  /** The count moved is a card-level field: bound by its bare name, not `part.field`. */
+  fieldTarget: (_content, _place, field) => field,
+  contentAt: makeTenContentAt,
+  /** A practice card starts fresh: nothing moved, nothing demonstrated. */
+  validateStart(state, fail) {
+    const fault = makeTenStartFault(state);
+    if (fault)
+      fail(fault);
+  },
+  facts: Object.freeze({
+    /**
+     * The bigger addend's frame holds ten. Judged on each tap, so the task ends on the tap that makes the ten
+     * (there is no "done"); the row of four blanks is a task of its own after it, anchored on the card.
+     */
+    complete: {
+      keys: [],
+      judgedOnTap: true,
+      read: (_completion, state) => {
+        const actual = makeTenComplete(state) ? 1 : 0;
+        return { actual, target: 1, succeeded: actual === 1 };
+      },
+      /** The one finished card of the task's own pair, computed: the pair, nothing demonstrated, the ten made. */
+      donePile({ content, startValue }) {
+        const bound = boundTargets(content);
+        const number = (field) => bound.has(field) ? startValue(bound.get(field)) : Number(content[field]);
+        const problem = makeTenProblemOf(number("a"), number("b"));
+        const start = makeTenFreshCount(problem.a, problem.b);
+        const result = {};
+        for (const [target, alias] of bound) {
+          if (target === "a" || target === "b")
+            result[alias] = number(target);
+          else if (target === "filled")
+            result[alias] = start;
+          else if (target === MAKE_TEN_TAP_FIELD)
+            result[alias] = MAKE_TEN_PLACES - start;
+        }
+        return result;
+      }
+    }
+  })
+});
 var TAP_CARD_KINDS = Object.freeze({
   [BASE_TEN_TRADE_KIND]: BASE_TEN_TRADE_CARD,
   [PLACE_VALUE_CHART_KIND]: PLACE_VALUE_CHART_CARD,
-  [PLACE_VALUE_TRADE_KIND]: PLACE_VALUE_TRADE_CARD
+  [PLACE_VALUE_TRADE_KIND]: PLACE_VALUE_TRADE_CARD,
+  [MAKE_TEN_KIND]: MAKE_TEN_CARD
 });
 var TAP_CARD_KIND_NAMES = Object.freeze(Object.keys(TAP_CARD_KINDS));
 var LESSON_TAP_CARD_KIND_NAMES = Object.freeze(TAP_CARD_KIND_NAMES.filter((name) => !TAP_CARD_KINDS[name].demonstration));
@@ -10119,11 +10500,14 @@ var OLL_BINDING_CAPABILITIES = {
   fraction_model: FRACTION_MODEL_BINDINGS,
   base_ten_trade: BASE_TEN_TRADE_BINDINGS,
   place_value_chart: PLACE_VALUE_CHART_BINDINGS,
-  place_value_trade: PLACE_VALUE_TRADE_BINDINGS
+  place_value_trade: PLACE_VALUE_TRADE_BINDINGS,
+  // The make-ten card has no parts: every field it binds is card-level (below).
+  make_ten: {}
 };
 var OLL_CARD_BINDING_CAPABILITIES = Object.freeze({
   place_value_chart: PLACE_VALUE_CHART_CARD_BINDINGS,
-  place_value_trade: PLACE_VALUE_TRADE_CARD_BINDINGS
+  place_value_trade: PLACE_VALUE_TRADE_CARD_BINDINGS,
+  make_ten: MAKE_TEN_CARD_BINDINGS
 });
 var OLL_CANONICAL_CARD_BINDING_CAPABILITIES = Object.freeze([...new Set(Object.values(OLL_CARD_BINDING_CAPABILITIES).flat())]);
 var EMPTY_BINDING_COLLECTIONS = Object.freeze({});
@@ -10199,8 +10583,9 @@ var MATH_PLUGIN_MANIFEST = {
   // 0.5.0: trading tens and ones, the `base_ten_trade` card (decision 0023). 0.6.0: the mat speaks Chinese
   // (0023 amendment 3). 0.7.0: a slider on a place's count, each stop one trade (0023 amendment 4).
   // 0.8.0: the place-value chart, the `place_value_chart` card (decision 0025). 0.9.0: adding and subtracting
-  // on the chart as the written method, the `place_value_trade` card (decision 0026).
-  version: "0.9.0",
+  // on the chart as the written method, the `place_value_trade` card (decision 0026). 0.10.0: making ten to add
+  // on two ten frames, the `make_ten` card (decision 0027).
+  version: "0.10.0",
   // Every subject plugin depends on the shared tools (decision 0012).
   depends: { shared: "0.1.0" },
   ollCore: ">=0.10.0"
@@ -10244,6 +10629,9 @@ var OLL_EXECUTION_FEATURES = Object.freeze({
   // Decision 0026: the player draws and plays the place-value trade card (its demonstration by columns finished,
   // its taps); a lesson that only demonstrates it needs that player too.
   "card:place_value_trade": "0.17.0",
+  // Decision 0027: the player draws and plays the make-ten card (its demonstration by the count in the bigger
+  // frame, its taps, its task ending on the tap that makes the ten); a lesson that only demonstrates it needs it too.
+  "card:make_ten": "0.18.0",
   // Decision 0025: a card-level field bound by its bare name (the chart's number); an older player cannot place it.
   "value-bindings:card-field": "0.16.0",
   // Decision 0023 amendment 1: a row of blanks answered in one go; an older player has no such question.
@@ -10284,7 +10672,7 @@ var looksLikeNumberLine = (content) => typeof content.range === "object" && cont
 var FIRST_PARTY_EXTENSIONS = Object.freeze([
   {
     plugin: { id: MATH_PLUGIN_MANIFEST.id, version: MATH_PLUGIN_MANIFEST.version },
-    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION, [FRACTION_MODEL_FEATURE]: FRACTION_MODEL_PLUGIN_VERSION, [BASE_TEN_TRADE_FEATURE]: BASE_TEN_TRADE_PLUGIN_VERSION, [BASE_TEN_TRADE_LANGUAGE_FEATURE]: BASE_TEN_TRADE_LANGUAGE_VERSION, [BASE_TEN_TRADE_SLIDER_FEATURE]: BASE_TEN_TRADE_SLIDER_VERSION, [PLACE_VALUE_CHART_FEATURE]: PLACE_VALUE_CHART_PLUGIN_VERSION, [PLACE_VALUE_TRADE_FEATURE]: PLACE_VALUE_TRADE_PLUGIN_VERSION },
+    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION, [FRACTION_MODEL_FEATURE]: FRACTION_MODEL_PLUGIN_VERSION, [BASE_TEN_TRADE_FEATURE]: BASE_TEN_TRADE_PLUGIN_VERSION, [BASE_TEN_TRADE_LANGUAGE_FEATURE]: BASE_TEN_TRADE_LANGUAGE_VERSION, [BASE_TEN_TRADE_SLIDER_FEATURE]: BASE_TEN_TRADE_SLIDER_VERSION, [PLACE_VALUE_CHART_FEATURE]: PLACE_VALUE_CHART_PLUGIN_VERSION, [PLACE_VALUE_TRADE_FEATURE]: PLACE_VALUE_TRADE_PLUGIN_VERSION, [MAKE_TEN_FEATURE]: MAKE_TEN_PLUGIN_VERSION },
     detect(content, kind, use, lesson) {
       if (kind === NUMBER_LINE_KIND || kind === void 0 && looksLikeNumberLine(content)) {
         use(NUMBER_LINE_FEATURE);
@@ -10304,11 +10692,13 @@ var FIRST_PARTY_EXTENSIONS = Object.freeze([
         use(PLACE_VALUE_CHART_FEATURE);
       if (kind === PLACE_VALUE_TRADE_KIND)
         use(PLACE_VALUE_TRADE_FEATURE);
+      if (kind === MAKE_TEN_KIND)
+        use(MAKE_TEN_FEATURE);
     }
   }
 ]);
 var FIRST_PARTY_FEATURES = Object.freeze(Object.assign({}, ...FIRST_PARTY_EXTENSIONS.map((extension) => extension.features)));
-var PLUGIN_NODE_FEATURES = Object.freeze({ [NUMBER_LINE_KIND]: NUMBER_LINE_FEATURE, [FRACTION_MODEL_KIND]: FRACTION_MODEL_FEATURE, [BASE_TEN_TRADE_KIND]: BASE_TEN_TRADE_FEATURE, [PLACE_VALUE_CHART_KIND]: PLACE_VALUE_CHART_FEATURE, [PLACE_VALUE_TRADE_KIND]: PLACE_VALUE_TRADE_FEATURE });
+var PLUGIN_NODE_FEATURES = Object.freeze({ [NUMBER_LINE_KIND]: NUMBER_LINE_FEATURE, [FRACTION_MODEL_KIND]: FRACTION_MODEL_FEATURE, [BASE_TEN_TRADE_KIND]: BASE_TEN_TRADE_FEATURE, [PLACE_VALUE_CHART_KIND]: PLACE_VALUE_CHART_FEATURE, [PLACE_VALUE_TRADE_KIND]: PLACE_VALUE_TRADE_FEATURE, [MAKE_TEN_KIND]: MAKE_TEN_FEATURE });
 
 // node_modules/octos-lesson-language/dist/packages/core/src/index.js
 var ajv = new import__.Ajv2020({ allErrors: true, strict: false });
@@ -10450,8 +10840,32 @@ var NUMBER_LINE_FORM_LIMITS = { span: 40, subdivisions: NUMBER_LINE_LIMITS.subdi
 var HOW_TO = Object.freeze({
   [BASE_TEN_TRADE_KIND]: baseTenHowTo,
   [PLACE_VALUE_CHART_KIND]: placeValueHowTo,
-  [PLACE_VALUE_TRADE_KIND]: placeValueTradeHowTo
+  [PLACE_VALUE_TRADE_KIND]: placeValueTradeHowTo,
+  [MAKE_TEN_KIND]: makeTenHowTo
 });
+
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/place-value-times-ten.js
+var PLACE_VALUE_TIMES_TEN_MAX_PLACE = PLACE_VALUE_MAX_PLACE;
+var PLACE_VALUE_TIMES_TEN_MAX_LINEAGES = 9;
+var PLACE_VALUE_TIMES_TEN_COPIES = 10;
+var PLACE_VALUE_TIMES_TEN_MAX_ROWS = 2 ** PLACE_VALUE_TIMES_TEN_MAX_LINEAGES - 1;
+var PLACE_VALUE_TIMES_TEN_TAP_PLACES = Object.freeze(Array.from({ length: PLACE_VALUE_TIMES_TEN_COPIES }, (_, i) => `row-${i + 1}`));
+var placeValueTimesTenUnit = (place) => 10 ** (place + 3);
+var unit = placeValueTimesTenUnit;
+function finish(p) {
+  const lo = Math.min(p.s, p.t), hi = Math.max(p.s, p.t);
+  const columns = [];
+  for (let place = hi; place >= lo; place -= 1)
+    columns.push(place);
+  return { ...p, columns };
+}
+var MAX_VALUE = 9 * unit(PLACE_VALUE_TIMES_TEN_MAX_PLACE);
+var FALLBACK = finish({ question: "count", amount: 0, target: 1, s: -2, t: -3, dir: -1, g: 1, n: 0, start: 10, result: 0 });
+var PLACE_VALUE_TIMES_TEN_GEOMETRY = { D: 30, G: 3, RP: 4, CP: 12, RH: 42, SQ: 106, SG: 8, NARROW: 150, POINT: 14, GAP: 8, EDGE: 12, HEAD: 34, LABEL: 22 };
+var GEO = PLACE_VALUE_TIMES_TEN_GEOMETRY;
+var placeValueTimesTenRowWidth = (k) => k * (GEO.D + GEO.G) - GEO.G + 2 * GEO.RP;
+var ROW_W = placeValueTimesTenRowWidth(10);
+var WIDE = ROW_W + 2 * GEO.CP;
 
 // src/selection-plot-routing.ts
 var MATH_FUNCTION_NAMES = /* @__PURE__ */ new Set([
@@ -10633,7 +11047,7 @@ function parseTopicAnalysisInput(raw) {
   if (typeof value.job_id !== "string" || !/^[a-f0-9]{64}$/.test(value.job_id)) throw new Error("Invalid analysis job id");
   if (typeof value.capability !== "string" || !/^[A-Za-z0-9_-]{32,128}$/.test(value.capability)) throw new Error("Invalid analysis capability");
   const input = value.input;
-  if (!isRecord(input) || input.schema !== 1 || typeof input.input_sha256 !== "string" || !/^[a-f0-9]{64}$/.test(input.input_sha256) || !isRecord(input.taxonomy) || typeof input.taxonomy.catalog_sha256 !== "string" || !Array.isArray(input.units) || input.units.length < 1 || input.units.length > 100 || input.units.some((unit) => !isRecord(unit) || typeof unit.unit_id !== "string" || typeof unit.content !== "string")) {
+  if (!isRecord(input) || input.schema !== 1 || typeof input.input_sha256 !== "string" || !/^[a-f0-9]{64}$/.test(input.input_sha256) || !isRecord(input.taxonomy) || typeof input.taxonomy.catalog_sha256 !== "string" || !Array.isArray(input.units) || input.units.length < 1 || input.units.length > 100 || input.units.some((unit2) => !isRecord(unit2) || typeof unit2.unit_id !== "string" || typeof unit2.content !== "string")) {
     throw new Error("Invalid analysis material");
   }
   return { job_id: value.job_id, capability: value.capability, input };
