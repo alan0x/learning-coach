@@ -69,6 +69,13 @@ export interface RecipeHooks {
    */
   outline_fault?(values: readonly number[]): string | undefined;
   /**
+   * The lesson variables the card will bind on these starting values (its lesson numbers, in its order, as the outline
+   * declares them with the program's own), at most: the worst case of what its create decides later (the column card's
+   * operation). Read when the lesson's first section compiles, so a lesson that cannot hold its planned cards loses the
+   * other picture before anything is published (review of #194, B2). Undefined when the values make no card.
+   */
+  planned_variables?(values: readonly number[]): number | undefined;
+  /**
    * The model wrote several first-section creates of this course visual (their contents, in order): the
    * index of the one the card is made from, drawn at the first create's moment. Without the hook Coach
    * keeps the first and drops the rest. Out of range or not a whole number: the first.

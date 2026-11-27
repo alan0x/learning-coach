@@ -3,7 +3,7 @@ import {
   isNumberLineCapability,
   recipeDeclares,
   recipeInitialCamera,
-  recipeMinLessonNumbers,
+  recipeMinLessonNumbers, recipeNumberRole,
   recipeProgramNumbers,
   recipeGuidance,
   LESSON_PLAN_CAPABILITY_NAMES,
@@ -38,6 +38,7 @@ import {
 import {
   compileAndValidateLessonPlan,
   mathExpressionToOll,
+  separateCardProblemNumbers,
   type CompileLessonPlanOptions,
   type CompiledLessonPlan,
 } from "./lesson-plan-compiler.js";
@@ -1368,7 +1369,11 @@ function lowerIntegerDecimal(record: Record<string, unknown>, prefix: string, pa
   return Number(mantissa) / 10 ** Number(scale);
 }
 
-/** Lesson numbers bound to a card that moves them by its own rules (recipe hook `number_moves`). */
+/**
+ * Lesson numbers bound to a card that moves them by its own rules (recipe hook `number_moves`). A card never moves its
+ * problem numbers either (the move is left out), so they are here too; another picture that shows one moves a copy of
+ * its own, a number of its own in the walk (`numberStateAfter`).
+ */
 function cardMovedNumbers(actions: readonly unknown[]): number[] {
   return actions.flatMap((action) => {
     const entry = action as { action?: string; kind?: string; content?: { capability?: string; numbers?: number[] } };
@@ -1733,20 +1738,30 @@ function practiceCard(draft: LessonPlanSectionDraft): Record<string, unknown> | 
 
 /**
  * The lesson numbers' values after the given (accepted) sections play, teacher animation only: optional student
- * practice is not run while later sections play. `afterMoment` sees each moment's values once its cards are drawn
- * and its restarts made (`drawn`), and after its animations (`after`).
+ * practice is not run while later sections play. The walk is over the sections as the compiler plays them: with the
+ * copies of cards' problem numbers it makes (`separateCardProblemNumbers`), so a move it leaves out moves nothing and a
+ * move it plays on a picture's copy moves that copy only (review of #194, B1). `state` is by the walked numbers (a copy
+ * by its own index; `shown` gives the outline's number a copy stands for); `current` is by the outline's numbers, each
+ * where the model's next move of it starts: its copy's value once a picture that moves it holds a copy. `afterMoment`
+ * sees each walked moment once its cards are drawn and its restarts made (`drawn`), and after its animations (`after`).
  */
 function numberStateAfter(
   outline: LessonPlanOutline,
   drafts: readonly LessonPlanSectionDraft[],
-  afterMoment?: (draftAt: number, momentAt: number, drawn: ReadonlyMap<number, number>, after: ReadonlyMap<number, number>) => void,
-): Map<number, number> {
-  const state = new Map((outline.numbers ?? []).map((number, index) => [index + 1, number.initial]));
+  afterMoment?: (draftAt: number, momentAt: number, drawn: ReadonlyMap<number, number>, after: ReadonlyMap<number, number>, moment: LessonPlanSectionDraft["moments"][number], shown: (number: number) => number) => void,
+): { state: Map<number, number>; current: Map<number, number>; shown: (number: number) => number } {
+  const walked = { numbers: structuredClone(outline.numbers ?? []), sections: structuredClone(drafts) as unknown as LessonPlan["sections"] };
+  const copies = separateCardProblemNumbers(walked);
+  const numbers = walked.numbers;
+  const sections = walked.sections as unknown as LessonPlanSectionDraft[];
+  const shown = (number: number) => copies.get(number)?.number ?? number;
+  const state = new Map(numbers.map((number, index) => [index + 1, number.initial]));
   // Cards that move their own numbers (the trading mat): one number's animation changes the others too.
   const cards: Array<{ numbers: number[]; hook: NonNullable<RecipeHooks["number_moves"]>; started: number[] }> = [];
-  // A card's numbers do not move before the card is drawn: the compiler leaves such an animation out.
-  const cardNumbers = new Set(cardMovedNumbers(drafts.flatMap((draft) => draft.moments).flatMap((moment) => moment.actions)));
-  for (const [draftAt, draft] of drafts.entries()) for (const [momentAt, moment] of draft.moments.entries()) {
+  // A card's numbers do not move before the card is drawn, and a card never moves its problem numbers: the compiler
+  // leaves such an animation out.
+  const cardNumbers = new Set(cardMovedNumbers(sections.flatMap((draft) => draft.moments).flatMap((moment) => moment.actions)));
+  for (const [draftAt, draft] of sections.entries()) for (const [momentAt, moment] of draft.moments.entries()) {
     for (const action of moment.actions) {
       if (action.action !== "create" || action.kind !== "visual") continue;
       const content = action.content as LessonPlanVisualContent;
@@ -1755,7 +1770,7 @@ function numberStateAfter(
         // The card's state when it is drawn: its lesson numbers as the card reads them there (a chart to build
         // starts empty, whatever number it is to show, unless the section drawing it never builds it), then what its
         // start adds (a hundreds column).
-        const initial = content.numbers.map((number) => outline.numbers![number - 1].initial);
+        const initial = content.numbers.map((number) => numbers[number - 1]!.initial);
         // A state shorter than the card's numbers (a mat whose hundreds start at 0) keeps the rest as written.
         const started = [...hook.state(initial, content, draft.moments.slice(momentAt).flatMap((each) => each.actions))];
         initial.forEach((value, position) => { if (started[position] === undefined) started[position] = value; });
@@ -1766,7 +1781,7 @@ function numberStateAfter(
     for (const number of moment.restart_numbers ?? []) {
       const card = cards.find((each) => each.numbers.includes(number));
       if (card) card.numbers.forEach((each, position) => state.set(each, card.started[position]!));
-      else state.set(number, outline.numbers![number - 1].initial);
+      else state.set(number, numbers[number - 1]!.initial);
     }
     const drawn = afterMoment ? new Map(state) : undefined;
     for (const card of cards) {
@@ -1781,9 +1796,12 @@ function numberStateAfter(
     for (const action of moment.actions) {
       if (action.action === "animate" && !cardNumbers.has(action.number)) state.set(action.number, action.end_value);
     }
-    afterMoment?.(draftAt, momentAt, drawn!, state);
+    afterMoment?.(draftAt, momentAt, drawn!, state, moment, shown);
   }
-  return state;
+  const current = new Map((outline.numbers ?? []).map((_number, index) => [index + 1, state.get(index + 1)!]));
+  const drawnBy = sections.length;
+  for (const [copy, { number, routed, from }] of copies) if (routed && from[0] < drawnBy) current.set(number, state.get(copy)!);
+  return { state, current, shown };
 }
 
 /** A formula, note, list or table as the board shows it; undefined for a picture or an image. */
@@ -1828,12 +1846,15 @@ function earlierSectionsRecord(
     return (outline.course_visuals ?? []).findIndex((visual) => visual.create_section === section
       && visual.reusable_item === slot && visual.capability === capability) + 1;
   };
+  // A picture's numbers as the model wrote them, each with the value the picture shows (a copy's for a picture that
+  // holds one): walked numbers are the compiler's (`numberStateAfter`).
+  let shown = (number: number) => number;
   const values = (numbers: readonly number[] | undefined, state: ReadonlyMap<number, number>) =>
-    (numbers ?? []).map((number) => ({ number, value: state.get(number) }));
+    (numbers ?? []).map((number) => ({ number: shown(number), value: state.get(number) }));
   const sections: EarlierSectionsRecord["sections"] = drafts.map(() => ({ taught: [] }));
   const pictures: Array<{ visual: number; capability: string; numbers?: number[] }> = [];
-  const end = numberStateAfter(outline, drafts, (draftAt, momentAt, drawn, after) => {
-    const moment = drafts[draftAt]!.moments[momentAt]!;
+  const walk = numberStateAfter(outline, drafts, (draftAt, momentAt, drawn, after, moment, walkShown) => {
+    shown = walkShown;
     const wrote: string[] = [];
     const drew: Array<Record<string, unknown>> = [];
     for (const action of moment.actions) {
@@ -1853,15 +1874,17 @@ function earlierSectionsRecord(
         ...(content.numbers?.length ? { numbers: values(content.numbers, drawn) } : {}),
       });
     }
-    const moved = [...after].filter(([number, value]) => drawn.get(number) !== value).map(([number, to]) => ({ number, to }));
+    const moved = [...after].filter(([number, value]) => drawn.get(number) !== value).map(([number, to]) => ({ number: shown(number), to }));
     sections[draftAt]!.taught.push({
       ...(moment.narration ? { narration: moment.narration } : {}),
       ...(wrote.length ? { wrote } : {}),
       ...(drew.length ? { drew } : {}),
-      ...(moment.restart_numbers?.length ? { restarted: moment.restart_numbers } : {}),
+      ...(moment.restart_numbers?.length ? { restarted: moment.restart_numbers.map((number) => shown(number)) } : {}),
       ...(moved.length ? { moved } : {}),
     });
   });
+  shown = walk.shown;
+  const end = walk.state;
   drafts.forEach((draft, draftAt) => {
     const kept = (draft.student_activities ?? []).filter((_activity, index) => !dropped(draftAt + 1)?.has(index));
     if (kept.length) sections[draftAt]!.learner_turn = kept.map((activity) => ({ kind: activity.kind, prompt: activity.prompt }));
@@ -3062,13 +3085,44 @@ export function certainNumberSharing(outline: LessonPlanOutline | undefined): { 
   for (const [index, other] of visuals.entries()) {
     const fewer = recipeMinLessonNumbers(other.capability);
     if (!fewer) continue;
+    // The overlap a card's problem numbers can take is no sharing: the other picture gets a copy of its own (the
+    // compiler's `separateCardProblemNumbers`; PF-10's chart on the times-ten card's amount, PT-15's on the column card's
+    // first number). Only an overlap beyond them is certain to share a number the card keeps.
+    const problems = (capability: string) => Array.from({ length: LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[capability as keyof typeof LESSON_PLAN_CAPABILITY_NUMBER_LIMITS] ?? 0 },
+      (_unused, position) => recipeNumberRole(capability, position)).filter((role) => role === "problem").length;
     const card = visuals.find((each) => {
       const more = recipeMinLessonNumbers(each.capability);
-      return each.capability !== other.capability && more > fewer && more <= declared && more + fewer > declared;
+      return each.capability !== other.capability && more > fewer && more <= declared && more + fewer - declared > problems(each.capability);
     });
     if (card) return { visual: index + 1, capability: other.capability, card: card.capability };
   }
   return undefined;
+}
+
+/**
+ * A lesson whose first section and planned cards cannot fit OLL's 16 lesson variables (review of #194, B2; PT-15: a
+ * pulled-apart chart, 14, in section 1 and the column card, up to 7, in section 2). The card that owns the outline's
+ * numbers (the one with the most `min_lesson_numbers`, its numbers leading) is the need's picture and stays: section 1's
+ * heaviest other picture is named, to go before section 1 publishes. Read when section 1 compiles, so the first section
+ * counts exactly and the card its worst case (`planned_variables`). Undefined when it fits, or no such picture exists.
+ */
+export function plannedCardOverflow(outline: LessonPlanOutline, sectionOne: LessonPlanSectionDraft, declared: number): { capability: string; card: string; detail: string } | undefined {
+  const visuals = outline.course_visuals ?? [];
+  const owner = visuals.filter((visual) => RECIPE_HOOKS[visual.capability as keyof typeof RECIPE_HOOKS]?.planned_variables)
+    .reduce<typeof visuals[number] | undefined>((best, visual) => (!best || recipeMinLessonNumbers(visual.capability) > recipeMinLessonNumbers(best.capability) ? visual : best), undefined);
+  if (!owner || owner.create_section === 1) return undefined;
+  const limit = LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[owner.capability as keyof typeof LESSON_PLAN_CAPABILITY_NUMBER_LIMITS] ?? 0;
+  if ((outline.numbers?.length ?? 0) < limit) return undefined;
+  const planned = RECIPE_HOOKS[owner.capability as keyof typeof RECIPE_HOOKS]!.planned_variables!(outline.numbers!.slice(0, limit).map((number) => number.initial));
+  if (planned === undefined || declared + planned <= 16) return undefined;
+  const heavy = sectionOne.moments.flatMap((moment) => moment.actions)
+    .flatMap((action) => (action.action === "create" && action.kind === "visual" ? [(action.content as LessonPlanVisualContent).capability] : []))
+    .filter((capability) => capability !== owner.capability && recipeDeclares(capability, "binds_many_variables")).at(-1);
+  return heavy === undefined ? undefined : {
+    capability: heavy,
+    card: owner.capability,
+    detail: `the lesson holds at most 16 numbers (OLL): section 1 uses ${declared} and the ${owner.capability} card planned for section ${owner.create_section} needs up to ${planned}`,
+  };
 }
 
 /** A fault only a new outline can fix: the outline chose the visual and the numbers it cannot show. */
@@ -3709,7 +3763,7 @@ export async function generateLessonPlanWithModel(
 
   // Teacher animation state only: optional student practice is not run while
   // subsequent sections play. Retries must never include the rejected draft.
-  const currentNumbersBefore = (section: number): Map<number, number> => numberStateAfter(outline, drafts.slice(0, section - 1));
+  const currentNumbersBefore = (section: number): Map<number, number> => numberStateAfter(outline, drafts.slice(0, section - 1)).current;
   const visualsForSection = (section: number, state: Map<number, number>) => (outline.course_visuals ?? []).flatMap((visual, index) => {
     if (!visual.use_sections.includes(section)) return [];
     // Two comparisons can share a capability while having different recipes,
@@ -3967,6 +4021,27 @@ export async function generateLessonPlanWithModel(
           attempt: sectionAttempts.get(section) ?? 1,
           error: rejectionDetails(error),
         });
+        candidate = undefined;
+        continue;
+      }
+      // Section 1 and the card the outline's numbers were written for cannot both fit: section 1's other heavy picture
+      // goes before anything is published, as a picture certain to share the card's numbers does at acceptance, and
+      // section 1 is written again without it (review of #194, B2).
+      const overflow = section === 1 && outline ? plannedCardOverflow(outline, candidate, prefix.lesson.lesson.variables?.length ?? 0) : undefined;
+      // A card that supports the picture is unlinked from it first, so it stays as a picture of its own (as at acceptance).
+      const unlinked = overflow && outline ? structuredClone(outline) : undefined;
+      for (const visual of unlinked?.course_visuals ?? []) {
+        const related = visual.related_visual === undefined ? undefined : unlinked!.course_visuals![visual.related_visual - 1];
+        if (visual.capability === overflow!.card && related?.capability === overflow!.capability) {
+          delete visual.related_visual;
+          visual.relation = "primary";
+        }
+      }
+      const cardsIn = (from: LessonPlanOutline | undefined) => (from?.course_visuals ?? []).filter((visual) => visual.capability === overflow?.card).length;
+      const withdrawn = overflow && unlinked && !withdrawnFrom(1, overflow.capability)
+        ? withdrawSectionVisual(unlinked, 1, overflow.capability, fixedRequestParts.length, true) : undefined;
+      if (overflow && withdrawn && cardsIn(withdrawn) === cardsIn(outline)) {
+        await withdrawBeforePublishing(1, overflow.capability, withdrawn, "planned_card_budget", overflow.detail);
         candidate = undefined;
         continue;
       }

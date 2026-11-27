@@ -74,6 +74,13 @@ export function recipeProgramNumbers(capability: string | undefined): ReadonlyAr
   return Array.isArray(declared) ? declared as ReadonlyArray<ProgramNumberInput> : [];
 }
 
+/** What a card's number at `position` is to it (`number_roles`): undefined for a recipe that declares none. */
+export type NumberRole = "problem" | "practice" | "demonstration" | "program";
+export function recipeNumberRole(capability: string | undefined, position: number): NumberRole | undefined {
+  const roles = recipeEntry(capability)?.number_roles;
+  return Array.isArray(roles) ? roles[position] as NumberRole | undefined : undefined;
+}
+
 /**
  * A recipe's guidance as a request that offers `offered` gives it. A recipe whose description depends on another
  * recipe being offered declares `model_guidance_with` ({ other recipe: its guidance then }): the first entry whose

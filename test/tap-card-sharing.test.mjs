@@ -67,7 +67,7 @@ test("section 1, the default-on chart: a number line on its number goes at once,
 });
 
 test("section 1, a second outline puts another picture on the card's numbers: the card goes, the lesson is made without it", () => {
-  const result = stagedRun([["make_ten", "number_line_steps", [1, 2, 3]], ["make_ten", "rectangle_unit_square_array", [1, 2]], [null, "rectangle_unit_square_array"]], "make_ten");
+  const result = stagedRun([["make_ten", "number_line_steps", [1, 2, 3]], ["make_ten", "rectangle_unit_square_array", [3, 4]], [null, "rectangle_unit_square_array"]], "make_ten");
   assert.equal(result.error, undefined);
   assert.deepEqual(result.adjustments, [
     ["visual_removed", 1, "number_line_steps", "shares_tap_card_numbers"],
@@ -170,7 +170,7 @@ test("section 1 with both outline restarts spent: the card is named and repaired
     const overflow = samplePlan("rectangle_unit_square_array");
     overflow.sections[0].student_activities = [];
     Object.assign(overflow.numbers[0], { initial: 12, min: 10, max: 14 });
-    const staged = [withPicture("number_line_steps", [1, 2, 3]), overflow, withPicture("function_plot", [1])].map((plan) => {
+    const staged = [withPicture("number_line_steps", [1, 2, 3]), overflow, withPicture("function_plot", [3])].map((plan) => {
       const compatible = makeSamplePlanModelCompatible(plan);
       const drafts = compatible.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({ section: index + 1, version: compatible.version, moments, student_activities }));
       return { outline: stagedOutline(compatible, drafts), drafts };
