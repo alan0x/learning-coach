@@ -248,3 +248,66 @@ test("PF-17: a chart in an outline that declares no number goes at once, never a
   assert.deepEqual(passing.adjustments.filter(([kind]) => kind === "visual_removed"), []);
   assert.ok(passing.written.includes("place_value_chart"));
 });
+
+test("a note on a picture dropped as an outline was accepted does not outlive that outline (review of this change)", () => {
+  // The card in section 1 and the chart in section 2 on the card's five numbers: the chart goes as the outline is
+  // accepted. The card then faults three times and the lesson is planned again, on a clean two-section outline.
+  const result = run(`
+    const plan = sp.timesTenPlan({ amount: 0.3, target: 0.001, practice: [5, 0.01] });
+    plan.numbers[0] = { initial: 3330, min: 0, max: 3330, label: "the amount" };
+    plan.sections[1] = { purpose: "Build a number", reusable_items: [{ kind: "board_item", board_kind: "visual", capability: "place_value_chart" }], moments: [
+      { narration: "A chart.", actions: [{ action: "create", kind: "visual", role: "main_visual", content: { capability: "place_value_chart", parameters: { given: "name" }, numbers: [1] }, placement: { relation: "new_region" }, reusable_item: 1 }] }] };
+    const first = staged(plan);
+    const clean = staged(sp.samplePlan("base_ten_trade"));
+    let stage = first;
+    const log = await generate((request) => {
+      if (request.label === "lesson-plan-bootstrap") return bootstrap(request, first);
+      if (request.label === "lesson-plan-outline") { stage = clean; return JSON.stringify(clean.outline); }
+      return JSON.stringify(stage.drafts[request.section - 1]);
+    }, "Why is 3330 333 tens?");
+    console.log(JSON.stringify(log));
+  `);
+  assert.equal(result.error, undefined, JSON.stringify(result.error));
+  assert.deepEqual(result.adjustments.filter(([kind]) => kind === "visual_removed"), [
+    ["visual_removed", 2, "place_value_chart", "shares_tap_card_numbers"],
+    ["visual_removed", 1, "place_value_times_ten", "visual_limits_after_retries"],
+  ]);
+  assert.deepEqual(result.requests, ["lesson-plan-bootstrap", "lesson-plan-section1", "lesson-plan-section1", "lesson-plan-section1", "lesson-plan-outline", "lesson-plan-section1", "lesson-plan-section2"]);
+  // The first outline's section 1 was told nothing (its note was section 2's); the new outline's sections are told nothing.
+  for (const label of ["lesson-plan-section1", "lesson-plan-section2"]) {
+    for (const [index, prompt] of result.prompts.entries()) {
+      if (result.requests[index] === label) assert.equal(JSON.parse(prompt).removed_picture, undefined, label);
+    }
+  }
+});
+
+test("endOutlineBefore: a part only the removed sections taught is recorded as not taught; a kept picture related to a removed one names no shorter outline", () => {
+  const result = run(`
+    const outline = {
+      version: "0.1", title: "Two parts", goals: ["one", "two"], numbers: [{ initial: 1, min: 0, max: 2 }],
+      request_coverage: [{ request_part: 1, treatment: "teach", sections: [1, 2] }, { request_part: 2, treatment: "teach", sections: [2] }],
+      course_visuals: [{ capability: "number_line", create_section: 1, use_sections: [1, 2], relation: "primary", reusable_item: 1 }],
+      sections: [
+        { purpose: "First", allowed_capabilities: ["number_line"], reusable_items: [{ kind: "board_item", board_kind: "visual", capability: "number_line" }] },
+        { purpose: "Second", allowed_capabilities: ["number_line"], reusable_items: [{ kind: "board_item", board_kind: "note" }] },
+      ],
+      close: { summary: "Review.", focus: [{ source: "reusable", section: 2, item: 1 }] },
+    };
+    const shorter = api.endOutlineBefore(outline, 2, 2);
+    const related = structuredClone(outline);
+    related.course_visuals = [
+      { capability: "number_line", create_section: 2, use_sections: [2], relation: "primary", reusable_item: 1 },
+      { capability: "coordinate_circle", create_section: 1, use_sections: [1], relation: "supporting", related_visual: 1, reusable_item: 1 },
+    ];
+    console.log(JSON.stringify({ shorter, related: api.endOutlineBefore(related, 2, 2) ?? null, first: api.endOutlineBefore(outline, 1, 2) ?? null }));
+  `);
+  assert.equal(result.shorter.sections.length, 1);
+  assert.deepEqual(result.shorter.request_coverage, [
+    { request_part: 1, treatment: "teach", sections: [1] },
+    { request_part: 2, treatment: "unsupported", sections: [], reason: "The lesson ended before the section that was to teach this part." },
+  ]);
+  assert.deepEqual(result.shorter.course_visuals[0].use_sections, [1]);
+  assert.deepEqual(result.shorter.close, { summary: "Review.", focus: [{ source: "reusable", section: 1, item: 1 }] });
+  assert.equal(result.related, null);
+  assert.equal(result.first, null);
+});

@@ -2688,7 +2688,7 @@ export function withdrawSectionVisual(
  * The outline ended before `section`: its published sections only (35P-04 objective run, PF-03: section 2's
  * repairs were spent on the trading mat section 1 drew, which no withdrawal can take out, and the lesson was lost).
  * Pictures created from `section` on go, the others keep only their earlier uses, a taught request part keeps its
- * earlier sections (when one is left with none, the coverage goes, as a playable prefix's does), and the close
+ * earlier sections (one left with none is recorded as not taught, with that reason), and the close
  * focuses on what is left (the last item of the last section that has one). The close summary stays as the outline
  * wrote it. Undefined when `section` is the first, or the shorter outline is not valid.
  */
@@ -2713,14 +2713,14 @@ export function endOutlineBefore(
       ...(visual.related_visual === undefined ? {} : { related_visual: positionMap.get(visual.related_visual)! }),
     }));
   }
-  let coverageParts = expectedRequestParts;
-  if (next.request_coverage) {
-    const coverage = next.request_coverage.map((item) => ({ ...item, sections: item.sections.filter((use) => use <= kept) }));
-    if (coverage.some((item) => item.treatment === "teach" && !item.sections.length)) {
-      delete next.request_coverage;
-      coverageParts = 0;
-    } else next.request_coverage = coverage;
-  }
+  // A part only the removed sections taught is recorded as not taught, with the fact of why (never a learner reply:
+  // only an accepted outline's unsupported part makes one).
+  if (next.request_coverage) next.request_coverage = next.request_coverage.map((item) => {
+    const sections = item.sections.filter((use) => use <= kept);
+    return item.treatment === "teach" && !sections.length
+      ? { request_part: item.request_part, treatment: "unsupported" as const, sections: [], reason: "The lesson ended before the section that was to teach this part." }
+      : { ...item, sections };
+  });
   next.close.focus = next.close.focus.filter((reference) => reference.source !== "reusable" || reference.section <= kept);
   if (!next.close.focus.length) {
     const last = next.sections.map((entry, offset) => ({ section: offset + 1, items: entry.reusable_items?.length ?? 0 }))
@@ -2729,7 +2729,7 @@ export function endOutlineBefore(
     next.close.focus = [{ source: "reusable", section: last.section, item: last.items }];
   }
   try {
-    return validateLessonPlanOutline(next, coverageParts);
+    return validateLessonPlanOutline(next, expectedRequestParts);
   } catch {
     return undefined;
   }
@@ -3728,6 +3728,8 @@ export async function generateLessonPlanWithModel(
       } else if (outline) excludeFaulting(outline, error);
       outlineError = error;
       outline = undefined;
+      // A note on a picture the discarded outline lost (one dropped as it was accepted) is not the new outline's.
+      withdrawnNotes.clear();
       bootstrappedFirstSection = undefined;
       sectionErrors.delete(1);
       sectionAttempts.delete(1);

@@ -28793,14 +28793,10 @@ function endOutlineBefore(outline, section, expectedRequestParts) {
       ...visual.related_visual === void 0 ? {} : { related_visual: positionMap.get(visual.related_visual) }
     }));
   }
-  let coverageParts = expectedRequestParts;
-  if (next.request_coverage) {
-    const coverage = next.request_coverage.map((item) => ({ ...item, sections: item.sections.filter((use) => use <= kept) }));
-    if (coverage.some((item) => item.treatment === "teach" && !item.sections.length)) {
-      delete next.request_coverage;
-      coverageParts = 0;
-    } else next.request_coverage = coverage;
-  }
+  if (next.request_coverage) next.request_coverage = next.request_coverage.map((item) => {
+    const sections = item.sections.filter((use) => use <= kept);
+    return item.treatment === "teach" && !sections.length ? { request_part: item.request_part, treatment: "unsupported", sections: [], reason: "The lesson ended before the section that was to teach this part." } : { ...item, sections };
+  });
   next.close.focus = next.close.focus.filter((reference) => reference.source !== "reusable" || reference.section <= kept);
   if (!next.close.focus.length) {
     const last = next.sections.map((entry, offset) => ({ section: offset + 1, items: entry.reusable_items?.length ?? 0 })).filter((entry) => entry.items > 0).at(-1);
@@ -28808,7 +28804,7 @@ function endOutlineBefore(outline, section, expectedRequestParts) {
     next.close.focus = [{ source: "reusable", section: last.section, item: last.items }];
   }
   try {
-    return validateLessonPlanOutline(next, coverageParts);
+    return validateLessonPlanOutline(next, expectedRequestParts);
   } catch {
     return void 0;
   }
@@ -29618,6 +29614,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
       } else if (outline) excludeFaulting(outline, error);
       outlineError = error;
       outline = void 0;
+      withdrawnNotes.clear();
       bootstrappedFirstSection = void 0;
       sectionErrors.delete(1);
       sectionAttempts.delete(1);
