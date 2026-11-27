@@ -496,6 +496,59 @@ test("a later section's card the outline gave too few numbers is withdrawn befor
   assert.doesNotMatch(result.lesson, /"kind":"place_value_trade"/u);
 });
 
+// Coach #181 review follow-ups. A create naming the card's first four numbers is bound to a fifth only when the
+// program supplied it: an outline's own fifth number may be another picture's. The card's minimum is counted on
+// the numbers its own create names, so a create left with four goes at once, never retried for a fifth.
+const CARD_IN_SECTION_2 = `
+  // Section 1 writes the sum; the card is planned for section 2, and section 2 creates it as section 1 would have.
+  outline.course_visuals = [{ ...outline.course_visuals[0], use_sections: [2] }];
+  outline.sections[0].reusable_items = [{ kind: "board_item", board_kind: "math" }];
+  first = { moments: [{ narration: "Here is the subtraction.", delivery: "neutral", math_creates: [{ timing: "during_speech", reusable_item: 1, content: { latex: "7352 - 2618" } }] }] };
+  const card = { ...structuredClone(drafts[0]), section: 2 };
+  card.course_visual_creates.visual_1.content.numbers = [1, 2, 3, 4];
+  reply = (request) => JSON.stringify(request.section === 2 && !JSON.parse(request.prompt).removed_picture ? card : { moments: [{ narration: "Subtract column by column.", delivery: "neutral" }] });
+`;
+
+test("a create naming four numbers is bound to the fifth the program supplied, in a later section too", () => {
+  const result = stubbedRun(`outline.numbers = outline.numbers.slice(0, 4); ${CARD_IN_SECTION_2}`);
+  assert.equal(result.error, undefined);
+  assert.deepEqual([result.rejected, result.adjustments], [[], []]);
+  assert.deepEqual(result.requests.map((request) => [request.label, request.section]), [["lesson-plan-bootstrap", undefined], ["lesson-plan-section", 2]]);
+  assert.match(result.lesson, /"kind":"place_value_trade"/u);
+  assert.deepEqual(result.numbers.at(-1), { initial: 0, min: 0, max: 6, label: "columns finished" });
+});
+
+test("a create naming four numbers is not bound to the outline's own fifth: the card goes at once, with no retry", () => {
+  // Section 1: the outline declares five numbers itself; the create names four. A new outline is asked without the card.
+  const first = stubbedRun(`
+    outline.numbers[4].label = "another picture's number";
+    for (const moment of first.moments) for (const create of moment.visual_creates ?? []) create.content.numbers = [1, 2, 3, 4];
+  `);
+  assert.deepEqual(first.requests.map((request) => request.label), ["lesson-plan-bootstrap", "lesson-plan-outline"]);
+  assert.equal(first.error, "replacement outline asked");
+  assert.deepEqual(first.adjustments, [{ kind: "visual_removed", section: 1, capability: "place_value_trade", reason: "outline_numbers_missing" }]);
+  assert.ok(first.rejected.includes("LESSON_PLAN_OUTLINE_NUMBERS_MISSING"));
+  assert.equal(first.rejected.includes("LESSON_PLAN_CAPABILITY_PARAMETER"), false);
+  // A later section: the section that created the card with four is written once more, without it.
+  const later = stubbedRun(`outline.numbers[4].label = "another picture's number"; ${CARD_IN_SECTION_2}`);
+  assert.equal(later.error, undefined);
+  assert.deepEqual(later.requests.map((request) => [request.label, request.section]), [["lesson-plan-bootstrap", undefined], ["lesson-plan-section", 2], ["lesson-plan-section", 2]]);
+  assert.deepEqual(later.adjustments, [{ kind: "visual_removed", section: 2, capability: "place_value_trade", reason: "outline_numbers_missing" }]);
+  assert.deepEqual(later.rejected, ["LESSON_PLAN_OUTLINE_NUMBERS_MISSING"]);
+  assert.match(later.requests[2].prompt.removed_picture, /column_add_subtract_trades.*do not mention it/u);
+  assert.doesNotMatch(later.lesson, /"kind":"place_value_trade"/u);
+  assert.equal(later.numbers.at(-1).label, "another picture's number");
+});
+
+test("the card's most columns is OLL's own limit, not a number of Coach's", () => {
+  const supplied = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    const { PLACE_VALUE_TRADE_MAX_COLUMNS } = await import("octos-lesson-language/plugin-math");
+    console.log(JSON.stringify({ inputs: api.LESSON_PLAN_CAPABILITY_REGISTRY.place_value_trade.program_number_inputs, oll: PLACE_VALUE_TRADE_MAX_COLUMNS }));
+  `);
+  assert.deepEqual(supplied.inputs, [{ initial: 0, min: 0, max: supplied.oll, label: "做完了几列" }]);
+});
+
 test("the trial's guidance asks for the card's numbers in the outline (default requests are checked by request-hashes)", () => {
   const guidance = withTrial(`
     const api = await import(${here("../lesson-plan.js")});

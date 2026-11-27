@@ -2,7 +2,7 @@
 // Subject plugin (decision 0012, draft). Coach assembles its recipe registry
 // and the recipe rules in its prompts from the installed plugins.
 import { REARRANGEMENT_MODEL_GUIDANCE } from "../rearrangement.js";
-import { MATH_PLUGIN_MANIFEST, MATH_SUBJECT_DESCRIPTION } from "octos-lesson-language/plugin-math";
+import { MATH_PLUGIN_MANIFEST, MATH_SUBJECT_DESCRIPTION, PLACE_VALUE_TRADE_MAX_COLUMNS } from "octos-lesson-language/plugin-math";
 import type { CoachSubjectPlugin } from "./types.js";
 import { PLOT_MARKS } from "./plot-mark-names.js";
 
@@ -215,8 +215,9 @@ export const MATH_RECIPES = {
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
     // Columns finished starts at 0 whatever the outline holds (the card is drawn with no column done), so the
     // program supplies it: an outline that declares only the four numbers before it gets it (0, from 0 to the
-    // card's most columns), and a create naming only those four is bound to it. A model's own fifth is kept.
-    program_number_inputs: [{ initial: 0, min: 0, max: 6, label: "做完了几列" }],
+    // card's most columns, OLL's own limit), and a create naming only those four is bound to it. A model's own
+    // fifth is kept, and a create naming four is not bound to it (it may be another picture's number).
+    program_number_inputs: [{ initial: 0, min: 0, max: PLACE_VALUE_TRADE_MAX_COLUMNS, label: "做完了几列" }],
     // The card starts on no fewer: an outline that declares fewer loses it at once (a section cannot add one).
     min_lesson_numbers: 5,
     parameter_names: ["operation"],
