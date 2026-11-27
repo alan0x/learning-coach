@@ -3648,7 +3648,20 @@ export async function generateLessonPlanWithModel(
     if (!site || !draft || (site.section >= section && !(ownCard && site.section === section))) return undefined;
     const keyOf = (moment: number, action: number) => `${moment}:${action}`;
     const candidates = new Set<string>();
-    if (site.kind === "animate") {
+    // The card's own problem and practice numbers, by its roles: a move of any of them is one the card keeps as written.
+    const fixed = (number: number) => {
+      const position = site.numbers.indexOf(number);
+      const role = position < 0 ? undefined : recipeNumberRole(site.capability, position);
+      return role === "problem" || role === "practice";
+    };
+    if (ownCard) {
+      // Every move in the section's draft of a number the card keeps as written: the section may hold several, and the
+      // compiled plan's action offsets need not be the draft's (a duplicate it removes). Each goes back in below when
+      // the section compiles with it (review of #197, B1).
+      draft.moments.forEach((moment, momentAt) => moment.actions.forEach((action, actionAt) => {
+        if (action.action === "animate" && fixed(action.number)) candidates.add(keyOf(momentAt, actionAt));
+      }));
+    } else if (site.kind === "animate") {
       // The fault's own move, read in the section's draft at the same place (the compiled plan is assembled from it).
       // Only this section's own move, the same move in its draft at the same place as in the plan compile saw.
       const own = draft.moments[site.moment]?.actions[site.action];
@@ -3681,8 +3694,16 @@ export async function generateLessonPlanWithModel(
       const action = draft.moments[momentAt]!.actions[actionAt]!;
       // Trace only: a moment left with its narration alone (every action it had was a move left out).
       const narrationOnly = draft.moments[momentAt]!.actions.every((_each, offset) => removed.has(keyOf(momentAt, offset)));
+      const at = `$lessonPlan.sections[${section - 1}].moments[${momentAt}].actions[${actionAt}]`;
+      // A card's own number: the fact the refusal stated (what the number is to the card).
+      const entry = LESSON_PLAN_CAPABILITY_REGISTRY[site.capability as keyof typeof LESSON_PLAN_CAPABILITY_REGISTRY] as { card_name?: string; number_names?: readonly string[] };
+      const number = action.action === "animate" ? action.number : undefined;
+      const position = number === undefined ? -1 : site.numbers.indexOf(number);
+      const fact = ownCard && number !== undefined && position >= 0
+        ? `lesson number ${number} is the ${entry.card_name ?? site.capability}'s ${entry.number_names?.[position] ?? "number"} ${outline!.numbers?.[number - 1]?.initial}, which stays as written`
+        : `the ${site.capability} visual cannot show lesson number ${number ?? "?"} at ${action.action === "animate" ? action.end_value : "?"}`;
       return {
-        detail: `$lessonPlan.sections[${section - 1}].moments[${momentAt}].actions[${actionAt}]: the ${site.capability} visual cannot show lesson number ${action.action === "animate" ? action.number : "?"} at ${action.action === "animate" ? action.end_value : "?"}; left out`,
+        detail: `${at}: ${fact}; left out`,
         ...(narrationOnly ? { narration_only_moment: true as const } : {}),
       };
     });

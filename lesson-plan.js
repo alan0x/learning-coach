@@ -26498,6 +26498,7 @@ function resolveMetNumberTargets(plan) {
     }
   }
 }
+var MAX_OUTLINE_NUMBERS = 16;
 function separateCardProblemNumbers(plan, adjustments = []) {
   const copyOf = /* @__PURE__ */ new Map();
   const numbers = plan.numbers;
@@ -26529,6 +26530,7 @@ function separateCardProblemNumbers(plan, adjustments = []) {
       if (held.picture === picture || copied.has(number) || held.role !== "problem" && role !== "problem") return;
       const definition = outlineDefinitions[number - 1];
       if (!definition) return;
+      while (numbers.length < MAX_OUTLINE_NUMBERS) numbers.push({ initial: 0, min: 0, max: 1 });
       numbers.push(structuredClone(definition));
       const copy = numbers.length;
       copied.add(number);
@@ -30726,7 +30728,16 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     if (!site || !draft || site.section >= section && !(ownCard && site.section === section)) return void 0;
     const keyOf = (moment, action) => `${moment}:${action}`;
     const candidates = /* @__PURE__ */ new Set();
-    if (site.kind === "animate") {
+    const fixed = (number) => {
+      const position = site.numbers.indexOf(number);
+      const role = position < 0 ? void 0 : recipeNumberRole(site.capability, position);
+      return role === "problem" || role === "practice";
+    };
+    if (ownCard) {
+      draft.moments.forEach((moment, momentAt) => moment.actions.forEach((action, actionAt) => {
+        if (action.action === "animate" && fixed(action.number)) candidates.add(keyOf(momentAt, actionAt));
+      }));
+    } else if (site.kind === "animate") {
       const own = draft.moments[site.moment]?.actions[site.action];
       if (site.in === section && own?.action === "animate" && own.number === site.move?.number && own.end_value === site.move.end_value && site.numbers.includes(own.number)) candidates.add(keyOf(site.moment, site.action));
     } else {
@@ -30759,8 +30770,13 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       const [momentAt, actionAt] = key.split(":").map(Number);
       const action = draft.moments[momentAt].actions[actionAt];
       const narrationOnly = draft.moments[momentAt].actions.every((_each, offset) => removed.has(keyOf(momentAt, offset)));
+      const at2 = `$lessonPlan.sections[${section - 1}].moments[${momentAt}].actions[${actionAt}]`;
+      const entry = LESSON_PLAN_CAPABILITY_REGISTRY[site.capability];
+      const number = action.action === "animate" ? action.number : void 0;
+      const position = number === void 0 ? -1 : site.numbers.indexOf(number);
+      const fact = ownCard && number !== void 0 && position >= 0 ? `lesson number ${number} is the ${entry.card_name ?? site.capability}'s ${entry.number_names?.[position] ?? "number"} ${outline.numbers?.[number - 1]?.initial}, which stays as written` : `the ${site.capability} visual cannot show lesson number ${number ?? "?"} at ${action.action === "animate" ? action.end_value : "?"}`;
       return {
-        detail: `$lessonPlan.sections[${section - 1}].moments[${momentAt}].actions[${actionAt}]: the ${site.capability} visual cannot show lesson number ${action.action === "animate" ? action.number : "?"} at ${action.action === "animate" ? action.end_value : "?"}; left out`,
+        detail: `${at2}: ${fact}; left out`,
         ...narrationOnly ? { narration_only_moment: true } : {}
       };
     });
