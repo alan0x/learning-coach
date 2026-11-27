@@ -415,3 +415,17 @@ test("a move of the pair or the practice pair is refused with what the number is
   assert.match(result[1][2], /lesson number 1 is the compare card's first number 4530, which stays as written; the demonstration moves lesson number 5, the places compared/);
   assert.match(result[3][2], /the compare card's practice first number 6281, which stays as written/);
 });
+
+test("pilot 2: no card's guidance gives the model a target value or a number to repeat; the practice is a plain invitation", () => {
+  const all = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    console.log(JSON.stringify(Object.fromEntries(["place_value_trade", "make_ten", "place_value_times_ten", "place_value_compare"].map((name) => [name, api.LESSON_PLAN_CAPABILITY_REGISTRY[name].model_guidance]))));
+  `, "place_value_trade,make_ten,place_value_times_ten,place_value_compare");
+  for (const [name, guidance] of Object.entries(all)) {
+    // PC-14, pilot 2: "after class ... by setting the comparison progress to 8" echoed "the practice target is 8".
+    assert.equal(/数值写(?:8|10|列数)/u.test(guidance), false, `${name}: no practice target value`);
+    assert.ok(guidance.includes("目标由程序定，这个数和它的值不在话里说；题目只请孩子课后在卡片上做练习的数"), `${name}: the target is the program's; the words invite`);
+  }
+  assert.ok(all.place_value_compare.includes("“课后在卡片上比一比 0.8 和 0.80”"));
+  assert.ok(all.place_value_compare.includes("compared 和它的值只给程序用，话里不说"));
+});
