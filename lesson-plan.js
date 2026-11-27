@@ -26806,7 +26806,7 @@ var OUTLINE_SYSTEM_PROMPT = [
   promptSlot("outline.visual_choice"),
   `- numbers \u53EA\u5199\u6709\u6559\u5B66\u4F5C\u7528\u7684\u5171\u4EAB\u6570\u503C\u3001\u8303\u56F4\u548C\u521D\u503C\uFF0C\u987A\u5E8F\u4F9D visual_recipes \u7684 numbers\uFF1B\u63A7\u4EF6\u4E0E\u6B65\u957F\u7531\u7A0B\u5E8F\u751F\u6210\u3002`,
   `- request_coverage \u4F9D request_parts \u987A\u5E8F\u8986\u76D6\uFF1A\u53EF\u5B9E\u73B0\u5199 teach+\u7AE0\u8282\u3002\u53EA\u662F\u8981\u6C42\u7684\u4E92\u52A8\u6216\u753B\u9762\u5F62\u5F0F\u505A\u4E0D\u5230\uFF08\u5982\u53EF\u81EA\u7531\u62D6\u52A8\u9876\u70B9\u7684\u4EFB\u610F\u4E09\u89D2\u5F62\uFF09\uFF0C\u4F46\u6570\u5B66\u5185\u5BB9\u80FD\u7528\u5DF2\u6709\u753B\u9762\u8BB2\u5BF9\u65F6\uFF0C\u5199 teach \u5E76\u6362\u6210\u53EF\u5B9E\u73B0\u7684\u753B\u9762\uFF0C\u5728\u7B2C\u4E00\u8282\u65C1\u767D\u91CC\u7528\u4E00\u53E5\u8BDD\u8BF4\u660E\u6362\u6210\u4E86\u4EC0\u4E48\uFF1B\u53EA\u6709\u6570\u5B66\u5185\u5BB9\u672C\u8EAB\u65E0\u6CD5\u6B63\u786E\u5448\u73B0\u65F6\u624D\u5199 unsupported\u3001\u7A7A\u7AE0\u8282\u53CA\u539F\u56E0\uFF0C\u7981\u6B62\u9519\u8BEF\u66FF\u4EE3\u3002`,
-  `- \u6309\u72EC\u7ACB\u6559\u5B66\u76EE\u6807\u548C\u5B66\u4E60\u8FDB\u7A0B\u5206\u8282\uFF0C\u4E0D\u6309\u4E3B\u9898\u6570\u6216\u753B\u9762\u6570\u5206\u8282\u3002\u6BCF\u8282\u53EA\u627F\u62C5\u4E00\u4E2A\u5B8C\u6210\u540E\u53EF\u9A8C\u8BC1\u7684\u76EE\u6807\uFF1B\u8FDE\u7EED\u63A8\u5BFC\u53CA\u987B\u540C\u6B65\u89C2\u5BDF\u7684\u753B\u9762\u7559\u5728\u540C\u4E00\u8282\u7684\u591A\u4E2A moment\u3002\u7B80\u5355\u95EE\u9898\u80FD\u56F4\u7ED5\u4E00\u4E2A\u76EE\u6807\u8BB2\u6E05\u65F6\u7528 1 \u8282\uFF1B\u82E5\u987B\u5206\u522B\u5EFA\u7ACB\u76F4\u89C9\u3001\u7EA0\u9519\u6216\u89E3\u91CA\u539F\u7406\u3001\u63A8\u5BFC\u6216\u6F14\u793A\u3001\u5E94\u7528\u3001\u68C0\u67E5\u638C\u63E1\u4E2D\u7684\u591A\u4E2A\u76EE\u6807\uFF0C\u62C6\u6210 2\u20134 \u8282\u3002\u4E0D\u8981\u4E3A\u51D1\u8282\u6570\u91CD\u590D\u5F00\u573A\u3001\u5B9A\u4E49\u6216\u603B\u7ED3\uFF0C\u4E5F\u4E0D\u8981\u628A\u672C\u5E94\u72EC\u7ACB\u7684\u63A8\u5BFC\u3001\u5E94\u7528\u548C\u68C0\u67E5\u5168\u585E\u8FDB\u4E00\u8282\u3002\u4E3A\u4EC0\u4E48\u987B\u63A8\u5BFC\uFF0C\u600E\u4E48\u7B97\u987B\u6B65\u9AA4\u4E0E\u68C0\u9A8C\uFF0C\u662F\u4EC0\u4E48\u987B\u76F4\u89C9\u4E0E\u8FB9\u754C\u3002\u4E0D\u731C\u5E74\u7EA7\uFF1Bclose \u53EA\u603B\u7ED3\u3002`,
+  `- \u6309\u72EC\u7ACB\u6559\u5B66\u76EE\u6807\u548C\u5B66\u4E60\u8FDB\u7A0B\u5206\u8282\uFF0C\u4E0D\u6309\u4E3B\u9898\u6570\u6216\u753B\u9762\u6570\u5206\u8282\u3002\u6BCF\u8282\u53EA\u627F\u62C5\u4E00\u4E2A\u5B8C\u6210\u540E\u53EF\u9A8C\u8BC1\u7684\u76EE\u6807\uFF1B\u8FDE\u7EED\u63A8\u5BFC\u53CA\u987B\u540C\u6B65\u89C2\u5BDF\u7684\u753B\u9762\u7559\u5728\u540C\u4E00\u8282\u7684\u591A\u4E2A moment\u3002\u7B80\u5355\u95EE\u9898\u80FD\u56F4\u7ED5\u4E00\u4E2A\u76EE\u6807\u8BB2\u6E05\u65F6\u7528 1 \u8282\uFF1B\u82E5\u987B\u5206\u522B\u5EFA\u7ACB\u76F4\u89C9\u3001\u7EA0\u9519\u6216\u89E3\u91CA\u539F\u7406\u3001\u63A8\u5BFC\u6216\u6F14\u793A\u3001\u5E94\u7528\u3001\u68C0\u67E5\u638C\u63E1\u4E2D\u7684\u591A\u4E2A\u76EE\u6807\uFF0C\u62C6\u6210 2\u20134 \u8282\u3002\u4E0D\u8981\u4E3A\u51D1\u8282\u6570\u91CD\u590D\u5F00\u573A\u3001\u5B9A\u4E49\u6216\u603B\u7ED3\uFF0C\u4E5F\u4E0D\u8981\u628A\u672C\u5E94\u72EC\u7ACB\u7684\u63A8\u5BFC\u3001\u5E94\u7528\u548C\u68C0\u67E5\u5168\u585E\u8FDB\u4E00\u8282\u3002\u6BCF\u8282\u90FD\u8981\u5E26\u6765\u65B0\u7684\u4E1C\u897F\uFF1A\u65B0\u7684\u4F8B\u5B50\u3001\u65B0\u7684\u6B65\u9AA4\uFF0C\u6216\u5B66\u751F\u8BFE\u540E\u81EA\u5DF1\u52A8\u624B\uFF1B\u540E\u9762\u7684\u8282\u4E0D\u91CD\u8BB2\u524D\u9762\u5DF2\u7ECF\u5C55\u793A\u8FC7\u7684\u5185\u5BB9\uFF0C\u6CA1\u6709\u65B0\u4E1C\u897F\u7684\u8282\u4E0D\u8981\u89C4\u5212\u3002\u4E3A\u4EC0\u4E48\u987B\u63A8\u5BFC\uFF0C\u600E\u4E48\u7B97\u987B\u6B65\u9AA4\u4E0E\u68C0\u9A8C\uFF0C\u662F\u4EC0\u4E48\u987B\u76F4\u89C9\u4E0E\u8FB9\u754C\u3002\u4E0D\u731C\u5E74\u7EA7\uFF1Bclose \u53EA\u603B\u7ED3\u3002`,
   `\u53EA\u8FD4\u56DE\u7B26\u5408\u54CD\u5E94 Schema \u7684 JSON\u3002`
 ].filter(Boolean).join("\n");
 var SECTION_SYSTEM_PROMPT = [
@@ -26851,6 +26851,7 @@ var PRACTICE_SYSTEM_PROMPT = `\u5B66\u751F\u521A\u5B66\u5B8C lesson.taught \u91C
 - \u8FD9\u8282\u8BB2\u4E86\u80FD\u7B97\u51FA\u786E\u5B9A\u6570\u503C\u7684\u5185\u5BB9\uFF08\u8BA1\u7B97\u3001\u6362\u7B97\u3001\u8BFB\u6570\u3001\u4EE3\u5165\u6C42\u503C\uFF09\u65F6\u5199 1\u20132 \u9053\uFF0C\u5426\u5219\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002\u9898\u76EE\u53EA\u8003\u8FD9\u8282\u8BB2\u8FC7\u7684\u65B9\u6CD5\uFF0C\u7528\u8BFE\u4E2D\u6CA1\u7B97\u8FC7\u7684\u65B0\u6570\uFF0C\u96BE\u5EA6\u548C\u8BFE\u4E2D\u4F8B\u5B50\u76F8\u5F53\u3002
 - ${ANSWER_ACTIVITY_RULE}
 \u53EA\u8FD4\u56DE\u7B26\u5408\u54CD\u5E94 Schema \u7684 JSON\u3002`;
+var LATER_SECTION_RECORD_RULE = `course_and_section.previous_sections[].taught \u662F\u524D\u9762\u5404\u8282\u5B9E\u9645\u8BB2\u8FC7\u7684\u5185\u5BB9\uFF08\u65C1\u767D\u3001\u677F\u4E66\u3001\u753B\u9762\u53CA\u6570\u503C\u53D8\u5316\uFF09\uFF0Clearner_turn \u662F\u5DF2\u7559\u7684\u8BFE\u540E\u7EC3\u4E60\uFF0Cpictures_now \u662F\u753B\u9762\u6B64\u523B\u663E\u793A\u7684\u6570\u503C\u3002\u672C\u8282\u8981\u5E26\u6765\u65B0\u7684\u4E1C\u897F\uFF1A\u65B0\u7684\u4F8B\u5B50\u3001\u65B0\u7684\u6B65\u9AA4\uFF0C\u6216\u5B66\u751F\u8BFE\u540E\u81EA\u5DF1\u52A8\u624B\uFF1B\u4E0D\u91CD\u8BB2\u524D\u9762\u5DF2\u5C55\u793A\u8FC7\u7684\u5185\u5BB9\uFF0C\u4E0D\u91CD\u590D\u5DF2\u7559\u8FC7\u7684\u7EC3\u4E60\u3002`;
 var LATER_SECTION_EXPERIENCE_RULE = `\u8FD9\u8282\u8BFE\u53EF\u80FD\u6CBF\u7528\u4E86\u8001\u5E08\u5728\u7B2C\u4E00\u8282\u63D0\u8D77\u7684\u4E00\u6BB5\u81EA\u5DF1\u7684\u7ECF\u5386\u4F5C\u4E3A\u60C5\u5883\u3002\u5982\u679C outline \u5199\u660E\u6CBF\u7528\uFF0C\u5C31\u6309 outline \u7EE7\u7EED\u8FD9\u4E2A\u60C5\u5883\uFF0C\u4E0D\u518D\u63D0\u65B0\u7684\u7ECF\u5386\uFF0C\u4E0D\u8865\u5145\u65B0\u7684\u5730\u70B9\u3001\u4EBA\u7269\u6216\u7ECF\u5386\uFF0C\u4E5F\u4E0D\u8BF4\u6210\u662F\u548C\u5B66\u751F\u4E00\u8D77\u7ECF\u5386\u7684\uFF1Boutline \u6CA1\u5199\u5C31\u4E0D\u63D0\u3002`;
 function withContextRules(systemPrompt, context) {
   const rules = [
@@ -27999,6 +28000,104 @@ function practiceCard(draft) {
   });
   return questionCard ?? lastCard;
 }
+function numberStateAfter(outline, drafts, afterMoment) {
+  const state = new Map((outline.numbers ?? []).map((number, index) => [index + 1, number.initial]));
+  const cards = [];
+  const cardNumbers = new Set(cardMovedNumbers(drafts.flatMap((draft) => draft.moments).flatMap((moment) => moment.actions)));
+  for (const [draftAt, draft] of drafts.entries()) for (const [momentAt, moment] of draft.moments.entries()) {
+    for (const action of moment.actions) {
+      if (action.action !== "create" || action.kind !== "visual") continue;
+      const content = action.content;
+      const hook = RECIPE_HOOKS[content.capability]?.number_moves;
+      if (hook && content.numbers?.length && !cards.some((card) => card.numbers.join() === content.numbers.join())) {
+        const initial = content.numbers.map((number) => outline.numbers[number - 1].initial);
+        const started = [...hook.state(initial, content)];
+        initial.forEach((value2, position) => {
+          if (started[position] === void 0) started[position] = value2;
+        });
+        cards.push({ numbers: [...content.numbers], hook, started });
+        content.numbers.forEach((number, position) => state.set(number, started[position]));
+      }
+    }
+    for (const number of moment.restart_numbers ?? []) {
+      const card = cards.find((each) => each.numbers.includes(number));
+      if (card) card.numbers.forEach((each, position) => state.set(each, card.started[position]));
+      else state.set(number, outline.numbers[number - 1].initial);
+    }
+    const drawn = afterMoment ? new Map(state) : void 0;
+    for (const card of cards) {
+      const moves = moment.actions.flatMap((action) => action.action === "animate" && card.numbers.includes(action.number) ? [{ position: card.numbers.indexOf(action.number), to: action.end_value }] : []);
+      if (!moves.length) continue;
+      const now = [...card.numbers.map((number) => state.get(number)), ...card.started.slice(card.numbers.length)];
+      const result = card.hook.moves(now, moves);
+      if ("steps" in result && result.steps.length) card.numbers.forEach((number, position) => state.set(number, result.steps.at(-1).to[position]));
+    }
+    for (const action of moment.actions) {
+      if (action.action === "animate" && !cardNumbers.has(action.number)) state.set(action.number, action.end_value);
+    }
+    afterMoment?.(draftAt, momentAt, drawn, state);
+  }
+  return state;
+}
+function boardText(content) {
+  if ("latex" in content) return content.latex;
+  if ("text" in content) return content.text;
+  if ("items" in content) return [content.title, ...content.items].join("; ");
+  if ("columns" in content) return [content.columns, ...content.rows].map((row) => row.join(" | ")).join("; ");
+  return void 0;
+}
+function earlierSectionsRecord(outline, drafts, dropped) {
+  const courseVisual = (section, action) => {
+    if (action.action !== "create" || action.kind !== "visual") return 0;
+    const capability2 = action.content.capability;
+    return (outline.course_visuals ?? []).findIndex((visual) => visual.create_section === section && visual.reusable_item === action.reusable_item && visual.capability === capability2) + 1;
+  };
+  const values = (numbers, state) => (numbers ?? []).map((number) => ({ number, value: state.get(number) }));
+  const sections = drafts.map(() => ({ taught: [] }));
+  const pictures = /* @__PURE__ */ new Map();
+  const end = numberStateAfter(outline, drafts, (draftAt, momentAt, drawn, after) => {
+    const moment = drafts[draftAt].moments[momentAt];
+    const wrote = [];
+    const drew = [];
+    for (const action of moment.actions) {
+      if (action.action !== "create" && action.action !== "revise") continue;
+      if (action.kind !== "visual") {
+        const text5 = boardText(action.content);
+        if (text5) wrote.push(text5);
+        continue;
+      }
+      const content = action.content;
+      const visual = courseVisual(draftAt + 1, action);
+      if (visual) pictures.set(visual, { capability: content.capability, ...content.numbers ? { numbers: content.numbers } : {} });
+      drew.push({
+        ...visual ? { course_visual: visual } : {},
+        capability: content.capability,
+        ...action.action === "revise" ? { revised: true } : {},
+        ...content.numbers?.length ? { numbers: values(content.numbers, drawn) } : {}
+      });
+    }
+    const moved = [...after].filter(([number, value2]) => drawn.get(number) !== value2).map(([number, to]) => ({ number, to }));
+    sections[draftAt].taught.push({
+      ...moment.narration ? { narration: moment.narration } : {},
+      ...wrote.length ? { wrote } : {},
+      ...drew.length ? { drew } : {},
+      ...moment.restart_numbers?.length ? { restarted: moment.restart_numbers } : {},
+      ...moved.length ? { moved } : {}
+    });
+  });
+  drafts.forEach((draft, draftAt) => {
+    const kept = (draft.student_activities ?? []).filter((_activity, index) => !dropped(draft)?.has(index));
+    if (kept.length) sections[draftAt].learner_turn = kept.map((activity) => ({ kind: activity.kind, prompt: activity.prompt }));
+  });
+  return {
+    sections,
+    pictures_now: [...pictures].sort(([left], [right]) => left - right).map(([visual, picture]) => ({
+      course_visual: visual,
+      capability: picture.capability,
+      ...picture.numbers?.length ? { numbers: values(picture.numbers, end) } : {}
+    }))
+  };
+}
 function taughtContent(draft) {
   return draft.moments.map((moment) => ({
     narration: moment.narration,
@@ -28659,7 +28758,7 @@ function executableNumberIndexesForSection(outline, drafts, sectionNumber) {
   }
   return [...indexes].sort((left, right) => left - right);
 }
-function sectionPromptContext(outline, sectionNumber, allowedNumberIndexes, currentNumbers) {
+function sectionPromptContext(outline, sectionNumber, allowedNumberIndexes, currentNumbers, earlier) {
   const section = outline.sections[sectionNumber - 1];
   const allowedNumbers = new Set(allowedNumberIndexes);
   return {
@@ -28690,8 +28789,10 @@ function sectionPromptContext(outline, sectionNumber, allowedNumberIndexes, curr
       reusable_items: (previous.reusable_items ?? []).map((item, itemIndex) => ({
         item: itemIndex + 1,
         ...item
-      }))
-    }))
+      })),
+      ...earlier?.sections[index]
+    })),
+    ...earlier?.pictures_now.length ? { pictures_now: earlier.pictures_now } : {}
   };
 }
 function unsupportedSectionResponse(error, previousError, language) {
@@ -29271,6 +29372,18 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     return void 0;
   };
   const drafts = [];
+  const compileDroppedActivities = /* @__PURE__ */ new WeakMap();
+  const noteCompiledDrops = (compiled2, sections) => {
+    for (const draft of drafts.slice(0, sections)) compileDroppedActivities.delete(draft);
+    for (const adjustment of compiled2.program_adjustments) {
+      const task = adjustment.kind === "activity_removed" ? /-task-(\d+)$/u.exec(adjustment.task) : null;
+      const draft = task ? drafts[adjustment.section - 1] : void 0;
+      if (!draft) continue;
+      const dropped = compileDroppedActivities.get(draft) ?? /* @__PURE__ */ new Set();
+      dropped.add(Number(task[1]) - 1);
+      compileDroppedActivities.set(draft, dropped);
+    }
+  };
   const faultSite = (error, section) => {
     if (!(error instanceof LessonPlanError) || !outline) return void 0;
     const at2 = /^\$lessonPlan\.sections\[(\d+)\]\.moments\[(\d+)\]\.actions\[(\d+)\](\.content\b|\.end_value$)/u.exec(error.path);
@@ -29450,43 +29563,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   if (earlyOutlineResult) return earlyOutlineResult;
   const outlineResult = await acceptOutline();
   if (outlineResult) return outlineResult;
-  const currentNumbersBefore = (section) => {
-    const state = new Map((outline.numbers ?? []).map((number, index) => [index + 1, number.initial]));
-    const cards = [];
-    const cardNumbers = new Set(cardMovedNumbers(drafts.slice(0, section - 1).flatMap((draft) => draft.moments).flatMap((moment) => moment.actions)));
-    for (const draft of drafts.slice(0, section - 1)) for (const moment of draft.moments) {
-      for (const action of moment.actions) {
-        if (action.action !== "create" || action.kind !== "visual") continue;
-        const content = action.content;
-        const hook = RECIPE_HOOKS[content.capability]?.number_moves;
-        if (hook && content.numbers?.length && !cards.some((card) => card.numbers.join() === content.numbers.join())) {
-          const initial = content.numbers.map((number) => outline.numbers[number - 1].initial);
-          const started = [...hook.state(initial, content)];
-          initial.forEach((value2, position) => {
-            if (started[position] === void 0) started[position] = value2;
-          });
-          cards.push({ numbers: [...content.numbers], hook, started });
-          content.numbers.forEach((number, position) => state.set(number, started[position]));
-        }
-      }
-      for (const number of moment.restart_numbers ?? []) {
-        const card = cards.find((each) => each.numbers.includes(number));
-        if (card) card.numbers.forEach((each, position) => state.set(each, card.started[position]));
-        else state.set(number, outline.numbers[number - 1].initial);
-      }
-      for (const card of cards) {
-        const moves = moment.actions.flatMap((action) => action.action === "animate" && card.numbers.includes(action.number) ? [{ position: card.numbers.indexOf(action.number), to: action.end_value }] : []);
-        if (!moves.length) continue;
-        const now = [...card.numbers.map((number) => state.get(number)), ...card.started.slice(card.numbers.length)];
-        const result = card.hook.moves(now, moves);
-        if ("steps" in result && result.steps.length) card.numbers.forEach((number, position) => state.set(number, result.steps.at(-1).to[position]));
-      }
-      for (const action of moment.actions) {
-        if (action.action === "animate" && !cardNumbers.has(action.number)) state.set(action.number, action.end_value);
-      }
-    }
-    return state;
-  };
+  const currentNumbersBefore = (section) => numberStateAfter(outline, drafts.slice(0, section - 1));
   const visualsForSection = (section, state) => (outline.course_visuals ?? []).flatMap((visual, index) => {
     if (!visual.use_sections.includes(section)) return [];
     const source = visual.create_section < section ? drafts[visual.create_section - 1]?.moments.flatMap((m) => m.actions).find((a) => a.action === "create" && a.kind === "visual" && a.reusable_item === visual.reusable_item && a.content.capability === visual.capability) : void 0;
@@ -29532,12 +29609,20 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         section,
         attempt,
         turn_id: input.turn_id,
-        system_prompt: section === 1 || typeof context.teacher_experiences !== "string" ? withContextRules(SECTION_SYSTEM_PROMPT, section === 1 ? context : laterSectionContext) : `${withContextRules(SECTION_SYSTEM_PROMPT, laterSectionContext)}
-
-${LATER_SECTION_EXPERIENCE_RULE}`,
+        system_prompt: section === 1 ? withContextRules(SECTION_SYSTEM_PROMPT, context) : [
+          withContextRules(SECTION_SYSTEM_PROMPT, laterSectionContext),
+          LATER_SECTION_RECORD_RULE,
+          ...typeof context.teacher_experiences === "string" ? [LATER_SECTION_EXPERIENCE_RULE] : []
+        ].join("\n\n"),
         prompt: JSON.stringify({
           course_context: compactModelContext(section === 1 ? context : laterSectionContext),
-          course_and_section: sectionPromptContext(outline, section, allowedNumberIndexes, currentNumbers),
+          course_and_section: sectionPromptContext(
+            outline,
+            section,
+            allowedNumberIndexes,
+            currentNumbers,
+            section > 1 ? earlierSectionsRecord(outline, drafts.slice(0, section - 1), (draft) => compileDroppedActivities.get(draft)) : void 0
+          ),
           visuals_for_section: visualsForSection(section, currentNumbers),
           assigned_request_parts: assignedRequestParts(section),
           // The note stays for later sections too: their purposes may also name the picture (review of this change).
@@ -29672,6 +29757,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
               sectionErrors.delete(section);
               for (const left of leftOutMoves) await options.on_program_adjustment?.({ kind: "plot_view_adjusted", section, reason: "animation_left_out", ...left });
               await reportDraftAdjustments(drafts[section - 1]);
+              noteCompiledDrops(kept, section);
               await options.on_playable_prefix?.({ completed_sections: section, compiled: kept });
               return;
             }
@@ -29708,6 +29794,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
         continue;
       }
       await reportDraftAdjustments(candidate);
+      noteCompiledDrops(prefix, section);
       await options.on_playable_prefix?.({ completed_sections: section, compiled: prefix });
       return;
     }
