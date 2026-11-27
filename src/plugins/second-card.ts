@@ -13,9 +13,12 @@ import { placeValueThousandths } from "./place-value-moves.js";
 
 /** The kinds that take a second card, each with its example's parameters and what the program supplies. */
 export const SECOND_CARDS = {
-  make_ten: { parameters: ["example_first_addend", "example_second_addend"], demonstration: 4, label: "第二个例子：大数那一框里有几个", max: 10 },
-  place_value_trade: { parameters: ["example_first_number", "example_second_number"], demonstration: 4, label: "第二个例子：做完了几列", max: 6 },
-  place_value_times_ten: { parameters: ["example_amount", "example_unit_asked"], demonstration: 4, label: "第二个例子：现在用什么单位在数", max: 1_000_000 },
+  make_ten: { parameters: ["example_first_addend", "example_second_addend"], demonstration: 4, label: "第二个例子：大数那一框里有几个", max: 10,
+    starts: "starts where the second card's example starts: the bigger addend's count" },
+  place_value_trade: { parameters: ["example_first_number", "example_second_number"], demonstration: 4, label: "第二个例子：做完了几列", max: 6,
+    starts: "starts where the second card's example starts: 0 columns finished" },
+  place_value_times_ten: { parameters: ["example_amount", "example_unit_asked"], demonstration: 4, label: "第二个例子：现在用什么单位在数", max: 1_000_000,
+    starts: "starts where the second card's example starts: the example's start unit" },
 } as const;
 export type SecondCardKind = keyof typeof SECOND_CARDS;
 export const isSecondCardKind = (capability: string): capability is SecondCardKind => capability in SECOND_CARDS;

@@ -2728,9 +2728,14 @@ function sectionPromptContext(
   allowedNumberIndexes: readonly number[],
   currentNumbers: Map<number, number>,
   earlier?: EarlierSectionsRecord,
+  language?: string,
 ): Record<string, unknown> {
   const section = outline.sections[sectionNumber - 1];
   const allowedNumbers = new Set(allowedNumberIndexes);
+  // The number a second card drawn in this section moves starts where the section's own example starts, which only
+  // its reply writes: it is listed with that fact, not a value (lead, #199 round 1); later sections read its start.
+  const startsFromExample = new Map(secondCardVisuals(outline).filter((visual) => visual.create_section === sectionNumber)
+    .map((visual) => [lessonText(language, visual.label), visual.starts]));
   return {
     title: outline.title,
     goals: outline.goals,
@@ -2738,8 +2743,10 @@ function sectionPromptContext(
       numbers: outline.numbers.map((number, index) => ({
         number: index + 1,
         label: number.label,
-        initial: number.initial,
-        current_value: currentNumbers.get(index + 1) ?? number.initial,
+        ...(number.label !== undefined && startsFromExample.has(number.label) ? { starts: startsFromExample.get(number.label) } : {
+          initial: number.initial,
+          current_value: currentNumbers.get(index + 1) ?? number.initial,
+        }),
         min: number.min,
         max: number.max,
         ...(number.unit === undefined ? {} : { unit: number.unit }),
@@ -3168,12 +3175,12 @@ export function plannedCardOverflow(outline: LessonPlanOutline, sectionOne: Less
 }
 
 /** The outline's second cards (a later course visual of a kind that takes one, `second_card_label`), in order. */
-function secondCardVisuals(outline: LessonPlanOutline): Array<{ capability: string; create_section: number; label: string }> {
+function secondCardVisuals(outline: LessonPlanOutline): Array<{ capability: string; create_section: number; label: string; starts: string }> {
   const visuals = outline.course_visuals ?? [];
   return visuals.flatMap((visual, index) => {
-    const label = (LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability] as { second_card_label?: string }).second_card_label;
+    const { second_card_label: label, second_card_starts: starts } = LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability] as { second_card_label?: string; second_card_starts?: string };
     return label !== undefined && visuals.slice(0, index).some((each) => each.capability === visual.capability)
-      ? [{ capability: visual.capability, create_section: visual.create_section, label }] : [];
+      ? [{ capability: visual.capability, create_section: visual.create_section, label, starts: starts ?? "" }] : [];
   });
 }
 
@@ -3929,7 +3936,7 @@ export async function generateLessonPlanWithModel(
         prompt: JSON.stringify({
           course_context: compactModelContext(section === 1 ? context : laterSectionContext),
           course_and_section: sectionPromptContext(outline, section, allowedNumberIndexes, currentNumbers,
-            section > 1 ? earlierRecord(section) : undefined),
+            section > 1 ? earlierRecord(section) : undefined, input.language),
           visuals_for_section: visualsForSection(section, currentNumbers),
           assigned_request_parts: assignedRequestParts(section),
           // The note stays for later sections too: their purposes may also name the picture (review of this change).

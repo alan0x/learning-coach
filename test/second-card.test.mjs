@@ -72,7 +72,7 @@ const run = (body) => JSON.parse(execFileSync(process.execPath, ["--input-type=m
       variables: (log.lesson?.lesson.variables ?? []).map((variable) => variable.as),
       tasks: (log.lesson?.lesson.tasks ?? []).map((task) => [task.completion.kind, task.completion.node ?? task.anchor]),
       initials: (log.lesson?.lesson.variables ?? []).map((variable) => [variable.as, variable.initial]),
-      sectionTwoNumbers: second && JSON.parse(second).course_and_section.numbers.map(({ number, label }) => [number, label]),
+      sectionTwoNumbers: second && JSON.parse(second).course_and_section.numbers.map(({ number, label, starts, initial, current_value }) => [number, label, starts ?? null, initial ?? null, current_value ?? null]),
       sectionThreeNumbers: third && JSON.parse(third).course_and_section.numbers.map(({ number, label, initial }) => [number, label, initial]) };
   };
   ${body}
@@ -80,10 +80,10 @@ const run = (body) => JSON.parse(execFileSync(process.execPath, ["--input-type=m
   env: { ...process.env, LEARNING_COACH_TRIAL_RECIPES: "make_ten,place_value_trade,place_value_times_ten" }, cwd: fileURLToPath(new URL("..", import.meta.url)), encoding: "utf8",
 }));
 
-for (const [kind, label, values] of [
-  ["make_ten", "第二个例子：大数那一框里有几个", [9, 4]],
-  ["place_value_trade", "第二个例子：做完了几列", [4527000, 1396000]],
-  ["place_value_times_ten", "第二个例子：现在用什么单位在数", [700, 1]],
+for (const [kind, label, values, starts] of [
+  ["make_ten", "第二个例子：大数那一框里有几个", [9, 4], "the bigger addend's count"],
+  ["place_value_trade", "第二个例子：做完了几列", [4527000, 1396000], "0 columns finished"],
+  ["place_value_times_ten", "第二个例子：现在用什么单位在数", [700, 1], "the example's start unit"],
 ]) {
   test(`${kind}: section 2 draws a second card on its own example; its demonstration plays; the practice stays on the first card`, () => {
     const result = run(`console.log(JSON.stringify(await lesson(${JSON.stringify(kind)})));`);
@@ -96,7 +96,8 @@ for (const [kind, label, values] of [
     assert.equal(result.parts, 3);
     assert.deepEqual(result.changed, []);
     // Section 2 is told the number the program gave the second card's demonstration, after the first card's.
-    assert.deepEqual(result.sectionTwoNumbers.at(-1)[1], label);
+    // It is listed with where it starts, not a value: the example is only known from section 2's reply.
+    assert.deepEqual(result.sectionTwoNumbers.at(-1).slice(1), [label, `starts where the second card's example starts: ${starts}`, null, null]);
     assert.deepEqual(result.cards.map(([step]) => step), [1, 2]);
     const second = result.cards[1][1];
     assert.deepEqual([second.a ?? second.amount, second.b ?? second.target], values);

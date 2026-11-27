@@ -18732,9 +18732,27 @@ function placeValueTradeMoves2(state, moves) {
 
 // src/plugins/second-card.ts
 var SECOND_CARDS = {
-  make_ten: { parameters: ["example_first_addend", "example_second_addend"], demonstration: 4, label: "\u7B2C\u4E8C\u4E2A\u4F8B\u5B50\uFF1A\u5927\u6570\u90A3\u4E00\u6846\u91CC\u6709\u51E0\u4E2A", max: 10 },
-  place_value_trade: { parameters: ["example_first_number", "example_second_number"], demonstration: 4, label: "\u7B2C\u4E8C\u4E2A\u4F8B\u5B50\uFF1A\u505A\u5B8C\u4E86\u51E0\u5217", max: 6 },
-  place_value_times_ten: { parameters: ["example_amount", "example_unit_asked"], demonstration: 4, label: "\u7B2C\u4E8C\u4E2A\u4F8B\u5B50\uFF1A\u73B0\u5728\u7528\u4EC0\u4E48\u5355\u4F4D\u5728\u6570", max: 1e6 }
+  make_ten: {
+    parameters: ["example_first_addend", "example_second_addend"],
+    demonstration: 4,
+    label: "\u7B2C\u4E8C\u4E2A\u4F8B\u5B50\uFF1A\u5927\u6570\u90A3\u4E00\u6846\u91CC\u6709\u51E0\u4E2A",
+    max: 10,
+    starts: "starts where the second card's example starts: the bigger addend's count"
+  },
+  place_value_trade: {
+    parameters: ["example_first_number", "example_second_number"],
+    demonstration: 4,
+    label: "\u7B2C\u4E8C\u4E2A\u4F8B\u5B50\uFF1A\u505A\u5B8C\u4E86\u51E0\u5217",
+    max: 6,
+    starts: "starts where the second card's example starts: 0 columns finished"
+  },
+  place_value_times_ten: {
+    parameters: ["example_amount", "example_unit_asked"],
+    demonstration: 4,
+    label: "\u7B2C\u4E8C\u4E2A\u4F8B\u5B50\uFF1A\u73B0\u5728\u7528\u4EC0\u4E48\u5355\u4F4D\u5728\u6570",
+    max: 1e6,
+    starts: "starts where the second card's example starts: the example's start unit"
+  }
 };
 var isSecondCardKind = (capability2) => capability2 in SECOND_CARDS;
 function exampleOf(capability2, parameters3) {
@@ -19111,6 +19129,7 @@ var MATH_RECIPES = {
     wrong_number_moves: "refused",
     // A second card of the kind on the section's own example (second-card.ts): the label of the number it moves.
     second_card_label: SECOND_CARDS.place_value_trade.label,
+    second_card_starts: SECOND_CARDS.place_value_trade.starts,
     card_name: "place-value trade card",
     number_names: ["first number", "second number", "practice first number", "practice second number", "columns finished"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
@@ -19151,6 +19170,7 @@ var MATH_RECIPES = {
     wrong_number_moves: "refused",
     // A second card of the kind on the section's own example (second-card.ts): the label of the number it moves.
     second_card_label: SECOND_CARDS.make_ten.label,
+    second_card_starts: SECOND_CARDS.make_ten.starts,
     card_name: "make-ten card",
     number_names: ["first addend", "second addend", "practice first addend", "practice second addend", "count in the bigger frame", "count moved"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
@@ -19193,6 +19213,7 @@ var MATH_RECIPES = {
     wrong_number_moves: "refused",
     // A second card of the kind on the section's own example (second-card.ts): the label of the number it moves.
     second_card_label: SECOND_CARDS.place_value_times_ten.label,
+    second_card_starts: SECOND_CARDS.place_value_times_ten.starts,
     card_name: "times-ten card",
     number_names: ["amount", "unit asked", "practice amount", "practice unit asked", "start unit"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
@@ -30263,9 +30284,10 @@ function executableNumberIndexesForSection(outline, drafts, sectionNumber) {
   }
   return [...indexes].sort((left, right) => left - right);
 }
-function sectionPromptContext(outline, sectionNumber, allowedNumberIndexes, currentNumbers, earlier) {
+function sectionPromptContext(outline, sectionNumber, allowedNumberIndexes, currentNumbers, earlier, language) {
   const section = outline.sections[sectionNumber - 1];
   const allowedNumbers = new Set(allowedNumberIndexes);
+  const startsFromExample = new Map(secondCardVisuals(outline).filter((visual) => visual.create_section === sectionNumber).map((visual) => [lessonText(language, visual.label), visual.starts]));
   return {
     title: outline.title,
     goals: outline.goals,
@@ -30273,8 +30295,10 @@ function sectionPromptContext(outline, sectionNumber, allowedNumberIndexes, curr
       numbers: outline.numbers.map((number, index) => ({
         number: index + 1,
         label: number.label,
-        initial: number.initial,
-        current_value: currentNumbers.get(index + 1) ?? number.initial,
+        ...number.label !== void 0 && startsFromExample.has(number.label) ? { starts: startsFromExample.get(number.label) } : {
+          initial: number.initial,
+          current_value: currentNumbers.get(index + 1) ?? number.initial
+        },
         min: number.min,
         max: number.max,
         ...number.unit === void 0 ? {} : { unit: number.unit }
@@ -30556,8 +30580,8 @@ function plannedCardOverflow(outline, sectionOne, declared) {
 function secondCardVisuals(outline) {
   const visuals = outline.course_visuals ?? [];
   return visuals.flatMap((visual, index) => {
-    const label = LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability].second_card_label;
-    return label !== void 0 && visuals.slice(0, index).some((each) => each.capability === visual.capability) ? [{ capability: visual.capability, create_section: visual.create_section, label }] : [];
+    const { second_card_label: label, second_card_starts: starts } = LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability];
+    return label !== void 0 && visuals.slice(0, index).some((each) => each.capability === visual.capability) ? [{ capability: visual.capability, create_section: visual.create_section, label, starts: starts ?? "" }] : [];
   });
 }
 function plannedSecondCardOverflow(outline, declared) {
@@ -31197,7 +31221,8 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
             section,
             allowedNumberIndexes,
             currentNumbers,
-            section > 1 ? earlierRecord(section) : void 0
+            section > 1 ? earlierRecord(section) : void 0,
+            input.language
           ),
           visuals_for_section: visualsForSection(section, currentNumbers),
           assigned_request_parts: assignedRequestParts(section),

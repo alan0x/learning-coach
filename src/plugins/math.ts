@@ -238,6 +238,7 @@ export const MATH_RECIPES = {
     wrong_number_moves: "refused",
     // A second card of the kind on the section's own example (second-card.ts): the label of the number it moves.
     second_card_label: SECOND_CARDS.place_value_trade.label,
+    second_card_starts: SECOND_CARDS.place_value_trade.starts,
     card_name: "place-value trade card",
     number_names: ["first number", "second number", "practice first number", "practice second number", "columns finished"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
@@ -278,6 +279,7 @@ export const MATH_RECIPES = {
     wrong_number_moves: "refused",
     // A second card of the kind on the section's own example (second-card.ts): the label of the number it moves.
     second_card_label: SECOND_CARDS.make_ten.label,
+    second_card_starts: SECOND_CARDS.make_ten.starts,
     card_name: "make-ten card",
     number_names: ["first addend", "second addend", "practice first addend", "practice second addend", "count in the bigger frame", "count moved"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
@@ -320,6 +322,7 @@ export const MATH_RECIPES = {
     wrong_number_moves: "refused",
     // A second card of the kind on the section's own example (second-card.ts): the label of the number it moves.
     second_card_label: SECOND_CARDS.place_value_times_ten.label,
+    second_card_starts: SECOND_CARDS.place_value_times_ten.starts,
     card_name: "times-ten card",
     number_names: ["amount", "unit asked", "practice amount", "practice unit asked", "start unit"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
