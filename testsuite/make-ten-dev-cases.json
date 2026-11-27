@@ -1,0 +1,388 @@
+{
+ "note": "Making ten to add: development cases for need K2N-19, 2026-11-27, written from blueprint.json in this folder (rows M1-M6), from the standards (1.OA.C.6; 1.OA.B.3, 1.OA.D.7, 1.OA.A.1 where they serve the strategy). Used for design and tuning; the scoring set is separate, written later by a fresh agent from the blueprint alone, sealed. Never taken from the question set. MT-01 to MT-15 are cases this need serves (8 en-US, 7 zh-CN): expect.numbers are the two addends as the question writes them; expect.fill is the frame a teacher fills (the bigger addend's, the first when equal); expect.moved is how many counters cross to fill it, expect.left the ones left, expect.result the sum. The card always fills the bigger addend's frame (after the 2026-11-27 cold read). MT-16 to MT-22 are near misses that belong to other needs (expect.need names it): this need's component must not be used (forbid names the tentative recipe make_ten). Chinese cases use 凑十, 补成 10, 拆, as Chinese learners say them.",
+ "cases": [
+  {
+   "id": "MT-01",
+   "row": "M1",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "Two ten frames: 8 and 6; 2 of the 6 move across to fill the 8's frame; ten and 4 left. Written 8 + 6 = 8 + 2 + 4 = 10 + 4 = 14.",
+   "prompt": "How do I explain 8 + 6 by making a ten? My son still counts it all on his fingers.",
+   "expect": {
+    "need": "K2N-19",
+    "numbers": [
+     "8",
+     "6"
+    ],
+    "fill": "first",
+    "moved": "2",
+    "left": "4",
+    "result": "14"
+   }
+  },
+  {
+   "id": "MT-02",
+   "row": "M1",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "Two ten frames: 7 and 5; 3 of the 5 move across to fill the 7's frame; ten and 2 left. Written 7 + 5 = 7 + 3 + 2 = 10 + 2 = 12.",
+   "prompt": "7 + 5 用凑十法怎么讲给一年级的孩子听？",
+   "expect": {
+    "need": "K2N-19",
+    "numbers": [
+     "7",
+     "5"
+    ],
+    "fill": "first",
+    "moved": "3",
+    "left": "2",
+    "result": "12"
+   }
+  },
+  {
+   "id": "MT-03",
+   "row": "M1",
+   "language": "en-US",
+   "kind": "detailed",
+   "teacher_picture": "Two ten frames: 8 and 7; 2 of the 7 move across to fill the 8's frame; ten and 5 left. Written 8 + 7 = 8 + 2 + 5 = 10 + 5 = 15.",
+   "prompt": "The worksheet says 'make a ten to solve 8 + 7' and leaves space for a drawing. What should the drawing look like?",
+   "expect": {
+    "need": "K2N-19",
+    "numbers": [
+     "8",
+     "7"
+    ],
+    "fill": "first",
+    "moved": "2",
+    "left": "5",
+    "result": "15"
+   }
+  },
+  {
+   "id": "MT-04",
+   "row": "M2",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "Two ten frames: 9 and 6; 1 of the 6 moves across to fill the 9's frame; ten and 5 left. Written 9 + 6 = 9 + 1 + 5 = 10 + 5 = 15.",
+   "prompt": "9 加几的题，比如 9 + 6，老师让先把 9 补成 10，为什么这样算更快？",
+   "expect": {
+    "need": "K2N-19",
+    "numbers": [
+     "9",
+     "6"
+    ],
+    "fill": "first",
+    "moved": "1",
+    "left": "5",
+    "result": "15"
+   }
+  },
+  {
+   "id": "MT-05",
+   "row": "M2",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "Two ten frames: 9 and 8; 1 of the 8 moves across to fill the 9's frame; ten and 7 left. Written 9 + 8 = 9 + 1 + 7 = 10 + 7 = 17.",
+   "prompt": "Our class is on 9 plus facts. Is there a quick picture showing that 9 + 8 turns into a ten and some more?",
+   "expect": {
+    "need": "K2N-19",
+    "numbers": [
+     "9",
+     "8"
+    ],
+    "fill": "first",
+    "moved": "1",
+    "left": "7",
+    "result": "17"
+   }
+  },
+  {
+   "id": "MT-06",
+   "row": "M3",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "Two ten frames: 3 and 8; 2 of the 3 move across to fill the 8's frame; ten and 1 left. Written 3 + 8 = 1 + 2 + 8 = 1 + 10 = 11.",
+   "prompt": "Homework: 3 + 8. Should my kid split the 3 or the 8 when building a ten?",
+   "expect": {
+    "need": "K2N-19",
+    "numbers": [
+     "3",
+     "8"
+    ],
+    "fill": "second",
+    "moved": "2",
+    "left": "1",
+    "result": "11"
+   }
+  },
+  {
+   "id": "MT-07",
+   "row": "M3",
+   "language": "zh-CN",
+   "kind": "detailed",
+   "teacher_picture": "Two ten frames: 4 and 9; 1 of the 4 moves across to fill the 9's frame; ten and 3 left. Written 4 + 9 = 3 + 1 + 9 = 3 + 10 = 13.",
+   "prompt": "4 + 9 孩子拆 9 去补 4，算得很慢。应该拆哪个数？请画出来。",
+   "expect": {
+    "need": "K2N-19",
+    "numbers": [
+     "4",
+     "9"
+    ],
+    "fill": "second",
+    "moved": "1",
+    "left": "3",
+    "result": "13"
+   }
+  },
+  {
+   "id": "MT-08",
+   "row": "M4",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "Two ten frames: 6 and 5; 4 of the 5 move across to fill the 6's frame; ten and 1 left. Written 6 + 5 = 6 + 4 + 1 = 10 + 1 = 11.",
+   "prompt": "Could you show 6 + 5 on ten frames? I'm not sure which counters should move.",
+   "expect": {
+    "need": "K2N-19",
+    "numbers": [
+     "6",
+     "5"
+    ],
+    "fill": "first",
+    "moved": "4",
+    "left": "1",
+    "result": "11"
+   }
+  },
+  {
+   "id": "MT-09",
+   "row": "M4",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "Two ten frames: 7 and 7; 3 of the 7 move across to fill the 7's frame; ten and 4 left. Written 7 + 7 = 7 + 3 + 4 = 10 + 4 = 14.",
+   "prompt": "7 + 7 能不能也用凑十来算，而不是背双数？",
+   "expect": {
+    "need": "K2N-19",
+    "numbers": [
+     "7",
+     "7"
+    ],
+    "fill": "first",
+    "moved": "3",
+    "left": "4",
+    "result": "14"
+   }
+  },
+  {
+   "id": "MT-10",
+   "row": "M5",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "Two ten frames: 8 and 5; 2 of the 5 move across to fill the 8's frame; ten and 3 left. Written 8 + 5 = 8 + 2 + 3 = 10 + 3 = 13.",
+   "prompt": "Lena has 8 shells and finds 5 more at the beach. How many shells now? Please use the make-a-ten trick.",
+   "expect": {
+    "need": "K2N-19",
+    "numbers": [
+     "8",
+     "5"
+    ],
+    "fill": "first",
+    "moved": "2",
+    "left": "3",
+    "result": "13"
+   }
+  },
+  {
+   "id": "MT-11",
+   "row": "M5",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "Two ten frames: 6 and 9; 1 of the 6 moves across to fill the 9's frame; ten and 5 left. Written 6 + 9 = 5 + 1 + 9 = 5 + 10 = 15.",
+   "prompt": "停车场有 6 辆车，又开来 9 辆，一共几辆？想用凑十法给孩子讲。",
+   "expect": {
+    "need": "K2N-19",
+    "numbers": [
+     "6",
+     "9"
+    ],
+    "fill": "second",
+    "moved": "1",
+    "left": "5",
+    "result": "15"
+   }
+  },
+  {
+   "id": "MT-12",
+   "row": "M6",
+   "language": "en-US",
+   "kind": "detailed",
+   "teacher_picture": "Two ten frames: 8 and 4; 2 of the 4 move across to fill the 8's frame; ten and 2 left. Written 8 + 4 = 8 + 2 + 2 = 10 + 2 = 12.",
+   "prompt": "My daughter wrote 8 + 4 = 10 + 4 = 14. Where did that go wrong, and how do I show her?",
+   "expect": {
+    "need": "K2N-19",
+    "numbers": [
+     "8",
+     "4"
+    ],
+    "fill": "first",
+    "moved": "2",
+    "left": "2",
+    "result": "12"
+   }
+  },
+  {
+   "id": "MT-13",
+   "row": "M6",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "Two ten frames: 8 and 5; 2 of the 5 move across to fill the 8's frame; ten and 3 left. Written 8 + 5 = 8 + 2 + 3 = 10 + 3 = 13.",
+   "prompt": "8 + 5 = 8 + 2 + 3 = 10 + 3，这一串等号为什么每个都成立？",
+   "expect": {
+    "need": "K2N-19",
+    "numbers": [
+     "8",
+     "5"
+    ],
+    "fill": "first",
+    "moved": "2",
+    "left": "3",
+    "result": "13"
+   }
+  },
+  {
+   "id": "MT-14",
+   "row": "M2",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "Two ten frames: 9 and 4; 1 of the 4 moves across to fill the 9's frame; ten and 3 left. Written 9 + 4 = 9 + 1 + 3 = 10 + 3 = 13.",
+   "prompt": "一年级：9 + 4 等于几？用凑十的方法画给我看。",
+   "expect": {
+    "need": "K2N-19",
+    "numbers": [
+     "9",
+     "4"
+    ],
+    "fill": "first",
+    "moved": "1",
+    "left": "3",
+    "result": "13"
+   }
+  },
+  {
+   "id": "MT-15",
+   "row": "M3",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "Two ten frames: 5 and 8; 2 of the 5 move across to fill the 8's frame; ten and 3 left. Written 5 + 8 = 3 + 2 + 8 = 3 + 10 = 13.",
+   "prompt": "Please go through 5 + 8 slowly, building a ten along the way.",
+   "expect": {
+    "need": "K2N-19",
+    "numbers": [
+     "5",
+     "8"
+    ],
+    "fill": "second",
+    "moved": "2",
+    "left": "3",
+    "result": "13"
+   }
+  },
+  {
+   "id": "MT-16",
+   "row": null,
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "Not this need: Partners of ten on one ten frame (K.OA.A.4). Need K2N-11.",
+   "prompt": "7 再加几就能凑十？用十格框怎么教？",
+   "expect": {
+    "need": "K2N-11",
+    "forbid": [
+     "make_ten"
+    ]
+   }
+  },
+  {
+   "id": "MT-17",
+   "row": null,
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "Not this need: Counting on from the bigger number (1.OA.C.5). Need K2N-18.",
+   "prompt": "For 8 + 2 she still counts every finger from one. How do I teach counting on?",
+   "expect": {
+    "need": "K2N-18",
+    "forbid": [
+     "make_ten"
+    ]
+   }
+  },
+  {
+   "id": "MT-18",
+   "row": null,
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "Not this need: Down through ten to subtract (1.OA.C.6, 13 − 4 = 13 − 3 − 1). Need K2N-20.",
+   "prompt": "13 − 4，先减 3 得 10，再减 1，这种平十法怎么讲？",
+   "expect": {
+    "need": "K2N-20",
+    "forbid": [
+     "make_ten"
+    ]
+   }
+  },
+  {
+   "id": "MT-19",
+   "row": null,
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "Not this need: Bundling ten ones into a ten and reading tens and ones (1.NBT.B.2). Need K2N-23.",
+   "prompt": "27 根小棒，每凑够十根捆成一捆，能捆几捆、还剩几根？",
+   "expect": {
+    "need": "K2N-23",
+    "forbid": [
+     "make_ten"
+    ]
+   }
+  },
+  {
+   "id": "MT-20",
+   "row": null,
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "Not this need: Three addends: joining the two that make ten first (1.OA.B.3). Need K2N-15.",
+   "prompt": "Grade 1 practice: 3 + 7 + 6. Is there a smart grouping that makes it easier?",
+   "expect": {
+    "need": "K2N-15",
+    "forbid": [
+     "make_ten"
+    ]
+   }
+  },
+  {
+   "id": "MT-21",
+   "row": null,
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "Not this need: Near doubles (1.OA.C.6, 6 + 7 = 6 + 6 + 1). Need K2N-21.",
+   "prompt": "I know 6 + 6 is 12. Can I use that to get 6 + 7 quickly?",
+   "expect": {
+    "need": "K2N-21",
+    "forbid": [
+     "make_ten"
+    ]
+   }
+  },
+  {
+   "id": "MT-22",
+   "row": null,
+   "language": "en-US",
+   "kind": "detailed",
+   "teacher_picture": "Not this need: Adding a two-digit number with blocks: ten ones traded for a ten (1.NBT.C.4). Need K2N-25.",
+   "prompt": "26 + 8 with base-ten blocks: what happens when the ones come to more than ten?",
+   "expect": {
+    "need": "K2N-25",
+    "forbid": [
+     "make_ten"
+    ]
+   }
+  }
+ ]
+}
