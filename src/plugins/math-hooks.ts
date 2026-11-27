@@ -12,7 +12,7 @@ import { BASE_TEN_DRAWN, baseTenColumns, baseTenMoves, baseTenState } from "./ba
 import { placeValueMoves, placeValueState } from "./place-value-moves.js";
 import { TRADE_NUMBER, placeValueTradeColumnsOf, placeValueTradeMoves, placeValueTradeStartFault, placeValueTradeState, placeValueTradeThousandths } from "./place-value-trade-moves.js";
 import { MAKE_TEN_NUMBER, makeTenMoves, makeTenState } from "./make-ten-moves.js";
-import { TIMES_TEN_NUMBER, placeValueTimesTenMoves, placeValueTimesTenState, timesTenDecimal, timesTenStartProblem } from "./place-value-times-ten-moves.js";
+import { TIMES_TEN_NUMBER, placeValueTimesTenMoves, placeValueTimesTenState, timesTenDecimal, timesTenOutlineFault, timesTenStartProblem } from "./place-value-times-ten-moves.js";
 import { placeValueTimesTenPath } from "octos-lesson-language/plugin-math";
 import { plotCurveNumbers, plotSampleNumbers, validatePlotSampleNumbers, normalizePlotDraftBindings } from "./plot-bindings.js";
 
@@ -243,8 +243,11 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
       });
       return new Map();
     },
-    // Counted in moves along the problem's path toward the target; nothing else moves.
+    // Counted in moves along the problem's path toward the target; nothing else moves (an animation of another
+    // number is left out and recorded).
     number_moves: { state: placeValueTimesTenState, moves: placeValueTimesTenMoves },
+    // Numbers the card cannot start on go with the outline, before any section is written for them.
+    outline_fault: timesTenOutlineFault,
   },
   number_line: { fit_numbers: fitNumberLineNumbers },
   number_line_compare: { fit_numbers: fitComparedNumbers },

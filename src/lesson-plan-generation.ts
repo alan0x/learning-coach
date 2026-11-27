@@ -2772,13 +2772,35 @@ export function supplyProgramNumbers(
  * naming the right ones.
  */
 const OUTLINE_NUMBERS_MISSING = "LESSON_PLAN_OUTLINE_NUMBERS_MISSING";
+/**
+ * Likewise a card that cannot start on the outline's numbers (recipe hook `outline_fault`): asked only when the card
+ * is the outline's first numbered picture and the outline declares exactly as many numbers as the card takes, so
+ * the numbers are surely its own (an outline with a number of its own besides, [2, 0.3, 0.001, ...], keeps the
+ * section's retries: a section may bind the card to numbers 2 to 6; review of #188). A section cannot change an
+ * outline number, so its retries are sure to fail too.
+ */
+const OUTLINE_NUMBERS_REFUSED = "LESSON_PLAN_OUTLINE_NUMBERS_REFUSED";
+const isOutlineNumbersFault = (error: unknown): error is LessonPlanError => error instanceof LessonPlanError
+  && (error.code === OUTLINE_NUMBERS_MISSING || error.code === OUTLINE_NUMBERS_REFUSED);
+const outlineNumbersReason = (error: LessonPlanError) => (error.code === OUTLINE_NUMBERS_REFUSED ? "outline_numbers_refused" : "outline_numbers_missing");
 function outlineNumbersMissing(outline: LessonPlanOutline, section: number): LessonPlanError | undefined {
   const declared = outline.numbers?.length ?? 0;
+  const firstNumbered = (outline.course_visuals ?? []).find((visual) => (LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[visual.capability as keyof typeof LESSON_PLAN_CAPABILITY_NUMBER_LIMITS] ?? 0) > 0);
   for (const [index, visual] of (outline.course_visuals ?? []).entries()) {
+    if (visual.create_section !== section) continue;
     const needed = recipeMinLessonNumbers(visual.capability);
-    if (visual.create_section !== section || declared >= needed) continue;
-    return new LessonPlanError(OUTLINE_NUMBERS_MISSING, `$lessonPlanOutline.course_visuals[${index}]`,
-      `the ${visual.capability} visual starts on ${needed} lesson numbers and the outline declares ${declared}; a section cannot add one`, visual.capability);
+    if (declared < needed) {
+      return new LessonPlanError(OUTLINE_NUMBERS_MISSING, `$lessonPlanOutline.course_visuals[${index}]`,
+        `the ${visual.capability} visual starts on ${needed} lesson numbers and the outline declares ${declared}; a section cannot add one`, visual.capability);
+    }
+    const check = RECIPE_HOOKS[visual.capability as keyof typeof RECIPE_HOOKS]?.outline_fault;
+    const limit = LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[visual.capability as keyof typeof LESSON_PLAN_CAPABILITY_NUMBER_LIMITS] ?? 0;
+    if (!check || visual !== firstNumbered || declared !== limit) continue;
+    const fault = check(outline.numbers!.slice(0, limit).map((number) => number.initial));
+    if (fault) {
+      return new LessonPlanError(OUTLINE_NUMBERS_REFUSED, `$lessonPlanOutline.course_visuals[${index}]`,
+        `the ${visual.capability} visual cannot start on the outline's numbers: ${fault}; a section cannot change them`, visual.capability);
+    }
   }
   return undefined;
 }
@@ -3437,7 +3459,7 @@ export async function generateLessonPlanWithModel(
     // outline without it (acceptFirstSection), a later section's from the outline in place.
     const missing = outline ? outlineNumbersMissing(outline, section) : undefined;
     if (missing && section === 1) throw missing;
-    if (missing) await withdrawLaterSectionVisual(section, missing.capability!, "outline_numbers_missing", missing.message);
+    if (missing) await withdrawLaterSectionVisual(section, missing.capability!, outlineNumbersReason(missing), missing.message);
     while (true) {
       candidate ??= await generateSection(section);
       await dropUncheckedAnswerActivities(candidate, section);
@@ -3536,7 +3558,7 @@ export async function generateLessonPlanWithModel(
       await acceptSection(1, bootstrappedFirstSection);
       return undefined;
     } catch (error) {
-      const numbersMissing = error instanceof LessonPlanError && error.code === OUTLINE_NUMBERS_MISSING;
+      const numbersMissing = isOutlineNumbersFault(error);
       const sharesTapCard = error instanceof LessonPlanError && error.withdrawAtOnce === true;
       // A picture on a tap card's numbers goes at once: a number line takes its whole family with it (they draw the
       // same line from the same numbers). Once an outline has put another picture there already, or the picture
@@ -3552,7 +3574,7 @@ export async function generateLessonPlanWithModel(
       if (spentOnPicture) {
         await options.on_program_adjustment?.({
           kind: "visual_removed", section: 1, capability: capability as keyof typeof LESSON_PLAN_CAPABILITIES,
-          reason: numbersMissing ? "outline_numbers_missing" : sharesTapCard ? "shares_tap_card_numbers" : "visual_limits_after_retries", detail: error instanceof Error ? error.message : String(error),
+          reason: numbersMissing ? outlineNumbersReason(error as LessonPlanError) : sharesTapCard ? "shares_tap_card_numbers" : "visual_limits_after_retries", detail: error instanceof Error ? error.message : String(error),
         });
       }
       if (sharesTapCard) {
