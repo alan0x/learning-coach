@@ -18001,6 +18001,9 @@ var MATH_RECIPES = {
     required_model_schema_parameters: ["given"],
     semantic_parameters: ["given"],
     output_kinds: ["place_value_chart"],
+    // The chart starts on one lesson number at least (the question's; the practice number is optional): an outline
+    // that declares none loses it at once, as no section can add one (35P-04 objective run, PF-17).
+    min_lesson_numbers: 1,
     // Two lesson variables a column: when a lesson holds too many, the chart is the picture that goes.
     binds_many_variables: true,
     // No control: the learner works the chart by its own taps (+, a disk, take out); the model never names one.
@@ -26958,7 +26961,7 @@ function errorFeedback(error) {
 }
 function rejectionDetails(error) {
   if (error instanceof LessonPlanError) {
-    return { code: error.code, path: error.path, message: error.message };
+    return { code: error.code, path: error.path, message: error.message, ...error.capability ? { capability: error.capability } : {} };
   }
   return {
     code: "LESSON_PLAN_GENERATION",
@@ -28735,7 +28738,7 @@ function compilePrefix(outline, drafts, options) {
   const prefixPlan = assembleLessonPlan(normalized.outline, normalized.drafts, options);
   return compileAndValidateLessonPlan(prefixPlan, { ...options, construction_rules: "explicit-v1" });
 }
-function withdrawSectionVisual(outline, section, capability2, expectedRequestParts) {
+function withdrawSectionVisual(outline, section, capability2, expectedRequestParts, keepSectionItem = false) {
   const visuals = outline.course_visuals ?? [];
   const dropped = new Set(visuals.flatMap((visual, index) => visual.capability === capability2 && visual.create_section === section ? [index + 1] : []));
   if (!dropped.size) return void 0;
@@ -28760,6 +28763,11 @@ function withdrawSectionVisual(outline, section, capability2, expectedRequestPar
       kept.push(item);
       itemMap.set(key, kept.length);
     });
+    if (keepSectionItem && offset + 1 === section && !kept.length) {
+      kept.push({ kind: "board_item", board_kind: "note" });
+      itemMap.set(`${section}:added`, kept.length);
+      entry.reusable_items = kept;
+    }
     if (entry.reusable_items) entry.reusable_items = kept;
     if (offset + 1 >= section) entry.allowed_capabilities = entry.allowed_capabilities.filter((allowed) => allowed !== capability2);
   });
@@ -28784,6 +28792,40 @@ function withdrawSectionVisual(outline, section, capability2, expectedRequestPar
     const last = [...itemMap.entries()].at(-1);
     if (!last) return void 0;
     next.close.focus = [{ source: "reusable", section: Number(last[0].split(":")[0]), item: last[1] }];
+  }
+  try {
+    return validateLessonPlanOutline(next, expectedRequestParts);
+  } catch {
+    return void 0;
+  }
+}
+function endOutlineBefore(outline, section, expectedRequestParts) {
+  if (section <= 1 || section > outline.sections.length) return void 0;
+  const kept = section - 1;
+  const next = structuredClone(outline);
+  next.sections = next.sections.slice(0, kept);
+  if (next.course_visuals) {
+    const positionMap = /* @__PURE__ */ new Map();
+    next.course_visuals.forEach((visual, index) => {
+      if (visual.create_section <= kept) positionMap.set(index + 1, positionMap.size + 1);
+    });
+    const visuals = next.course_visuals.filter((visual) => visual.create_section <= kept);
+    if (visuals.some((visual) => visual.related_visual !== void 0 && !positionMap.has(visual.related_visual))) return void 0;
+    next.course_visuals = visuals.map((visual) => ({
+      ...visual,
+      use_sections: visual.use_sections.filter((use) => use <= kept),
+      ...visual.related_visual === void 0 ? {} : { related_visual: positionMap.get(visual.related_visual) }
+    }));
+  }
+  if (next.request_coverage) next.request_coverage = next.request_coverage.map((item) => {
+    const sections = item.sections.filter((use) => use <= kept);
+    return item.treatment === "teach" && !sections.length ? { request_part: item.request_part, treatment: "unsupported", sections: [], reason: "The lesson ended before the section that was to teach this part." } : { ...item, sections };
+  });
+  next.close.focus = next.close.focus.filter((reference) => reference.source !== "reusable" || reference.section <= kept);
+  if (!next.close.focus.length) {
+    const last = next.sections.map((entry, offset) => ({ section: offset + 1, items: entry.reusable_items?.length ?? 0 })).filter((entry) => entry.items > 0).at(-1);
+    if (!last) return void 0;
+    next.close.focus = [{ source: "reusable", section: last.section, item: last.items }];
   }
   try {
     return validateLessonPlanOutline(next, expectedRequestParts);
@@ -28864,6 +28906,20 @@ function outlineNumbersMissing(outline, section) {
         visual.capability
       );
     }
+  }
+  return void 0;
+}
+function certainNumberSharing(outline) {
+  const declared = outline?.numbers?.length ?? 0;
+  const visuals = outline?.course_visuals ?? [];
+  for (const [index, other] of visuals.entries()) {
+    const fewer = recipeMinLessonNumbers(other.capability);
+    if (!fewer) continue;
+    const card = visuals.find((each) => {
+      const more = recipeMinLessonNumbers(each.capability);
+      return each.capability !== other.capability && more > fewer && more <= declared && more + fewer > declared;
+    });
+    if (card) return { visual: index + 1, capability: other.capability, card: card.capability };
   }
   return void 0;
 }
@@ -29212,6 +29268,69 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     }
     return void 0;
   };
+  const drafts = [];
+  const withdrawLaterSectionVisual = async (section, capability2, reason, detail, reported2) => {
+    const withdrawn = section > 1 && !withdrawnNotes.has(section) && outline ? withdrawSectionVisual(outline, section, capability2, fixedRequestParts.length) : void 0;
+    if (!withdrawn) return false;
+    await applyWithdrawal(section, capability2, withdrawn, reason, detail, reported2);
+    return true;
+  };
+  const notesIn = (from, section) => (from.sections[section - 1]?.reusable_items ?? []).filter((item) => item.kind === "board_item" && item.board_kind === "note").length;
+  const applyWithdrawal = async (section, capability2, withdrawn, reason, detail, reported2) => {
+    withdrawnNotes.set(section, `A picture this lesson was planned around in section ${section} (${LESSON_PLAN_CAPABILITY_REGISTRY[capability2]?.required_features.join(", ") ?? capability2}) could not show the lesson's numbers and has been taken out of the lesson. Write this section without it: do not mention it or anything it would have drawn, and do not invite the learner to use it. Teach with the pictures in visuals_for_section, written math and words.`);
+    const slotAdded = outline !== void 0 && notesIn(withdrawn, section) > notesIn(outline, section);
+    outline = withdrawn;
+    await reported2?.();
+    await options.on_program_adjustment?.({
+      kind: "visual_removed",
+      section,
+      capability: capability2,
+      reason,
+      detail
+    });
+    if (slotAdded) {
+      await options.on_program_adjustment?.({
+        kind: "reusable_item_added",
+        section,
+        board_kind: "note",
+        reason: "section_lost_its_only_item",
+        detail: "an empty note slot the section writes; the program writes nothing in it"
+      });
+    }
+  };
+  const withdrawBeforePublishing = async (section, capability2, withdrawn, reason, detail, reported2) => {
+    await applyWithdrawal(section, capability2, withdrawn, reason, detail, reported2);
+    if (programNumberCard === void 0 || !outlineCapabilities(withdrawn).has(programNumberCard)) programNumberCard = soleProgramNumberCard(withdrawn);
+    if (section === 1) {
+      bootstrappedFirstSection = void 0;
+      sectionErrors.delete(1);
+      drafts.length = 0;
+    }
+  };
+  const dropPicturesSharingCardNumbers = async () => {
+    for (let sharing = outline && certainNumberSharing(outline); sharing && outline; sharing = certainNumberSharing(outline)) {
+      const { visual, capability: capability2, card } = sharing;
+      const section = outline.course_visuals[visual - 1].create_section;
+      const unlinked = structuredClone(outline);
+      for (const each of unlinked.course_visuals ?? []) {
+        const related = each.related_visual === void 0 ? void 0 : unlinked.course_visuals[each.related_visual - 1];
+        if (each.capability === card && related?.capability === capability2) {
+          delete each.related_visual;
+          each.relation = "primary";
+        }
+      }
+      const cardsIn = (from) => (from.course_visuals ?? []).filter((each) => each.capability === card).length;
+      const withdrawn = withdrawnNotes.has(section) ? void 0 : withdrawSectionVisual(unlinked, section, capability2, fixedRequestParts.length, section === 1);
+      if (!withdrawn || cardsIn(withdrawn) !== cardsIn(outline)) return;
+      await withdrawBeforePublishing(
+        section,
+        capability2,
+        withdrawn,
+        "shares_tap_card_numbers",
+        `the ${capability2} visual starts on at least ${recipeMinLessonNumbers(capability2)} lesson numbers and the ${card} card on ${recipeMinLessonNumbers(card)}, and the outline declares ${outline.numbers?.length ?? 0}: they would share one`
+      );
+    }
+  };
   const acceptOutline = async () => {
     if (!outline) throw outlineError;
     programNumberCard = supplyProgramNumbers(outline, input.language)?.capability ?? soleProgramNumberCard(outline);
@@ -29223,7 +29342,10 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       camera_observation: stableCameraObservation !== void 0
     });
     const unsupported = outline.request_coverage?.find((item) => item.treatment === "unsupported");
-    if (!unsupported) return void 0;
+    if (!unsupported) {
+      await dropPicturesSharingCardNumbers();
+      return void 0;
+    }
     const reason = unsupported.reason?.trim();
     const learnerResponse = reason && reason.length <= 480 && !/\$lesson|LESSON_PLAN_|already exhausted|do not call|internal attempts/iu.test(reason) ? lessonText(input.language, "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5B8C\u6574\u751F\u6210\u8FD9\u8282\u8BFE\uFF1A{{v0}}", { v0: reason }) : lessonText(input.language, "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5B8C\u6574\u751F\u6210\u8FD9\u8282\u8BFE\uFF0C\u56E0\u4E3A\u5176\u4E2D\u5305\u542B\u5C1A\u672A\u652F\u6301\u7684\u753B\u9762\u6216\u4E92\u52A8\u3002");
     return {
@@ -29387,22 +29509,6 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
     if (kept.length) draft.student_activities = kept;
     else delete draft.student_activities;
   };
-  const drafts = [];
-  const withdrawLaterSectionVisual = async (section, capability2, reason, detail, reported2) => {
-    const withdrawn = section > 1 && !withdrawnNotes.has(section) && outline ? withdrawSectionVisual(outline, section, capability2, fixedRequestParts.length) : void 0;
-    if (!withdrawn) return false;
-    withdrawnNotes.set(section, `A picture this lesson was planned around in section ${section} (${LESSON_PLAN_CAPABILITY_REGISTRY[capability2]?.required_features.join(", ") ?? capability2}) could not show the lesson's numbers and has been taken out of the lesson. Write this section without it: do not mention it or anything it would have drawn, and do not invite the learner to use it. Teach with the pictures in visuals_for_section, written math and words.`);
-    outline = withdrawn;
-    await reported2?.();
-    await options.on_program_adjustment?.({
-      kind: "visual_removed",
-      section,
-      capability: capability2,
-      reason,
-      detail
-    });
-    return true;
-  };
   const acceptSection = async (section, initialCandidate) => {
     let candidate = initialCandidate;
     const missing = outline ? outlineNumbersMissing(outline, section) : void 0;
@@ -29465,7 +29571,24 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
               await options.on_rejected_part?.({ label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error) });
             }
           );
-          if (!withdrawn) throw error;
+          if (!withdrawn) {
+            const shorter = capability2 !== void 0 && outline ? endOutlineBefore(outline, section, fixedRequestParts.length) : void 0;
+            if (!shorter) throw error;
+            await options.on_rejected_part?.({ label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error) });
+            outline = shorter;
+            drafts.length = section - 1;
+            sectionErrors.delete(section);
+            endedEarly = true;
+            await options.on_program_adjustment?.({
+              kind: "sections_removed",
+              section,
+              capability: capability2,
+              reason: "visual_limits_after_retries",
+              detail: error instanceof Error ? error.message : String(error),
+              close_summary: "left_out"
+            });
+            return;
+          }
           sectionErrors.delete(section);
           sectionAttempts.set(section, maxAttempts - 1);
           candidate = void 0;
@@ -29487,6 +29610,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
     }
   };
   let outlineRestarts = 0;
+  let endedEarly = false;
   let sharedRestarts = 0;
   const acceptFirstSection = async () => {
     try {
@@ -29498,6 +29622,22 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
       const dropCard = sharesTapCard && (sharedRestarts > 0 || excludedCapabilities.has(error.capability));
       const capability2 = dropCard ? error.tapCard : error instanceof LessonPlanError ? error.capability : void 0;
       const spentOnPicture = capability2 !== void 0 && !excludedCapabilities.has(capability2) && (numbersMissing || sharesTapCard || (sectionAttempts.get(1) ?? 0) >= maxAttempts);
+      if (outlineRestarts >= 2 && capability2 !== void 0 && !withdrawnNotes.has(1) && outline && (isOutlineOwnedFault(error) || numbersMissing || sharesTapCard || (sectionAttempts.get(1) ?? 0) >= maxAttempts)) {
+        const withdrawn = withdrawSectionVisual(outline, 1, capability2, fixedRequestParts.length, true);
+        if (!withdrawn) throw error;
+        await withdrawBeforePublishing(
+          1,
+          capability2,
+          withdrawn,
+          numbersMissing ? outlineNumbersReason(error) : sharesTapCard ? "shares_tap_card_numbers" : "visual_limits_after_retries",
+          error instanceof Error ? error.message : String(error),
+          async () => {
+            await options.on_rejected_part?.({ label: "lesson-plan-section", section: 1, attempt: sectionAttempts.get(1) ?? 1, error: rejectionDetails(error) });
+          }
+        );
+        sectionAttempts.set(1, maxAttempts - 1);
+        return acceptFirstSection();
+      }
       if (!(isOutlineOwnedFault(error) || spentOnPicture) || outlineRestarts >= 2) throw error;
       outlineRestarts += 1;
       await options.on_rejected_part?.({ label: "lesson-plan-section", section: 1, attempt: sectionAttempts.get(1) ?? 1, error: rejectionDetails(error) });
@@ -29519,6 +29659,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
       } else if (outline) excludeFaulting(outline, error);
       outlineError = error;
       outline = void 0;
+      withdrawnNotes.clear();
       bootstrappedFirstSection = void 0;
       sectionErrors.delete(1);
       sectionAttempts.delete(1);
@@ -29629,6 +29770,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
     }
   }
   if (!compiled) throw finalError;
+  if (endedEarly) compiled.lesson.close.summary = "";
   for (const draft of drafts) await reportDraftAdjustments(draft);
   for (const adjustment of programAdjustments) {
     await options.on_program_adjustment?.(adjustment);
@@ -29714,6 +29856,7 @@ export {
   buildLessonPlanOutlineJsonSchema,
   buildLessonPlanPracticeJsonSchema,
   buildLessonPlanSectionDraftJsonSchema,
+  certainNumberSharing,
   coerceLessonPlanBootstrapSectionModelNumbers,
   coerceLessonPlanOutlineModelNumbers,
   coerceLessonPlanSectionModelNumbers,
@@ -29722,6 +29865,7 @@ export {
   countRange,
   deriveLessonRequestParts,
   enabledTrialRecipes,
+  endOutlineBefore,
   frameRawReply,
   generateLessonPlanWithModel,
   includeWrittenCardsInFocus,
