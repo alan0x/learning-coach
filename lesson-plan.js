@@ -7633,7 +7633,7 @@ var v0_1_schema_default = {
         do: { enum: ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate", "hide", "view", "tap"] },
         when: { enum: ["before_speech", "during_speech", "after_speech"] },
         as: { $ref: "#/$defs/alias" },
-        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model", "base_ten_trade", "place_value_chart", "place_value_trade"] },
+        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model", "base_ten_trade", "place_value_chart", "place_value_trade", "make_ten"] },
         role: { type: "string" },
         content: { type: "object" },
         place: { $ref: "#/$defs/placement" },
@@ -7740,6 +7740,13 @@ var v0_1_schema_default = {
             properties: { do: { const: "write" }, kind: { const: "place_value_trade" } }
           },
           then: { properties: { content: { $ref: "#/$defs/placeValueTradeContent" } } }
+        },
+        {
+          if: {
+            required: ["do", "kind"],
+            properties: { do: { const: "write" }, kind: { const: "make_ten" } }
+          },
+          then: { properties: { content: { $ref: "#/$defs/makeTenContent" } } }
         },
         {
           if: { properties: { do: { const: "revise" } } },
@@ -8082,6 +8089,24 @@ var v0_1_schema_default = {
         }
       }
     },
+    makeTenContent: {
+      type: "object",
+      required: ["a", "b", "filled", "moved"],
+      additionalProperties: false,
+      properties: {
+        language: { enum: ["en-US", "zh-CN"] },
+        a: { type: "integer", minimum: 1, maximum: 9 },
+        b: { type: "integer", minimum: 1, maximum: 9 },
+        filled: { type: "integer", minimum: 0, maximum: 10 },
+        moved: { type: "integer", minimum: 0, maximum: 4 },
+        bindings: {
+          type: "array",
+          minItems: 1,
+          maxItems: 64,
+          items: { $ref: "#/$defs/valueBinding" }
+        }
+      }
+    },
     scene3dContent: {
       type: "object",
       required: ["objects", "camera", "fallback"],
@@ -8233,7 +8258,7 @@ var v0_1_schema_default = {
       required: ["target", "expression"],
       additionalProperties: false,
       properties: {
-        target: { type: "string", pattern: "^(?:[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*|target|a|b|finished)$" },
+        target: { type: "string", pattern: "^(?:[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*|target|a|b|finished|filled|moved)$" },
         expression: { type: "string", minLength: 1, maxLength: 256 },
         allow_zero: { const: true },
         hide_when_undefined: { const: true },
@@ -8695,14 +8720,14 @@ function validateNumberLineContent(raw, path, fail4, options = {}) {
     fail4(`${path}/ticks/format`, "The tick format is integer, decimal, fraction or mixed");
   const shape = { range: { min, max }, ticks };
   const step = planTickStep(shape);
-  const unit3 = step / subdivisions;
-  if ((max - min) / unit3 > NUMBER_LINE_LIMITS.ticks + 1e-9)
+  const unit4 = step / subdivisions;
+  if ((max - min) / unit4 > NUMBER_LINE_LIMITS.ticks + 1e-9)
     fail4(`${path}/ticks`, `The range holds more than ${NUMBER_LINE_LIMITS.ticks} of the smallest ticks; use a larger step or fewer subdivisions`);
   if ((ticks.format === "fraction" || ticks.format === "mixed") && !Number.isInteger(step))
     fail4(`${path}/ticks/format`, "Fraction labels need a whole-number major step");
   if (ticks.format === "integer" && !Number.isInteger(step))
     fail4(`${path}/ticks/format`, "Integer labels need a whole-number major step");
-  if (ticks.format === "integer" && ticks.labels === "all" && !Number.isInteger(unit3)) {
+  if (ticks.format === "integer" && ticks.labels === "all" && !Number.isInteger(unit4)) {
     fail4(`${path}/ticks`, "Integer labels on every tick need whole-number ticks; label only the major ticks, or use fraction or decimal labels");
   }
   const pointAliases = /* @__PURE__ */ new Set();
@@ -8750,7 +8775,7 @@ function validateNumberLineContent(raw, path, fail4, options = {}) {
     if (jump.hops !== void 0 && typeof jump.hops !== "boolean")
       fail4(`${jumpPath}/hops`, "hops is true or false");
     if (jump.hops) {
-      const count = Math.abs(by) / unit3;
+      const count = Math.abs(by) / unit4;
       const whole2 = near(count, Math.round(count), count);
       if (!whole2 && !loose2 || Math.ceil(count - 1e-9) > NUMBER_LINE_LIMITS.hops) {
         fail4(`${jumpPath}/hops`, `A jump drawn hop by hop moves a whole number of the smallest ticks, at most ${NUMBER_LINE_LIMITS.hops}`);
@@ -8780,29 +8805,29 @@ function validateNumberLineContent(raw, path, fail4, options = {}) {
     text(interval.label, `${intervalPath}/label`, fail4, 64);
   }
 }
-function decimalPlaces(unit3) {
+function decimalPlaces(unit4) {
   for (let digits = 0; digits <= 6; digits += 1) {
-    const scaled = unit3 * 10 ** digits;
+    const scaled = unit4 * 10 ** digits;
     if (Math.abs(scaled - Math.round(scaled)) <= 1e-9 * Math.max(1, Math.abs(scaled)))
       return digits;
   }
   return 3;
 }
-function formatDecimal(value2, unit3) {
-  const text5 = value2.toFixed(decimalPlaces(unit3)).replace(/(\.\d*?)0+$/u, "$1").replace(/\.$/u, "");
+function formatDecimal(value2, unit4) {
+  const text5 = value2.toFixed(decimalPlaces(unit4)).replace(/(\.\d*?)0+$/u, "$1").replace(/\.$/u, "");
   return text5 === "-0" || text5 === "\u22120" ? "0" : text5.replace("-", "\u2212");
 }
 function planNumberLineTicks(content) {
   const step = planTickStep(content);
   const subdivisions = content.ticks?.subdivisions ?? 1;
-  const unit3 = step / subdivisions;
+  const unit4 = step / subdivisions;
   const labels = content.ticks?.labels ?? "major";
   const format = content.ticks?.format ?? (Number.isInteger(step) ? subdivisions > 1 ? "fraction" : "integer" : "decimal");
-  const first = Math.ceil(content.range.min / unit3 - 1e-9);
-  const last = Math.floor(content.range.max / unit3 + 1e-9);
+  const first = Math.ceil(content.range.min / unit4 - 1e-9);
+  const last = Math.floor(content.range.max / unit4 + 1e-9);
   const ticks = [];
   for (let index = first; index <= last; index += 1) {
-    const tickValue = Number((index * unit3).toPrecision(12));
+    const tickValue = Number((index * unit4).toPrecision(12));
     const major = index % subdivisions === 0;
     const labelled = labels === "all" || labels === "major" && major;
     let label;
@@ -8819,7 +8844,7 @@ function planNumberLineTicks(content) {
           label = format === "mixed" && size > denominator ? { kind: "fraction", negative, whole: Math.floor(size / denominator), numerator: size % denominator, denominator } : { kind: "fraction", negative, numerator: size, denominator };
         }
       } else {
-        label = format === "integer" && !Number.isInteger(tickValue) ? void 0 : { kind: "text", text: formatDecimal(tickValue, format === "integer" ? 1 : unit3) };
+        label = format === "integer" && !Number.isInteger(tickValue) ? void 0 : { kind: "text", text: formatDecimal(tickValue, format === "integer" ? 1 : unit4) };
       }
     }
     ticks.push({ value: tickValue, major, ...label ? { label } : {} });
@@ -10183,7 +10208,317 @@ function placeValueTradeStepSentences(problem, k, language = "en-US") {
   return sentences;
 }
 
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/make-ten.js
+var MAKE_TEN_KIND = "make_ten";
+var MAKE_TEN_FEATURE = "plugin:math/make-ten@1";
+var MAKE_TEN_PLUGIN_VERSION = "0.10.0";
+var MAKE_TEN_LANGUAGES = BASE_TEN_TRADE_LANGUAGES;
+var MAKE_TEN_PLACES = 10;
+var MAKE_TEN_MIN_ADDEND = 1;
+var MAKE_TEN_MAX_ADDEND = 9;
+var MAKE_TEN_MAX_MOVED = 4;
+var MAKE_TEN_CARD_BINDINGS = ["a", "b", "filled", "moved"];
+var MAKE_TEN_CARD_FIELDS = ["a", "b", "filled"];
+var MAKE_TEN_PROBLEM_FIELDS = ["a", "b"];
+var MAKE_TEN_TAP_FIELD = "moved";
+var MAKE_TEN_PART_FIELDS = [];
+var MAKE_TEN_TAP_PLACES = ["first", "second"];
+var MAKE_TEN_TAPS = ["give", "back"];
+function makeTenFault(a, b) {
+  if (typeof a !== "number" || typeof b !== "number" || !Number.isInteger(a) || !Number.isInteger(b))
+    return "unreadable";
+  if (a < MAKE_TEN_MIN_ADDEND || a > MAKE_TEN_MAX_ADDEND || b < MAKE_TEN_MIN_ADDEND || b > MAKE_TEN_MAX_ADDEND)
+    return "not_one_digit";
+  if (a + b < MAKE_TEN_PLACES)
+    return "under_ten";
+  if (a + b === MAKE_TEN_PLACES)
+    return "exactly_ten";
+  return void 0;
+}
+function makeTenProblemOf(a, b) {
+  return { a, b, sum: a + b, left: a + b - MAKE_TEN_PLACES, big: a >= b ? 0 : 1 };
+}
+var makeTenAddend = (problem, frame) => frame === 0 ? problem.a : problem.b;
+var makeTenGiver = (problem) => problem.big === 0 ? 1 : 0;
+var makeTenFreshCount = (a, b) => Math.max(a, b);
+var makeTenToTen = (problem) => MAKE_TEN_PLACES - makeTenAddend(problem, problem.big);
+var makeTenProblemText = (problem) => `${problem.a} + ${problem.b}`;
+function makeTenFrame(state, frame) {
+  const { problem, moved } = state;
+  const filling = frame === problem.big;
+  const home = makeTenAddend(problem, frame) - (filling ? 0 : moved);
+  const visitors = filling ? moved : 0;
+  return { home, visitors, count: home + visitors, empty: MAKE_TEN_PLACES - home - visitors };
+}
+function makeTenFullFrame(state) {
+  for (const frame of [0, 1])
+    if (makeTenFrame(state, frame).count === MAKE_TEN_PLACES)
+      return frame;
+  return -1;
+}
+var makeTenComplete = (state) => makeTenFullFrame(state) !== -1;
+var makeTenDemonstrating = (state) => (state.filled ?? makeTenAddend(state.problem, state.problem.big)) > makeTenAddend(state.problem, state.problem.big);
+var withMoved = (state, moved) => ({ ...state, moved });
+function applyMakeTenTap(state, tap) {
+  const f = tap.place;
+  if (f !== 0 && f !== 1)
+    return { ok: false, reason: "none" };
+  if (makeTenDemonstrating(state))
+    return { ok: false, reason: "demonstrating" };
+  const here = makeTenFrame(state, f), other = makeTenFrame(state, 1 - f);
+  if (tap.tap === "back") {
+    if (!here.visitors)
+      return { ok: false, reason: "none" };
+    return { ok: true, state: withMoved(state, state.moved - 1), to: 1 - f };
+  }
+  if (!here.home)
+    return { ok: false, reason: "none" };
+  if (f === state.problem.big)
+    return { ok: false, reason: "stays" };
+  if (!other.empty)
+    return { ok: false, reason: "full" };
+  return { ok: true, state: withMoved(state, state.moved + 1), to: 1 - f };
+}
+function makeTenChain(problem) {
+  const ten = problem.big, giver = makeTenGiver(problem), moved = makeTenToTen(problem), left = problem.left;
+  let k = 0;
+  const blank = (part, value2) => ({ blank: k++, part, value: value2, giver: part === "total" ? null : giver });
+  const head = [{ n: problem.a, frame: 0 }, "+", { n: problem.b, frame: 1 }, "="];
+  if (ten === 0)
+    return [...head, { n: problem.a, frame: 0 }, "+", blank("moved", moved), "+", blank("left", left), "=", { n: MAKE_TEN_PLACES, ten: true }, "+", blank("left", left), "=", blank("total", problem.sum)];
+  return [...head, blank("left", left), "+", blank("moved", moved), "+", { n: problem.b, frame: 1 }, "=", blank("left", left), "+", { n: MAKE_TEN_PLACES, ten: true }, "=", blank("total", problem.sum)];
+}
+var isBlank = (token) => typeof token === "object" && "blank" in token;
+function makeTenChainText(problem) {
+  return makeTenChain(problem).map((token) => typeof token === "string" ? token : isBlank(token) ? String(token.value) : String(token.n)).join(" ");
+}
+var BLANK_NAMES = { moved: "to-ten", total: "total" };
+function makeTenRow(a, b, language = "en-US") {
+  const fault = makeTenFault(a, b);
+  if (fault)
+    throw new Error(makeTenFaultText(fault, a, b));
+  const problem = makeTenProblemOf(a, b);
+  const words = MAKE_TEN_WORDS[language] ?? MAKE_TEN_WORDS["en-US"];
+  const parts = [];
+  let text5 = [];
+  let leftSeen = 0;
+  const flush = () => {
+    if (text5.length) {
+      parts.push({ text: text5.join(" ") });
+      text5 = [];
+    }
+  };
+  for (const token of makeTenChain(problem)) {
+    if (!isBlank(token)) {
+      text5.push(typeof token === "string" ? token : String(token.n));
+      continue;
+    }
+    flush();
+    const as = token.part === "left" ? leftSeen++ === 0 ? "rest" : "ones" : BLANK_NAMES[token.part];
+    parts.push({ blank: { as, answer: String(token.value), ...token.part === "moved" ? { label: words.toTen } : {} } });
+  }
+  flush();
+  return parts;
+}
+function record6(value2, path, fail4) {
+  if (!value2 || typeof value2 !== "object" || Array.isArray(value2))
+    fail4(path, "Expected an object");
+  return value2;
+}
+function wholeNumber5(raw, path, low, high, fail4, what) {
+  if (typeof raw !== "number" || !Number.isInteger(raw) || raw < low || raw > high)
+    fail4(path, `${what} is a whole number from ${low} to ${high}`);
+  return raw;
+}
+function makeTenFaultText(fault, a, b) {
+  const pair = typeof a === "number" && typeof b === "number" ? `${a} + ${b}` : "This pair";
+  switch (fault) {
+    case "not_one_digit":
+      return `${pair}: each number is from 1 to 9 (not_one_digit)`;
+    case "under_ten":
+      return `${pair} is less than ten: there is no ten to make (under_ten)`;
+    case "exactly_ten":
+      return `${pair} is exactly ten: nothing is left over; that is partners of ten, not this card (exactly_ten)`;
+    default:
+      return "The two numbers are whole numbers from 1 to 9 (unreadable)";
+  }
+}
+function validateMakeTenContent(raw, path, fail4, options = {}) {
+  const content = record6(raw, path, fail4);
+  for (const key of Object.keys(content)) {
+    if (!["language", "a", "b", "filled", "moved", "bindings"].includes(key))
+      fail4(`${path}/${key}`, `Unknown make-ten field '${key}'`);
+  }
+  if (content.language !== void 0 && !MAKE_TEN_LANGUAGES.includes(content.language)) {
+    fail4(`${path}/language`, `The card speaks ${MAKE_TEN_LANGUAGES.join(" or ")}`);
+  }
+  const a = wholeNumber5(content.a, `${path}/a`, MAKE_TEN_MIN_ADDEND, MAKE_TEN_MAX_ADDEND, fail4, "The first number");
+  const b = wholeNumber5(content.b, `${path}/b`, MAKE_TEN_MIN_ADDEND, MAKE_TEN_MAX_ADDEND, fail4, "The second number");
+  const filled = wholeNumber5(content.filled, `${path}/filled`, 0, MAKE_TEN_PLACES, fail4, "The count in the bigger addend's frame (filled)");
+  const moved = wholeNumber5(content.moved, `${path}/moved`, 0, MAKE_TEN_MAX_MOVED, fail4, "The counters moved");
+  if (options.boundValues)
+    return;
+  const fault = makeTenFault(a, b);
+  if (fault)
+    fail4(`${path}/b`, makeTenFaultText(fault, a, b));
+  const problem = makeTenProblemOf(a, b);
+  const start = makeTenFreshCount(a, b);
+  if (filled < start) {
+    fail4(`${path}/filled`, `'filled' counts the counters in the bigger addend's frame: for ${makeTenProblemText(problem)} it starts at ${start}, the bigger addend, not ${filled}`);
+  }
+  if (moved > makeTenToTen(problem)) {
+    fail4(`${path}/moved`, `${makeTenProblemText(problem)} fills its ten with ${makeTenToTen(problem)} moved; ${moved} cannot be`);
+  }
+  if (filled > start && moved !== 0) {
+    fail4(`${path}/filled`, "A demonstration (filled above the bigger addend) plays on fresh frames: moved is 0");
+  }
+  if (options.start && filled !== start) {
+    fail4(`${path}/filled`, `A card opens fresh: for ${makeTenProblemText(problem)} 'filled' starts at ${start}, the bigger addend, not ${filled}`);
+  }
+  if (options.start && moved !== 0)
+    fail4(`${path}/moved`, `A card opens fresh: nothing moved, not ${moved}`);
+}
+var makeTenLanguage = (raw) => baseTenLanguage(raw);
+function makeTenState(raw) {
+  const content = raw ?? {};
+  const int = (value2, low, high, fallback = low) => typeof value2 === "number" && Number.isFinite(value2) ? Math.min(high, Math.max(low, Math.floor(value2 + 1e-9))) : fallback;
+  const a = int(content.a, MAKE_TEN_MIN_ADDEND, MAKE_TEN_MAX_ADDEND, MAKE_TEN_MAX_ADDEND);
+  const b = int(content.b, MAKE_TEN_MIN_ADDEND, MAKE_TEN_MAX_ADDEND, MAKE_TEN_MAX_ADDEND);
+  const problem = makeTenProblemOf(a, b);
+  const start = makeTenAddend(problem, problem.big);
+  const most = Math.max(0, Math.min(MAKE_TEN_PLACES - start, makeTenAddend(problem, makeTenGiver(problem))));
+  const filled = int(content.filled, start, start + most, start);
+  if (filled > start)
+    return { problem, moved: filled - start, filled };
+  return { problem, moved: int(content.moved, 0, most), filled };
+}
+function makeTenStartFault(state) {
+  const start = makeTenAddend(state.problem, state.problem.big);
+  if ((state.filled ?? start) !== start)
+    return `A practice card starts with nothing demonstrated: filled is ${state.filled}, not ${start} (${makeTenProblemText(state.problem)}'s bigger addend)`;
+  if (state.moved !== 0)
+    return `A practice card starts fresh: moved is ${state.moved}, not 0`;
+  return void 0;
+}
+function makeTenChanges(before, after) {
+  return before.moved === after.moved ? [] : [{ place: 0, field: "moved", before: before.moved, after: after.moved }];
+}
+var MAKE_TEN_VARIABLE_COUNT = MAKE_TEN_CARD_BINDINGS.length;
+var MAKE_TEN_WORDS = {
+  "en-US": {
+    cardLabel: "Making ten on two ten frames",
+    howto: {
+      start: "Make a ten: tap a {c} counter to fill the empty places.",
+      going: "Keep tapping {c} counters until the frame is full.",
+      done: "The frame is a ten. Fill in the blanks.",
+      shown: "The frame is a ten."
+    },
+    colour: ["red", "blue"],
+    refusal: {
+      stays: "{K} counters stay in their frame.",
+      full: "That frame is full: a frame has ten places.",
+      demonstrating: "These frames show the demonstration.",
+      none: "That can't be done here."
+    },
+    moveAway: "Move this counter to the other frame",
+    moveBack: "Move this counter back to its own frame",
+    frameName: (n) => `Ten frame of the ${n}`,
+    toTen: "to make ten",
+    demo: {
+      start: (big) => `Fill the ${big}'s frame to make a ten.`,
+      move: (small) => `Move one of the ${small} across.`,
+      ten: (left) => `A full frame is ten, and ${left} ${left === 1 ? "is" : "are"} left: 10 + ${left}.`
+    },
+    fixedHowTo: "Tap a {c} counter to move it into an empty place of the other frame; tap it again to bring it back. When that frame holds ten, fill in the blanks."
+  },
+  "zh-CN": {
+    cardLabel: "\u4E24\u4E2A\u5341\u683C\u6846\u51D1\u5341",
+    howto: {
+      start: "\u51D1\u6210\u5341\uFF1A\u70B9{c}\u7684\u5706\u7247\uFF0C\u628A\u7A7A\u4F4D\u586B\u6EE1\u3002",
+      going: "\u63A5\u7740\u70B9{c}\u7684\u5706\u7247\uFF0C\u76F4\u5230\u6846\u6EE1\u4E86\u3002",
+      done: "\u6846\u6EE1\u5341\u4E86\u3002\u5728\u4E0B\u9762\u586B\u7A7A\u3002",
+      shown: "\u6846\u6EE1\u5341\u4E86\u3002"
+    },
+    colour: ["\u7EA2\u8272", "\u84DD\u8272"],
+    refusal: {
+      stays: "{K}\u7684\u5706\u7247\u7559\u5728\u81EA\u5DF1\u7684\u6846\u91CC\u3002",
+      full: "\u90A3\u4E2A\u6846\u6EE1\u4E86\uFF1A\u4E00\u4E2A\u6846\u53EA\u6709\u5341\u4E2A\u683C\u5B50\u3002",
+      demonstrating: "\u8FD9\u662F\u6F14\u793A\u3002",
+      none: "\u8FD9\u91CC\u4E0D\u80FD\u8FD9\u6837\u505A\u3002"
+    },
+    moveAway: "\u628A\u8FD9\u4E2A\u5706\u7247\u79FB\u5230\u53E6\u4E00\u4E2A\u6846",
+    moveBack: "\u628A\u8FD9\u4E2A\u5706\u7247\u79FB\u56DE\u5B83\u81EA\u5DF1\u7684\u6846",
+    frameName: (n) => `${n} \u7684\u5341\u683C\u6846`,
+    toTen: "\u51D1\u6210\u5341",
+    demo: {
+      start: (big) => `\u628A ${big} \u7684\u6846\u8865\u6EE1\uFF0C\u51D1\u6210\u5341\u3002`,
+      move: (small) => `\u4ECE ${small} \u91CC\u79FB\u4E00\u4E2A\u8FC7\u53BB\u3002`,
+      ten: (left) => `\u6EE1\u6846\u662F\u5341\uFF0C\u53E6\u4E00\u4E2A\u6846\u8FD8\u5269 ${left} \u4E2A\uFF1A10 + ${left}\u3002`
+    },
+    fixedHowTo: "\u70B9{c}\u7684\u5706\u7247\uFF0C\u628A\u5B83\u79FB\u5230\u53E6\u4E00\u4E2A\u6846\u7684\u7A7A\u4F4D\u91CC\uFF1B\u518D\u70B9\u4E00\u4E0B\u5C31\u79FB\u56DE\u6765\u3002\u90A3\u4E2A\u6846\u6EE1\u5341\u4E86\uFF0C\u5C31\u5728\u4E0B\u9762\u586B\u7A7A\u3002"
+  }
+};
+function makeTenRich(sentence, problem, language = "en-US") {
+  const words = MAKE_TEN_WORDS[language] ?? MAKE_TEN_WORDS["en-US"];
+  const give = makeTenGiver(problem), keep = problem.big;
+  const cap = (word) => word.charAt(0).toUpperCase() + word.slice(1);
+  return sentence.split(/(\{[cK]\})/u).filter(Boolean).map((part) => {
+    if (part === "{c}")
+      return { word: words.colour[give], frame: give };
+    if (part === "{K}")
+      return { word: cap(words.colour[keep]), frame: keep };
+    return part;
+  });
+}
+var makeTenPlain = (rich) => rich.map((part) => typeof part === "string" ? part : part.word).join("");
+function makeTenHowTo(raw) {
+  const language = makeTenLanguage(raw);
+  return makeTenPlain(makeTenRich(MAKE_TEN_WORDS[language].fixedHowTo, makeTenState(raw).problem, language));
+}
+function makeTenRefusalRich(state, reason, language = "en-US") {
+  const words = MAKE_TEN_WORDS[language] ?? MAKE_TEN_WORDS["en-US"];
+  const sentence = words.refusal[reason] ?? words.refusal.none;
+  return makeTenRich(sentence, state.problem, language);
+}
+var makeTenRefusalText = (state, reason, language = "en-US") => makeTenPlain(makeTenRefusalRich(state, reason, language));
+function makeTenStepSentences(problem, from, to, language = "en-US") {
+  const dm = MAKE_TEN_WORDS[language].demo;
+  const start = makeTenAddend(problem, problem.big);
+  const sentences = [];
+  if (from === start && to > from)
+    sentences.push(dm.start(start));
+  for (let k = from; k < to; k += 1)
+    sentences.push(dm.move(makeTenAddend(problem, makeTenGiver(problem))));
+  if (to === MAKE_TEN_PLACES && from < to)
+    sentences.push(dm.ten(problem.left));
+  return sentences;
+}
+
 // node_modules/octos-lesson-language/dist/packages/core/src/cards.js
+function wholeForwardDemonstration(spec) {
+  return Object.freeze({
+    range: spec.range,
+    next: spec.next,
+    field: spec.field,
+    tapState: spec.tapState,
+    shows: spec.shows,
+    fresh: spec.fresh,
+    ...spec.opensAtStart ? { opensAtStart: true } : {},
+    start: spec.start,
+    refuseStep(content, from, to) {
+      if (!Number.isInteger(to))
+        return `${spec.counts}: a whole number, not ${to}; from ${from}, ${spec.next(content, from)}`;
+      if (to < from)
+        return `${spec.counts}: it goes forward, not from ${from} back to ${to}; ${spec.next(content, from)}`;
+      return void 0;
+    },
+    refuseReplay: (_content, value2) => Number.isInteger(value2) ? void 0 : `${spec.counts}: a whole number, not ${value2}`,
+    outside(content, value2) {
+      const { min, max } = spec.range(content);
+      return `${spec.counts}: ${min} to ${max}, not ${value2}`;
+    }
+  });
+}
 var placeName = (content, place5) => {
   const places = content?.places;
   const item = Array.isArray(places) ? places[place5] : void 0;
@@ -10467,22 +10802,28 @@ var tradeContentAt = (content, value2) => {
   }
   return at2;
 };
+var PLACE_VALUE_TRADE_DEMONSTRATION = wholeForwardDemonstration({
+  field: "finished",
+  counts: `counts the columns a ${PLACE_VALUE_TRADE_KIND} card has finished`,
+  tapState: "a column's state",
+  shows: "(columns finished, counting from the right), and the program plays each column",
+  fresh: "chart",
+  start: () => 0,
+  range: (content) => ({ min: 0, max: placeValueTradeState(content).problem.columns.length }),
+  next(content, value2) {
+    const columns = placeValueTradeState(content).problem.columns;
+    const k = Math.max(0, Math.floor(value2));
+    const place5 = columns[columns.length - 1 - k];
+    return place5 === void 0 ? `every column is finished at ${columns.length}` : `the next value, ${k + 1}, finishes the ${placeValueColumnName(place5).toLowerCase()}`;
+  }
+});
 var PLACE_VALUE_TRADE_CARD = Object.freeze({
   kind: PLACE_VALUE_TRADE_KIND,
   taps: PLACE_VALUE_TRADE_TAPS,
   places: PLACE_VALUE_TAP_PLACES,
   cardFields: PLACE_VALUE_TRADE_CARD_BINDINGS,
   practiceFields: PLACE_VALUE_TRADE_PROBLEM_FIELDS,
-  demonstration: Object.freeze({
-    field: "finished",
-    range: (content) => ({ min: 0, max: placeValueTradeState(content).problem.columns.length }),
-    next(content, value2) {
-      const columns = placeValueTradeState(content).problem.columns;
-      const k = Math.max(0, Math.floor(value2));
-      const place5 = columns[columns.length - 1 - k];
-      return place5 === void 0 ? `every column is finished at ${columns.length}` : `the next value, ${k + 1}, finishes the ${placeValueColumnName(place5).toLowerCase()}`;
-    }
-  }),
+  demonstration: PLACE_VALUE_TRADE_DEMONSTRATION,
   fieldsAtOnce: true,
   validateContent: (raw, path, fail4) => validatePlaceValueTradeContent(raw, path, fail4),
   state: placeValueTradeState,
@@ -10560,10 +10901,104 @@ var PLACE_VALUE_TRADE_CARD = Object.freeze({
     }
   })
 });
+var makeTenContentAt = (content, value2) => {
+  const at2 = structuredClone(content);
+  delete at2.bindings;
+  for (const field of [...MAKE_TEN_CARD_FIELDS, MAKE_TEN_TAP_FIELD]) {
+    const v = value2(field);
+    if (v !== void 0)
+      at2[field] = v;
+  }
+  return at2;
+};
+var MAKE_TEN_DEMONSTRATION = wholeForwardDemonstration({
+  field: "filled",
+  counts: `counts the counters in the bigger addend's frame of a ${MAKE_TEN_KIND} card`,
+  tapState: "the count the learner moved",
+  shows: "(the count in the bigger addend's frame, from the bigger addend up to 10), and the program moves each counter",
+  fresh: "card",
+  opensAtStart: true,
+  start: (content) => {
+    const { problem } = makeTenState(content);
+    return makeTenFreshCount(problem.a, problem.b);
+  },
+  range: (content) => {
+    const { problem } = makeTenState(content);
+    return { min: makeTenFreshCount(problem.a, problem.b), max: MAKE_TEN_PLACES };
+  },
+  next(content, value2) {
+    const { problem } = makeTenState(content);
+    const k = Math.max(makeTenFreshCount(problem.a, problem.b), Math.floor(value2));
+    const big = makeTenAddend(problem, problem.big), small = makeTenAddend(problem, makeTenGiver(problem));
+    return k >= MAKE_TEN_PLACES ? `the ${big}'s frame holds ten at ${MAKE_TEN_PLACES}` : `the next value, ${k + 1}, moves one of the ${small} into the ${big}'s frame`;
+  }
+});
+var MAKE_TEN_CARD = Object.freeze({
+  kind: MAKE_TEN_KIND,
+  taps: MAKE_TEN_TAPS,
+  places: MAKE_TEN_TAP_PLACES,
+  cardFields: MAKE_TEN_CARD_FIELDS,
+  practiceFields: MAKE_TEN_PROBLEM_FIELDS,
+  demonstration: MAKE_TEN_DEMONSTRATION,
+  fieldsAtOnce: true,
+  validateContent: (raw, path, fail4, options) => validateMakeTenContent(raw, path, fail4, options?.start ? { start: true } : {}),
+  state: makeTenState,
+  apply: (state, tap) => {
+    const result = applyMakeTenTap(state, { tap: tap.kind, place: tap.place });
+    return result.ok ? { ok: true, state: result.state } : { ok: false, reason: result.reason };
+  },
+  refusalText(reason, _place, language, state) {
+    return makeTenRefusalText(state ?? makeTenState({}), reason, language === "zh-CN" ? "zh-CN" : "en-US");
+  },
+  language: makeTenLanguage,
+  changes: (before, after) => makeTenChanges(before, after),
+  tapFields: () => [{ place: 0, field: MAKE_TEN_TAP_FIELD, min: 0, max: MAKE_TEN_MAX_MOVED }],
+  /** The count moved is a card-level field: bound by its bare name, not `part.field`. */
+  fieldTarget: (_content, _place, field) => field,
+  contentAt: makeTenContentAt,
+  /** A practice card starts fresh: nothing moved, nothing demonstrated. */
+  validateStart(state, fail4) {
+    const fault = makeTenStartFault(state);
+    if (fault)
+      fail4(fault);
+  },
+  facts: Object.freeze({
+    /**
+     * The bigger addend's frame holds ten. Judged on each tap, so the task ends on the tap that makes the ten
+     * (there is no "done"); the row of four blanks is a task of its own after it, anchored on the card.
+     */
+    complete: {
+      keys: [],
+      judgedOnTap: true,
+      read: (_completion, state) => {
+        const actual = makeTenComplete(state) ? 1 : 0;
+        return { actual, target: 1, succeeded: actual === 1 };
+      },
+      /** The one finished card of the task's own pair, computed: the pair, nothing demonstrated, the ten made. */
+      donePile({ content, startValue }) {
+        const bound = boundTargets(content);
+        const number = (field) => bound.has(field) ? startValue(bound.get(field)) : Number(content[field]);
+        const problem = makeTenProblemOf(number("a"), number("b"));
+        const start = makeTenFreshCount(problem.a, problem.b);
+        const result = {};
+        for (const [target, alias] of bound) {
+          if (target === "a" || target === "b")
+            result[alias] = number(target);
+          else if (target === "filled")
+            result[alias] = start;
+          else if (target === MAKE_TEN_TAP_FIELD)
+            result[alias] = MAKE_TEN_PLACES - start;
+        }
+        return result;
+      }
+    }
+  })
+});
 var TAP_CARD_KINDS = Object.freeze({
   [BASE_TEN_TRADE_KIND]: BASE_TEN_TRADE_CARD,
   [PLACE_VALUE_CHART_KIND]: PLACE_VALUE_CHART_CARD,
-  [PLACE_VALUE_TRADE_KIND]: PLACE_VALUE_TRADE_CARD
+  [PLACE_VALUE_TRADE_KIND]: PLACE_VALUE_TRADE_CARD,
+  [MAKE_TEN_KIND]: MAKE_TEN_CARD
 });
 function tapCardKind(kind) {
   return typeof kind === "string" && Object.hasOwn(TAP_CARD_KINDS, kind) ? TAP_CARD_KINDS[kind] : void 0;
@@ -10623,11 +11058,14 @@ var OLL_BINDING_CAPABILITIES = {
   fraction_model: FRACTION_MODEL_BINDINGS,
   base_ten_trade: BASE_TEN_TRADE_BINDINGS,
   place_value_chart: PLACE_VALUE_CHART_BINDINGS,
-  place_value_trade: PLACE_VALUE_TRADE_BINDINGS
+  place_value_trade: PLACE_VALUE_TRADE_BINDINGS,
+  // The make-ten card has no parts: every field it binds is card-level (below).
+  make_ten: {}
 };
 var OLL_CARD_BINDING_CAPABILITIES = Object.freeze({
   place_value_chart: PLACE_VALUE_CHART_CARD_BINDINGS,
-  place_value_trade: PLACE_VALUE_TRADE_CARD_BINDINGS
+  place_value_trade: PLACE_VALUE_TRADE_CARD_BINDINGS,
+  make_ten: MAKE_TEN_CARD_BINDINGS
 });
 function cardBindingCapabilitiesForNodeKind(kind) {
   return Object.hasOwn(OLL_CARD_BINDING_CAPABILITIES, kind) ? OLL_CARD_BINDING_CAPABILITIES[kind] : [];
@@ -10712,8 +11150,9 @@ var MATH_PLUGIN_MANIFEST = {
   // 0.5.0: trading tens and ones, the `base_ten_trade` card (decision 0023). 0.6.0: the mat speaks Chinese
   // (0023 amendment 3). 0.7.0: a slider on a place's count, each stop one trade (0023 amendment 4).
   // 0.8.0: the place-value chart, the `place_value_chart` card (decision 0025). 0.9.0: adding and subtracting
-  // on the chart as the written method, the `place_value_trade` card (decision 0026).
-  version: "0.9.0",
+  // on the chart as the written method, the `place_value_trade` card (decision 0026). 0.10.0: making ten to add
+  // on two ten frames, the `make_ten` card (decision 0027).
+  version: "0.10.0",
   // Every subject plugin depends on the shared tools (decision 0012).
   depends: { shared: "0.1.0" },
   ollCore: ">=0.10.0"
@@ -10757,6 +11196,9 @@ var OLL_EXECUTION_FEATURES = Object.freeze({
   // Decision 0026: the player draws and plays the place-value trade card (its demonstration by columns finished,
   // its taps); a lesson that only demonstrates it needs that player too.
   "card:place_value_trade": "0.17.0",
+  // Decision 0027: the player draws and plays the make-ten card (its demonstration by the count in the bigger
+  // frame, its taps, its task ending on the tap that makes the ten); a lesson that only demonstrates it needs it too.
+  "card:make_ten": "0.18.0",
   // Decision 0025: a card-level field bound by its bare name (the chart's number); an older player cannot place it.
   "value-bindings:card-field": "0.16.0",
   // Decision 0023 amendment 1: a row of blanks answered in one go; an older player has no such question.
@@ -10797,7 +11239,7 @@ var looksLikeNumberLine = (content) => typeof content.range === "object" && cont
 var FIRST_PARTY_EXTENSIONS = Object.freeze([
   {
     plugin: { id: MATH_PLUGIN_MANIFEST.id, version: MATH_PLUGIN_MANIFEST.version },
-    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION, [FRACTION_MODEL_FEATURE]: FRACTION_MODEL_PLUGIN_VERSION, [BASE_TEN_TRADE_FEATURE]: BASE_TEN_TRADE_PLUGIN_VERSION, [BASE_TEN_TRADE_LANGUAGE_FEATURE]: BASE_TEN_TRADE_LANGUAGE_VERSION, [BASE_TEN_TRADE_SLIDER_FEATURE]: BASE_TEN_TRADE_SLIDER_VERSION, [PLACE_VALUE_CHART_FEATURE]: PLACE_VALUE_CHART_PLUGIN_VERSION, [PLACE_VALUE_TRADE_FEATURE]: PLACE_VALUE_TRADE_PLUGIN_VERSION },
+    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION, [FRACTION_MODEL_FEATURE]: FRACTION_MODEL_PLUGIN_VERSION, [BASE_TEN_TRADE_FEATURE]: BASE_TEN_TRADE_PLUGIN_VERSION, [BASE_TEN_TRADE_LANGUAGE_FEATURE]: BASE_TEN_TRADE_LANGUAGE_VERSION, [BASE_TEN_TRADE_SLIDER_FEATURE]: BASE_TEN_TRADE_SLIDER_VERSION, [PLACE_VALUE_CHART_FEATURE]: PLACE_VALUE_CHART_PLUGIN_VERSION, [PLACE_VALUE_TRADE_FEATURE]: PLACE_VALUE_TRADE_PLUGIN_VERSION, [MAKE_TEN_FEATURE]: MAKE_TEN_PLUGIN_VERSION },
     detect(content, kind, use, lesson) {
       if (kind === NUMBER_LINE_KIND || kind === void 0 && looksLikeNumberLine(content)) {
         use(NUMBER_LINE_FEATURE);
@@ -10817,11 +11259,13 @@ var FIRST_PARTY_EXTENSIONS = Object.freeze([
         use(PLACE_VALUE_CHART_FEATURE);
       if (kind === PLACE_VALUE_TRADE_KIND)
         use(PLACE_VALUE_TRADE_FEATURE);
+      if (kind === MAKE_TEN_KIND)
+        use(MAKE_TEN_FEATURE);
     }
   }
 ]);
 var FIRST_PARTY_FEATURES = Object.freeze(Object.assign({}, ...FIRST_PARTY_EXTENSIONS.map((extension) => extension.features)));
-var PLUGIN_NODE_FEATURES = Object.freeze({ [NUMBER_LINE_KIND]: NUMBER_LINE_FEATURE, [FRACTION_MODEL_KIND]: FRACTION_MODEL_FEATURE, [BASE_TEN_TRADE_KIND]: BASE_TEN_TRADE_FEATURE, [PLACE_VALUE_CHART_KIND]: PLACE_VALUE_CHART_FEATURE, [PLACE_VALUE_TRADE_KIND]: PLACE_VALUE_TRADE_FEATURE });
+var PLUGIN_NODE_FEATURES = Object.freeze({ [NUMBER_LINE_KIND]: NUMBER_LINE_FEATURE, [FRACTION_MODEL_KIND]: FRACTION_MODEL_FEATURE, [BASE_TEN_TRADE_KIND]: BASE_TEN_TRADE_FEATURE, [PLACE_VALUE_CHART_KIND]: PLACE_VALUE_CHART_FEATURE, [PLACE_VALUE_TRADE_KIND]: PLACE_VALUE_TRADE_FEATURE, [MAKE_TEN_KIND]: MAKE_TEN_FEATURE });
 
 // node_modules/octos-lesson-language/dist/packages/core/src/opening.js
 function applyLessonOpeningPolicy(source, policy = { kind: "preserve" }) {
@@ -11203,15 +11647,27 @@ function validateCardStudentTask(task, path, registry, cards, declarations, star
     fail("OLL_INVALID_PHASE_START", `${path}/start`, "A card task gives the learner's practice pile in start");
   const initial = Object.fromEntries(declarations.map((variable) => [variable.as, variable.initial]));
   const failAt = (message, where) => (failPath, detail) => fail("OLL_INVALID_STUDENT_TASK", where, `${message}: ${detail} (${failPath.replace(/^\$\//, "")})`);
-  kind.validateContent(cardContentAt(kind, content, variables, initial), "$", failAt("The lesson's pile is not a starting pile", `${path}/completion/node`));
+  kind.validateContent(cardContentAt(kind, content, variables, initial), "$", failAt("The lesson's pile is not a starting pile", `${path}/completion/node`), { start: true });
   if (task.start) {
+    const shown = kind.demonstration;
+    if (shown && variables.get(shown.field) === void 0) {
+      const practiceAt = cardContentAt(kind, content, variables, { ...initial, ...startValues });
+      const start = shown.start(practiceAt);
+      if (Number(practiceAt[shown.field]) !== start) {
+        fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/node`, `The practice starts the card's '${shown.field}' at ${start}, not the ${String(practiceAt[shown.field])} written on the card: bind '${shown.field}' to a lesson variable the task's start sets`);
+      }
+    }
     const selected = new Set(task.start.variables ?? []);
     const missing = [...variables.values()].filter((alias) => !selected.has(alias));
     if (missing.length)
       fail("OLL_INVALID_PHASE_START", `${path}/start/variables`, `A card task's practice pile sets every ${kind.kind === BASE_TEN_TRADE_KIND ? "count and tray" : "field the card binds"}; missing ${missing.join(", ")}`);
     const practice = cardContentAt(kind, content, variables, { ...initial, ...startValues });
-    kind.validateContent(practice, "$", failAt("The practice pile is not a starting pile", `${path}/start/values`));
+    kind.validateContent(practice, "$", failAt("The practice pile is not a starting pile", `${path}/start/values`), { start: true });
     kind.validateStart?.(kind.state(practice), (message) => fail("OLL_INVALID_PHASE_START", `${path}/start/values`, `The practice pile is not a starting pile: ${message}`));
+    const demonstration = kind.demonstration;
+    if (demonstration && Number(practice[demonstration.field]) !== demonstration.start(practice)) {
+      fail("OLL_INVALID_PHASE_START", `${path}/start/values`, `The practice pile is not a starting pile: its '${demonstration.field}' starts at ${demonstration.start(practice)} on a fresh ${demonstration.fresh}, not ${String(practice[demonstration.field])}`);
+    }
     const own = kind.practiceFields ?? kind.cardFields ?? [];
     for (const field of own) {
       if (variables.get(field) === void 0)
@@ -11729,6 +12185,11 @@ function checkPlaceValueTradeBoundValues(content, path, declarations) {
   checkPluginBoundValues(content, path, declarations, PLACE_VALUE_TRADE_PART_FIELDS, validate);
   checkEachBoundVariable(content, path, declarations, PLACE_VALUE_TRADE_PART_FIELDS, validate);
 }
+function checkMakeTenBoundValues(content, path, declarations) {
+  const validate = (evaluated, failAt) => validateMakeTenContent(evaluated, path, failAt, { boundValues: true });
+  checkPluginBoundValues(content, path, declarations, MAKE_TEN_PART_FIELDS, validate);
+  checkEachBoundVariable(content, path, declarations, MAKE_TEN_PART_FIELDS, validate);
+}
 function checkEachBoundVariable(content, path, declarations, fields, validate) {
   const bindings = Array.isArray(content.bindings) ? content.bindings : [];
   const known = new Set(declarations.map((declaration) => declaration.as));
@@ -11760,15 +12221,14 @@ function checkDemonstrationAnimate(cards, variable, value2, before, path) {
       continue;
     const bound = bareBindings(content);
     if (bound.get(kind.demonstration.field) === variable) {
-      const from = before ?? 0;
-      if (!Number.isInteger(value2))
-        fail("OLL_INVALID_VARIABLE", `${path}/value`, `'${variable}' counts the columns a ${kind.kind} card has finished: a whole number, not ${value2}; from ${from}, ${kind.demonstration.next(content, from)}`);
-      if (value2 < from)
-        fail("OLL_INVALID_VARIABLE", `${path}/value`, `'${variable}' counts the columns a ${kind.kind} card has finished: it goes forward, not from ${from} back to ${value2}; ${kind.demonstration.next(content, from)}`);
+      const from = before ?? kind.demonstration.start(content);
+      const refusal = kind.demonstration.refuseStep(content, from, value2);
+      if (refusal !== void 0)
+        fail("OLL_INVALID_VARIABLE", `${path}/value`, `'${variable}' ${refusal}`);
     }
     for (const { place: place5, field } of kind.tapFields(content)) {
       if (bound.get(kind.fieldTarget(content, place5, field)) === variable) {
-        fail("OLL_INVALID_VARIABLE", `${path}/variable`, `'${variable}' is a column's state on a ${kind.kind} card: only the learner's taps change it; the lesson animates '${bound.get(kind.demonstration.field) ?? kind.demonstration.field}'`);
+        fail("OLL_INVALID_VARIABLE", `${path}/variable`, `'${variable}' is ${kind.demonstration.tapState} on a ${kind.kind} card: only the learner's taps change it; the lesson animates '${bound.get(kind.demonstration.field) ?? kind.demonstration.field}'`);
       }
     }
     for (const field of kind.practiceFields ?? []) {
@@ -11810,9 +12270,9 @@ function checkDemonstrationReplay(cards, values, played, path) {
       continue;
     const bound = bareBindings(content);
     const field = bound.get(kind.demonstration.field);
-    if (field !== void 0 && Object.hasOwn(values, field) && !Number.isInteger(values[field])) {
-      fail("OLL_INVALID_PHASE_START", `${path}/values/${field}`, `'${field}' counts the columns a ${kind.kind} card has finished: a whole number, not ${values[field]}`);
-    }
+    const refusal = field !== void 0 && Object.hasOwn(values, field) ? kind.demonstration.refuseReplay(content, values[field]) : void 0;
+    if (refusal !== void 0)
+      fail("OLL_INVALID_PHASE_START", `${path}/values/${field}`, `'${field}' ${refusal}`);
     let touched = field !== void 0 && Object.hasOwn(values, field);
     for (const { place: place5, field: tapField } of kind.tapFields(content)) {
       const alias = bound.get(kind.fieldTarget(content, place5, tapField));
@@ -11820,7 +12280,7 @@ function checkDemonstrationReplay(cards, values, played, path) {
         continue;
       touched = true;
       if (values[alias] !== 0)
-        fail("OLL_INVALID_PHASE_START", `${path}/values/${alias}`, `'${alias}' is a column's state on a ${kind.kind} card: a replay lays a fresh chart (0), not ${values[alias]}`);
+        fail("OLL_INVALID_PHASE_START", `${path}/values/${alias}`, `'${alias}' is ${kind.demonstration.tapState} on a ${kind.kind} card: a replay lays a fresh ${kind.demonstration.fresh} (0), not ${values[alias]}`);
     }
     for (const cardField of kind.practiceFields ?? [])
       if (bound.get(cardField) !== void 0 && Object.hasOwn(values, bound.get(cardField)))
@@ -11833,6 +12293,19 @@ function checkDemonstrationReplay(cards, values, played, path) {
     });
     kind.validateContent(at2, "$", (failPath, message) => fail("OLL_INVALID_PHASE_START", path, `The replay's card is not one this card takes: ${message} (${failPath.replace(/^\$\//, "")})`));
   }
+}
+function checkOpensFresh(action, played, path) {
+  const kind = tapCardKind(action.kind);
+  const demonstration = kind?.demonstration;
+  if (!kind || !demonstration?.opensAtStart || !action.content || typeof action.content !== "object")
+    return;
+  const content = action.content;
+  const at2 = cardContentAt(kind, content, bareBindings(content), played);
+  const prefix = "As the lesson has played when the card is written: ";
+  kind.validateContent(at2, `${path}/content`, (failPath, message) => fail("OLL_INVALID_OPERATION_PAYLOAD", failPath, `${prefix}${message}`), { start: true });
+  const value2 = Number(at2[demonstration.field]), start = demonstration.start(at2);
+  if (value2 !== start)
+    fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/${demonstration.field}`, `${prefix}a ${kind.kind} card opens fresh: its '${demonstration.field}' starts at ${start}, not ${value2}`);
 }
 function bareBindings(content) {
   const result = /* @__PURE__ */ new Map();
@@ -12783,7 +13256,7 @@ function validateAuthoringLesson(document2, resourceContext = null) {
           const tapCard = tapCardKind(action.kind);
           if (tapCard) {
             tapCards.set(action.as, { kind: tapCard, content: action.content });
-            tapCard.validateContent(action.content, `${actionPath}/content`, (failPath, message) => fail("OLL_INVALID_OPERATION_PAYLOAD", failPath, message));
+            tapCard.validateContent(action.content, `${actionPath}/content`, (failPath, message) => fail("OLL_INVALID_OPERATION_PAYLOAD", failPath, message), { start: true });
           }
           if (action.kind === "scene3d") {
             scene3dHighlights.set(action.as, new Set((action.content.highlights ?? []).map((highlight) => highlight.as)));
@@ -12817,9 +13290,11 @@ function validateAuthoringLesson(document2, resourceContext = null) {
             checkPlaceValueChartBoundValues(action.content, `${actionPath}/content`, document2.lesson.variables ?? []);
           if (action.kind === PLACE_VALUE_TRADE_KIND)
             checkPlaceValueTradeBoundValues(action.content, `${actionPath}/content`, document2.lesson.variables ?? []);
+          if (action.kind === MAKE_TEN_KIND)
+            checkMakeTenBoundValues(action.content, `${actionPath}/content`, document2.lesson.variables ?? []);
           if (tapCard?.validateStart && Array.isArray(action.content.bindings)) {
             const initials = Object.fromEntries((document2.lesson.variables ?? []).map((variable) => [variable.as, variable.initial]));
-            tapCard.validateContent(cardContentAt(tapCard, action.content, bareBindings(action.content), initials), `${actionPath}/content`, (failPath, message) => fail("OLL_INVALID_OPERATION_PAYLOAD", failPath, `As its variables start it: ${message}`));
+            tapCard.validateContent(cardContentAt(tapCard, action.content, bareBindings(action.content), initials), `${actionPath}/content`, (failPath, message) => fail("OLL_INVALID_OPERATION_PAYLOAD", failPath, `As its variables start it: ${message}`), { start: true });
           }
           register(registry, action.as, "node", `${actionPath}/as`, fragments);
           return;
@@ -12830,7 +13305,7 @@ function validateAuthoringLesson(document2, resourceContext = null) {
           if (!card || target.fragment)
             fail("OLL_INVALID_REFERENCE", `${actionPath}/target`, `A tap acts on a whole ${lessonTapCardKindList()} card of this lesson`);
           if (card.kind.demonstration) {
-            fail("OLL_INVALID_OPERATION", `${actionPath}/do`, `A ${card.kind.kind} card is not tapped by the lesson: animate the variable bound to its '${card.kind.demonstration.field}' (columns finished, counting from the right), and the program plays each column`);
+            fail("OLL_INVALID_OPERATION", `${actionPath}/do`, `A ${card.kind.kind} card is not tapped by the lesson: animate the variable bound to its '${card.kind.demonstration.field}' ${card.kind.demonstration.shows}`);
           }
           requireVisible(action.target, `${actionPath}/target`);
           if (!card.kind.taps.includes(action.tap))
@@ -12848,8 +13323,7 @@ function validateAuthoringLesson(document2, resourceContext = null) {
           if (action.value < variable.min || action.value > variable.max) {
             const shown = [...shownCards.values()].find(({ kind, content }) => kind.demonstration && bareBindings(content).get(kind.demonstration.field) === action.variable);
             if (shown?.kind.demonstration) {
-              const { min, max } = shown.kind.demonstration.range(shown.content);
-              fail("OLL_INVALID_VARIABLE", `${actionPath}/value`, `'${action.variable}' counts the columns a ${shown.kind.kind} card has finished: ${min} to ${max}, not ${action.value}`);
+              fail("OLL_INVALID_VARIABLE", `${actionPath}/value`, `'${action.variable}' ${shown.kind.demonstration.outside(shown.content, action.value)}`);
             }
             fail("OLL_INVALID_VARIABLE", `${actionPath}/value`, `Animation target for '${action.variable}' is outside its range`);
           }
@@ -12958,6 +13432,8 @@ function validateAuthoringLesson(document2, resourceContext = null) {
         beat.actions.forEach((action, actionIndex) => {
           if ((action.when ?? "during_speech") !== phase)
             return;
+          if (action.do === "write")
+            checkOpensFresh(action, playedValues, `${beatPath}/actions/${actionIndex}`);
           if (action.do === "animate") {
             checkDemonstrationAnimate(shownCards, action.variable, action.value, playedValues[action.variable], `${beatPath}/actions/${actionIndex}`);
             playedValues[action.variable] = action.value;
@@ -13427,10 +13903,10 @@ function bindingTarget(content, target) {
   const fragmentId = target.slice(0, separator);
   const property = target.slice(separator + 1);
   for (const [field, properties] of Object.entries(OLL_CANONICAL_BINDING_CAPABILITIES)) {
-    const record7 = (Array.isArray(content[field]) ? content[field] : []).find((item) => item.id === fragmentId);
-    if (record7 && properties.includes(property))
-      return { record: record7, property };
-    if (record7)
+    const record8 = (Array.isArray(content[field]) ? content[field] : []).find((item) => item.id === fragmentId);
+    if (record8 && properties.includes(property))
+      return { record: record8, property };
+    if (record8)
       fail("OLL_INVALID_BINDING", "content.bindings.target", `Property '${property}' cannot be bound on '${field}'`);
   }
   fail("OLL_REFERENCE_NOT_FOUND", "content.bindings.target", `Canonical binding target '${target}' was not found`);
@@ -13449,7 +13925,7 @@ function evaluateContentBindings(content, variables) {
       delete bindingTarget(evaluated, binding.target).record.binding_undefined;
   }
   for (const binding of Array.isArray(evaluated.bindings) ? evaluated.bindings : []) {
-    const { record: record7, property } = bindingTarget(evaluated, binding.target);
+    const { record: record8, property } = bindingTarget(evaluated, binding.target);
     if (binding.hide_when_undefined === true) {
       let value2;
       try {
@@ -13458,22 +13934,22 @@ function evaluateContentBindings(content, variables) {
         value2 = void 0;
       }
       if (value2 === void 0 || !Number.isFinite(value2)) {
-        record7.binding_undefined = true;
+        record8.binding_undefined = true;
         continue;
       }
     }
     try {
-      record7[property] = evaluateMathExpression(binding.expression, variables);
-      if (property === "radius" && (record7[property] < 0 || record7[property] === 0 && binding.allow_zero !== true)) {
+      record8[property] = evaluateMathExpression(binding.expression, variables);
+      if (property === "radius" && (record8[property] < 0 || record8[property] === 0 && binding.allow_zero !== true)) {
         throw new Error("Bound radius must be positive unless explicitly allowed to degenerate to zero");
       }
       if (property === "unfold")
-        record7[property] = Math.min(1, Math.max(0, record7[property]));
-      if (property === "sides" && (record7[property] < 3 || record7[property] > 384)) {
+        record8[property] = Math.min(1, Math.max(0, record8[property]));
+      if (property === "sides" && (record8[property] < 3 || record8[property] > 384)) {
         throw new Error("Bound polygon sides must be in 3..384");
       }
       if (binding.label)
-        record7.label = formatBoundNumericLabel(record7[property], binding.label);
+        record8.label = formatBoundNumericLabel(record8[property], binding.label);
     } catch (error) {
       const message = error instanceof Error ? error.message : "binding evaluation failed";
       fail("OLL_BINDING_EVALUATION_FAILED", "content.bindings.expression", message);
@@ -15433,6 +15909,35 @@ function buildPlaceValueTrade(input) {
   };
 }
 
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/make-ten-builder.js
+var driven6 = (value2) => typeof value2 === "object" && value2 !== null && typeof value2.expression === "string";
+function buildMakeTen(input) {
+  const bindings = [];
+  const value2 = (raw, target) => {
+    if (!driven6(raw))
+      return raw;
+    bindings.push({ target, expression: raw.expression });
+    return raw.initial;
+  };
+  const a = value2(input.a, "a");
+  const b = value2(input.b, "b");
+  const filled = value2(input.filled ?? makeTenFreshCount(a, b), "filled");
+  const moved = value2(input.moved ?? 0, "moved");
+  const content = {
+    ...input.language !== void 0 ? { language: input.language } : {},
+    a,
+    b,
+    filled,
+    moved,
+    ...bindings.length ? { bindings } : {}
+  };
+  return {
+    actions: [{ do: "write", as: input.as, kind: MAKE_TEN_KIND, role: input.role, content, place: input.place }],
+    whole: input.as,
+    parts: { whole: input.as }
+  };
+}
+
 // node_modules/octos-lesson-language/dist/packages/plugin-math/src/number-line-form.js
 var NUMBER_LINE_FORM_LIMITS = { span: 40, subdivisions: NUMBER_LINE_LIMITS.subdivisions, moves: 3 };
 
@@ -16088,8 +16593,32 @@ function signOf([lo, hi]) {
 var HOW_TO = Object.freeze({
   [BASE_TEN_TRADE_KIND]: baseTenHowTo,
   [PLACE_VALUE_CHART_KIND]: placeValueHowTo,
-  [PLACE_VALUE_TRADE_KIND]: placeValueTradeHowTo
+  [PLACE_VALUE_TRADE_KIND]: placeValueTradeHowTo,
+  [MAKE_TEN_KIND]: makeTenHowTo
 });
+
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/place-value-times-ten.js
+var PLACE_VALUE_TIMES_TEN_MAX_PLACE = PLACE_VALUE_MAX_PLACE;
+var PLACE_VALUE_TIMES_TEN_MAX_LINEAGES = 9;
+var PLACE_VALUE_TIMES_TEN_COPIES = 10;
+var PLACE_VALUE_TIMES_TEN_MAX_ROWS = 2 ** PLACE_VALUE_TIMES_TEN_MAX_LINEAGES - 1;
+var PLACE_VALUE_TIMES_TEN_TAP_PLACES = Object.freeze(Array.from({ length: PLACE_VALUE_TIMES_TEN_COPIES }, (_, i) => `row-${i + 1}`));
+var placeValueTimesTenUnit = (place5) => 10 ** (place5 + 3);
+var unit3 = placeValueTimesTenUnit;
+function finish(p) {
+  const lo = Math.min(p.s, p.t), hi = Math.max(p.s, p.t);
+  const columns = [];
+  for (let place5 = hi; place5 >= lo; place5 -= 1)
+    columns.push(place5);
+  return { ...p, columns };
+}
+var MAX_VALUE = 9 * unit3(PLACE_VALUE_TIMES_TEN_MAX_PLACE);
+var FALLBACK = finish({ question: "count", amount: 0, target: 1, s: -2, t: -3, dir: -1, g: 1, n: 0, start: 10, result: 0 });
+var PLACE_VALUE_TIMES_TEN_GEOMETRY = { D: 30, G: 3, RP: 4, CP: 12, RH: 42, SQ: 106, SG: 8, NARROW: 150, POINT: 14, GAP: 8, EDGE: 12, HEAD: 34, LABEL: 22 };
+var GEO = PLACE_VALUE_TIMES_TEN_GEOMETRY;
+var placeValueTimesTenRowWidth = (k) => k * (GEO.D + GEO.G) - GEO.G + 2 * GEO.RP;
+var ROW_W = placeValueTimesTenRowWidth(10);
+var WIDE = ROW_W + 2 * GEO.CP;
 
 // node_modules/octos-lesson-language/dist/packages/plugin-math/src/index.js
 var MATH_SUBJECT_DESCRIPTION = {
@@ -16182,9 +16711,9 @@ function buildUnitCircle(input) {
 }
 function buildCirclePolygons(input) {
   const { radius } = input;
-  const driven6 = typeof input.sides === "number" ? void 0 : input.sides;
+  const driven7 = typeof input.sides === "number" ? void 0 : input.sides;
   const sides = typeof input.sides === "number" ? input.sides : input.sides.initial;
-  const extent = input.circumscribed ? radius / Math.cos(Math.PI / (driven6?.min ?? sides)) * 1.18 : radius * 1.3;
+  const extent = input.circumscribed ? radius / Math.cos(Math.PI / (driven7?.min ?? sides)) * 1.18 : radius * 1.3;
   const polygon = (as, label) => ({
     as,
     center: "center",
@@ -16205,9 +16734,9 @@ function buildCirclePolygons(input) {
       ...input.circumscribed ? [polygon("circumscribed", input.text.circumscribed_label)] : []
     ],
     ...input.text.caption !== void 0 ? { caption: input.text.caption } : {},
-    ...driven6 ? { bindings: [
-      { target: "inscribed.sides", expression: driven6.expression },
-      ...input.circumscribed ? [{ target: "circumscribed.sides", expression: driven6.expression }] : []
+    ...driven7 ? { bindings: [
+      { target: "inscribed.sides", expression: driven7.expression },
+      ...input.circumscribed ? [{ target: "circumscribed.sides", expression: driven7.expression }] : []
     ] } : {}
   };
   return {
@@ -16492,6 +17021,37 @@ var MATH_RECIPES = {
     student_controls: [],
     required_features: ["column_add_subtract_trades"],
     model_guidance: "\u6570\u4F4D\u8868\u52A0\u51CF\uFF08\u7AD6\u5F0F\uFF0C\u8FDB\u4F4D\u3001\u9000\u4F4D\u5C31\u662F\u4EA4\u6362\uFF09\uFF1A\u591A\u4F4D\u6570\u52A0\u51CF\uFF08\u5230\u5341\u4E07\u4F4D\uFF09\u548C\u5C0F\u6570\u52A0\u51CF\uFF08\u5230\u767E\u5206\u4F4D\uFF09\uFF0C\u81F3\u5C11\u6709\u4E00\u4F4D\u8981\u8FDB\u4F4D\u6216\u9000\u4F4D\uFF0C\u6700\u591A\u516D\u5217\uFF08\u4ECE\u4E24\u4E2A\u6570\u6700\u4F4E\u7684\u4E00\u4F4D\u5230\u4E24\u4E2A\u6570\u548C\u5F97\u6570\u6700\u9AD8\u7684\u4E00\u4F4D\uFF09\u3002\u4E0D\u7528\u4E8E\u6446\u6570\u3001\u62C6\u6570\u3001\u6BD4\u8F83\u3001\u51D1\u6574\u3001\u4E58\u6CD5\uFF0C\u4E5F\u4E0D\u7528\u4E8E\u4F4E\u5E74\u7EA7\u7684\u51D1\u5341\uFF08\u7528\u65B9\u5757\uFF09\u3002operation \u5199 add \u6216 subtract\u3002outline \u7684 numbers \u4F9D\u6B21\u5199\u8FD9\u4E94\u4E2A\u6570\uFF08\u4E0D\u52A8\u7684\u4E5F\u8981\u5199\uFF09\uFF1A\u7B2C\u4E00\u4E2A\u6570\u3001\u7B2C\u4E8C\u4E2A\u6570\uFF08\u51CF\u6CD5\u7B2C\u4E00\u4E2A\u6570\u4E0D\u5C0F\u4E8E\u7B2C\u4E8C\u4E2A\u6570\uFF09\u3001\u7EC3\u4E60\u7684\u7B2C\u4E00\u4E2A\u6570\u3001\u7EC3\u4E60\u7684\u7B2C\u4E8C\u4E2A\u6570\u3001\u505A\u5B8C\u4E86\u51E0\u5217\u3002\u6570\u503C\u5199\u5B9E\u9645\u5927\u5C0F\uFF082.75\uFF09\uFF0C\u6700\u591A\u4E24\u4F4D\u5C0F\u6570\u3002\u7EC3\u4E60\u7684\u4E00\u5BF9\u662F\u53E6\u4E00\u5BF9\uFF08\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u514D\u5F97\u5B69\u5B50\u7167\u6284\u6F14\u793A\uFF09\uFF0C\u4E5F\u8981\u8FDB\u4F4D\u6216\u9000\u4F4D\uFF0C\u5217\u548C\u9898\u76EE\u7684\u4E00\u6837\uFF08\u540C\u6837\u591A\u7684\u6574\u6570\u4F4D\u548C\u5C0F\u6570\u4F4D\uFF0C\u9898\u76EE\u7684\u5F97\u6570\u591A\u51FA\u4E00\u4F4D\u65F6\u7EC3\u4E60\u7684\u4E5F\u591A\u51FA\u4E00\u4F4D\uFF09\u3002\u505A\u5B8C\u4E86\u51E0\u5217\u4ECE\u6700\u53F3\u8FB9\u4E00\u5217\u6570\u8D77\uFF0C\u5199 0\uFF1A\u8868\u4E00\u5F00\u59CB\u4E00\u5217\u4E5F\u6CA1\u6709\u505A\u3002\u6F14\u793A\u65F6\u628A\u5B83\u52A8\u753B\u5230 1\u30012\u2026\u2026\uFF1A\u6BCF\u5230\u4E00\u4E2A\u503C\uFF0C\u7A0B\u5E8F\u6309\u89C4\u5219\u505A\u5B8C\u53F3\u8FB9\u53C8\u4E00\u5217\uFF08\u5408\u8D77\u6765\u3001\u6EE1\u5341\u6362\u4E00\u3001\u4E0D\u591F\u62C6\u4E00\uFF09\uFF0C\u53EA\u5F80\u524D\u8D70\uFF0C\u540C\u4E00\u4E2A\u503C\u518D\u5199\u8868\u4E0D\u53D8\uFF1B\u53EF\u4EE5\u53EA\u6F14\u793A\u51E0\u5217\u3002\u4E24\u4E2A\u6570\u548C\u7EC3\u4E60\u7684\u6570\u4E0D\u52A8\u753B\u3002\u7EC3\u4E60\uFF1A\u5BF9\u505A\u5B8C\u4E86\u51E0\u5217\u5199\u4E00\u4E2A\u6570\u503C\u76EE\u6807\u9898\uFF08\u6570\u503C\u5199\u5217\u6570\uFF09\uFF0C\u5B69\u5B50\u5728\u8868\u4E0A\u505A\u5B8C\u7EC3\u4E60\u7684\u4E00\u5BF9\uFF0C\u7A0B\u5E8F\u518D\u81EA\u5DF1\u95EE\u5F97\u6570\uFF0C\u4E0D\u53E6\u51FA\u95EE\u8FD9\u4E00\u5BF9\u5F97\u6570\u7684\u586B\u6570\u9898\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u5F97\u6570\u3002\u8868\u4E0A\u7684\u6570\u3001\u5706\u7247\u548C\u64CD\u4F5C\u8BF4\u660E\u90FD\u7531\u5361\u7247\u81EA\u5DF1\u5199\uFF1B\u8BF4\u6570\u4F4D\u7528\u540D\u5B57\uFF08\u4E2A\u4F4D\u3001\u5341\u5206\u4F4D\u3001hundreds\uFF09\uFF0C\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
+  },
+  // OLL decision 0027 (a trial): making ten to add on two ten frames (8 + 6 = 8 + 2 + 4 = 10 + 4). The model writes
+  // the question's pair and a practice pair; the program supplies the count in the bigger number's frame (it starts
+  // at the bigger number, taken from the pair) and the count the learner moves (0), and the demonstration animates
+  // the first of them to 10 (or 9) while the card moves one counter at a time. The program makes the learner's task
+  // on the practice pair and the row of four blanks after it.
+  make_ten: {
+    parts: ["whole"],
+    number_inputs: ["first", "second", "practice_first", "practice_second", "filled", "moved"],
+    number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
+    // The two counts start where the pair puts them (the frames apart, nothing moved), so the program supplies
+    // them: an outline that declares the four numbers before them gets both, one that also declares the first
+    // keeps it and gets the second.
+    program_number_inputs: [
+      { initial: ([a, b]) => makeTenFreshCount(a ?? 0, b ?? 0), min: 0, max: MAKE_TEN_PLACES, label: "\u5927\u6570\u90A3\u4E00\u6846\u91CC\u6709\u51E0\u4E2A" },
+      { initial: 0, min: 0, max: MAKE_TEN_MAX_MOVED, label: "\u79FB\u8FC7\u53BB\u51E0\u4E2A" }
+    ],
+    // The card starts on no fewer: an outline that declares fewer loses it at once (a section cannot add one).
+    min_lesson_numbers: 6,
+    parameter_names: [],
+    model_parameter_names: [],
+    required_model_schema_parameters: [],
+    semantic_parameters: [],
+    output_kinds: ["make_ten"],
+    // Four lesson variables (the pair, the two counts): when a lesson holds too many, the card is the picture that goes.
+    binds_many_variables: true,
+    // No control: the learner works the card by its own taps; the model never names one, and the card's own
+    // fixed text says how it is used.
+    student_controls: [],
+    required_features: ["make_ten_to_add"],
+    model_guidance: "\u51D1\u5341\uFF08\u4E24\u4E2A\u5341\u683C\u6846\uFF09\uFF1A\u4E24\u4E2A\u4E00\u4F4D\u6570\u76F8\u52A0\u3001\u548C\u5927\u4E8E10\uFF08\u59828+6\uFF09\uFF0C\u5C0F\u6570\u5206\u51FA\u4E00\u90E8\u5206\u628A\u5927\u6570\u8865\u6210\u5341\u3002\u4E0D\u7528\u4E8E\u548C\u6B63\u597D\u662F10\u3001\u63A5\u7740\u6570\u3001\u7834\u5341\u51CF\u3001\u4E24\u4F4D\u6570\u52A0\u4E00\u4F4D\u6570\u3001\u4E09\u4E2A\u6570\u76F8\u52A0\u3002outline \u7684 numbers \u4F9D\u6B21\u5199\u56DB\u4E2A\u6570\uFF1A\u9898\u76EE\u7684\u4E24\u4E2A\u6570\u3001\u7EC3\u4E60\u7684\u4E24\u4E2A\u6570\uFF08\u53E6\u4E00\u5BF9\uFF0C\u4E5F\u662F\u4E00\u4F4D\u6570\u3001\u548C\u5927\u4E8E10\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u6362\u987A\u5E8F\u4E5F\u4E0D\u7B97\uFF09\u3002\u7A0B\u5E8F\u518D\u8865\u4E24\u4E2A\u6570\uFF1A\u5927\u6570\u90A3\u4E00\u6846\u91CC\u6709\u51E0\u4E2A\uFF08\u5F00\u59CB\u5C31\u662F\u5927\u6570\uFF09\u3001\u79FB\u8FC7\u53BB\u51E0\u4E2A\uFF080\uFF09\u3002\u6F14\u793A\u65F6\u628A\u7B2C\u4E94\u4E2A\u6570\u52A8\u753B\u523010\uFF08\u53EF\u4EE5\u53EA\u52309\uFF09\uFF0C\u7A0B\u5E8F\u4E00\u4E2A\u4E00\u4E2A\u5730\u79FB\u5706\u7247\uFF1B\u522B\u7684\u6570\u4E0D\u52A8\u753B\u3002\u7EC3\u4E60\uFF1A\u5BF9\u7B2C\u4E94\u4E2A\u6570\u5199\u4E00\u4E2A\u6570\u503C\u76EE\u6807\u9898\uFF08\u6570\u503C\u519910\uFF09\uFF0C\u5B69\u5B50\u81EA\u5DF1\u8865\u6EE1\u5341\uFF0C\u7A0B\u5E8F\u518D\u51FA\u4E00\u884C\u7A7A\uFF088+6=8+__+__=10+__=__\uFF09\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u548C\u3002\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
@@ -16799,7 +17359,7 @@ function buildConstantSpeedMotion(input) {
   const distance = time.initial * speed.initial;
   const t = quantityValue(time);
   const v = quantityValue(speed);
-  const driven6 = Boolean(time.expression || speed.expression);
+  const driven7 = Boolean(time.expression || speed.expression);
   const lane = Number((0.08 * length2).toPrecision(12));
   const trackContent = {
     title: text5.title,
@@ -16807,13 +17367,13 @@ function buildConstantSpeedMotion(input) {
     points: [
       { as: "start", x: 0, y: lane, label: text5.start },
       { as: "finish", x: length2, y: lane, visible: false },
-      { as: "object", x: distance, y: lane, label: driven6 ? `${text5.distance_readout}${distance}${text5.distance_unit ? ` ${text5.distance_unit}` : ""}` : text5.object }
+      { as: "object", x: distance, y: lane, label: driven7 ? `${text5.distance_readout}${distance}${text5.distance_unit ? ` ${text5.distance_unit}` : ""}` : text5.object }
     ],
     segments: [
       { as: "track", from: "start", to: "finish", style: "dashed" },
       { as: "travelled", from: "start", to: "object", style: "solid" }
     ],
-    ...driven6 ? {
+    ...driven7 ? {
       bindings: [{
         target: "object.x",
         expression: `${v}*${t}`,
@@ -16826,7 +17386,7 @@ function buildConstantSpeedMotion(input) {
     axes: { x: { min: 0, max: time.max, label: text5.time_axis }, y: { min: 0, max: length2, label: text5.distance_axis } },
     curves: [{ as: "primary-curve", expression: `${v}*x`, label: text5.curve_label }],
     points: [{ as: "moving-point", x: time.initial, y: distance, label: text5.current_state }],
-    ...driven6 ? {
+    ...driven7 ? {
       bindings: [
         { target: "moving-point.x", expression: t },
         { target: "moving-point.y", expression: `${v}*${t}` }
@@ -17084,7 +17644,7 @@ var RECIPE_CATALOG_ORDER = [
   "place_value_chart"
 ];
 var RETIRED_RECIPES = ["cube_with_section"];
-var TRIAL_RECIPES = ["constant_speed_motion", "fraction_model", "place_value_trade"];
+var TRIAL_RECIPES = ["constant_speed_motion", "fraction_model", "place_value_trade", "make_ten"];
 function enabledTrialRecipes(list3) {
   const named = new Set((list3 ?? "").split(",").map((name) => name.trim()).filter(Boolean));
   return TRIAL_RECIPES.filter((name) => named.has(name));
@@ -17236,6 +17796,10 @@ var EN = {
   "\u5199\u51FA\u6BCF\u4E00\u90E8\u5206\u662F\u591A\u5C11\u3002": "Write what each part is worth.",
   "\u6BCF\u4E00\u90E8\u5206\u662F\u8FD9\u4E00\u4F4D\u4E0A\u7684\u5706\u7247\u4E2A\u6570\u4E58\u8FD9\u4E00\u4F4D\u7684\u503C\u3002": "Each part is the number of disks in that place times the value of the place.",
   "\u4ECE\u5DE6\u5230\u53F3\u8BFB\u6A2A\u7EBF\u4E0B\u9762\u6BCF\u4E00\u5217\u7684\u5706\u7247\u4E2A\u6570\u3002": "Read how many disks each column has below the line, from left to right.",
+  "\u5927\u6570\u90A3\u4E00\u6846\u91CC\u6709\u51E0\u4E2A": "in the bigger number's frame",
+  "\u79FB\u8FC7\u53BB\u51E0\u4E2A": "moved across",
+  "\u5199\u6210\u7B97\u5F0F\u3002": "Write it as a number sentence.",
+  "\u5148\u8BFB\u6EE1\u5341\u7684\u90A3\u4E00\u6846\uFF0C\u518D\u8BFB\u53E6\u4E00\u6846\u3002": "Read the full frame first, then the other one.",
   "y \u622A\u8DDD": "y-intercept",
   "x \u622A\u8DDD": "x-intercept",
   "\u5BF9\u79F0\u8F74": "Axis of symmetry",
@@ -17557,9 +18121,9 @@ function formatMathExpressionDisplay(expression, symbol) {
   if (!result || stack.length !== 1) fail2("LESSON_PLAN_EXPRESSION", "$expression", "expression does not produce one result");
   return result.text;
 }
-function angleScaleForUnit(unit3) {
-  if (!unit3) return 1;
-  const normalized = unit3.trim().toLowerCase();
+function angleScaleForUnit(unit4) {
+  if (!unit4) return 1;
+  const normalized = unit4.trim().toLowerCase();
   if (/弧度|radian|rad/u.test(normalized)) return 1;
   if (/角度|度|°|degree|deg/u.test(normalized)) return Math.PI / 180;
   return 1;
@@ -17691,11 +18255,11 @@ function fitMoves(content, plan, sharedNumbers, numbers) {
   let low = Math.floor(Math.min(...used)) - 1;
   let high = Math.ceil(Math.max(...used)) + 1;
   let windowFits = high - low <= MAX_WINDOW;
-  let unit3 = 1;
+  let unit4 = 1;
   if (denominator === 1 && !windowFits) {
     const coarse = COARSE_UNITS.find((count) => values.every((value2) => near2(value2, 1) && Math.round(value2) % count === 0) && Math.ceil(Math.max(...used) / count) - Math.floor(Math.min(...used) / count) + 2 <= MAX_WINDOW);
     if (coarse) {
-      unit3 = coarse;
+      unit4 = coarse;
       grid = coarse;
       low = (Math.floor(Math.min(...used) / coarse) - 1) * coarse;
       high = (Math.ceil(Math.max(...used) / coarse) + 1) * coarse;
@@ -17722,7 +18286,7 @@ function fitMoves(content, plan, sharedNumbers, numbers) {
     if (values2.length > 1) return window;
     if (definition.student_control && carriesAnswer && definition.initial === 0) return void 0;
     if (definition.student_control && carriesAnswer) return window;
-    return [definition.initial - unit3, definition.initial + unit3];
+    return [definition.initial - unit4, definition.initial + unit4];
   };
   const snapped2 = (values2) => values2.map((value2) => grid ? snap2(value2, grid) : value2);
   fit(start, snapped2(startValues), rangeFor(start, startValues, [low, high], false));
@@ -17815,21 +18379,21 @@ var ROUNDING_UNITS = { hundreds: 100, tens: 10, ones: 1, tenths: 0.1, hundredths
 function fitRoundingNumbers(content, plan, sharedNumbers) {
   const fitted = /* @__PURE__ */ new Map();
   const [index] = content.numbers ?? [];
-  const unit3 = ROUNDING_UNITS[String(content.parameters?.place)];
+  const unit4 = ROUNDING_UNITS[String(content.parameters?.place)];
   const definition = index ? plan.numbers?.[index - 1] : void 0;
-  if (!index || !unit3 || !definition || sharedNumbers.has(index)) return fitted;
+  if (!index || !unit4 || !definition || sharedNumbers.has(index)) return fitted;
   const values = [definition.initial, ...lessonValues(plan, index)];
   const on = (value2, step) => {
     const count = value2 / step;
     return Math.abs(count - Math.round(count)) <= 1e-9 * Math.max(1, Math.abs(count));
   };
-  const minor = [unit3 / 10, unit3 / 100].map((step) => Number(step.toPrecision(12))).find((step) => values.every((value2) => on(value2, step)));
+  const minor = [unit4 / 10, unit4 / 100].map((step) => Number(step.toPrecision(12))).find((step) => values.every((value2) => on(value2, step)));
   if (!minor) return fitted;
   if (definition.student_control) definition.student_control.step = minor;
-  const decade = (value2) => Math.floor(value2 / unit3 + 1e-9);
+  const decade = (value2) => Math.floor(value2 / unit4 + 1e-9);
   if (values.every((value2) => decade(value2) === decade(values[0]))) {
-    const lower = Number((decade(values[0]) * unit3).toPrecision(12));
-    const upper = Number((lower + unit3 - minor).toPrecision(12));
+    const lower = Number((decade(values[0]) * unit4).toPrecision(12));
+    const upper = Number((lower + unit4 - minor).toPrecision(12));
     if (lower < upper) {
       definition.min = Math.max(definition.min, lower) <= definition.initial ? Math.max(definition.min, lower) : lower;
       definition.max = Math.min(definition.max, upper) >= definition.initial ? Math.min(definition.max, upper) : upper;
@@ -18822,6 +19386,71 @@ function placeValueTradeMoves2(state, moves) {
   return { steps };
 }
 
+// src/plugins/make-ten-moves.ts
+var MAKE_TEN_NUMBER = { first: 0, second: 1, practiceFirst: 2, practiceSecond: 3, filled: 4, moved: 5 };
+var makeTenSum = (a, b) => a + b;
+function makeTenStartFault2(values) {
+  if (values.length !== 6) {
+    return "the card takes six lesson numbers, in order: the first number, the second number, the practice pair's two numbers (another pair, for the learner), the count in the bigger number's frame (the bigger number at the start) and the count moved (0)";
+  }
+  const [a, b, pa, pb, filled, moved] = values;
+  const fault = makeTenFault(a, b);
+  if (fault) return `the question's pair: ${makeTenFaultText(fault, a, b)}`;
+  const practiceFault = makeTenFault(pa, pb);
+  if (practiceFault) return `the practice pair: ${makeTenFaultText(practiceFault, pa, pb)}`;
+  if (pa === a && pb === b || pa === b && pb === a) {
+    return "the practice pair is the learner's own: another pair than the question's (the same two numbers in the other order are the same pair), so the learner does not copy the demonstration";
+  }
+  if (filled !== makeTenFreshCount(a, b)) {
+    return `the count in the bigger number's frame starts at the bigger number, ${makeTenFreshCount(a, b)}, not ${filled}: the frames start apart, nothing moved`;
+  }
+  if (moved !== 0) return `the count moved starts at 0, not ${moved}: only the learner's taps change it`;
+  return void 0;
+}
+function makeTenState2(start) {
+  const [a, b] = [start[0] ?? 0, start[1] ?? 0];
+  return [...start.slice(0, 4), makeTenFreshCount(a, b), 0];
+}
+function makeTenNext(a, b, filled) {
+  const big = Math.max(a, b), small = a >= b ? b : a;
+  return filled >= MAKE_TEN_PLACES ? `the ${big}'s frame holds ten at ${MAKE_TEN_PLACES}` : `the next value, ${filled + 1}, moves one of the ${small} into the ${big}'s frame`;
+}
+function makeTenMove(state, position, to) {
+  if (position < 0 || position > MAKE_TEN_NUMBER.moved) return "the card has six lesson numbers";
+  if (to === state[position]) return [...state];
+  const [a, b] = [state[0], state[1]];
+  const start = makeTenFreshCount(a, b);
+  if (position === MAKE_TEN_NUMBER.moved) return "the count moved changes only by the learner's taps: the demonstration moves the count in the bigger number's frame";
+  if (position !== MAKE_TEN_NUMBER.filled) {
+    return `the two numbers and the practice pair stay as written: the demonstration moves only the count in the bigger number's frame (the card's fifth lesson number), from ${start} up to ${MAKE_TEN_PLACES}, one counter at a time`;
+  }
+  const from = state[MAKE_TEN_NUMBER.filled];
+  if (!Number.isInteger(to) || to < start || to > MAKE_TEN_PLACES) {
+    return `the count in the bigger number's frame is a whole number from ${start} to ${MAKE_TEN_PLACES}, not ${to}; from ${from}, ${makeTenNext(a, b, from)}`;
+  }
+  if (to < from) return `the count in the bigger number's frame goes forward, never back: from ${from} it can be ${from} to ${MAKE_TEN_PLACES}; ${makeTenNext(a, b, from)}`;
+  const moved = [...state];
+  moved[MAKE_TEN_NUMBER.filled] = to;
+  return moved;
+}
+function makeTenMoves(state, moves) {
+  const steps = [];
+  let current = [...state];
+  for (const move of moves) {
+    const result = makeTenMove(current, move.position, move.to);
+    if (typeof result === "string") return { refused: { position: move.position, reason: result } };
+    steps.push({ position: move.position, from: current, to: result });
+    current = result;
+  }
+  return { steps };
+}
+var FULL_WIDTH4 = /[０-９＝]/gu;
+var halfWidth3 = (text5) => text5.replace(FULL_WIDTH4, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
+function makeTenWordsGiveAnswer(words, sum) {
+  for (const match of halfWidth3(String(words)).matchAll(/\d+/gu)) if (Number(match[0]) === sum) return true;
+  return false;
+}
+
 // src/plugins/math-hooks.ts
 function separateInitialSamples(visual, plan, sectionIndex) {
   const words = plan.sections[sectionIndex].moments.map((moment) => moment.narration).join(" ");
@@ -18990,6 +19619,25 @@ var MATH_HOOKS = {
     // Columns finished moves forward from 0; the two numbers and the practice pair never move.
     number_moves: { state: placeValueTradeState2, moves: placeValueTradeMoves2 }
   },
+  make_ten: {
+    // The card's numbers have no control: the learner works it by its own taps (OLL 0027; owner, 2026-11-24: the
+    // model never names a control). Each number's range is its own value; the count in the bigger frame runs to 10
+    // and the count moved to 4 (the program's own numbers). The compiler checks every number and each step itself.
+    fit_numbers(content, plan) {
+      const numbers = content.numbers ?? [];
+      const definitions = numbers.map((number) => plan.numbers?.[number - 1]);
+      if (!definitions.length || definitions.some((definition) => !definition)) return /* @__PURE__ */ new Map();
+      definitions.forEach((definition, position) => {
+        definition.min = position >= MAKE_TEN_NUMBER.filled ? 0 : Math.min(0, definition.initial);
+        definition.max = position === MAKE_TEN_NUMBER.filled ? 10 : position === MAKE_TEN_NUMBER.moved ? 4 : Math.max(0, definition.initial);
+        delete definition.student_control;
+        delete definition.unit;
+      });
+      return /* @__PURE__ */ new Map();
+    },
+    // The count in the bigger frame moves forward from the bigger number to 10; nothing else moves.
+    number_moves: { state: makeTenState2, moves: makeTenMoves }
+  },
   number_line: { fit_numbers: fitNumberLineNumbers },
   number_line_compare: { fit_numbers: fitComparedNumbers },
   number_line_solution: { fit_numbers: fitSolutionNumbers },
@@ -19074,7 +19722,7 @@ var MATH_HOOKS = {
       delete parameters3.curve_label;
       return { no_numbers: true };
     },
-    validate_parameters(parameters3, { path, numberCount, fail: fail4, record: record7, array: array2, validateMathExpression: validateMathExpression2 }) {
+    validate_parameters(parameters3, { path, numberCount, fail: fail4, record: record8, array: array2, validateMathExpression: validateMathExpression2 }) {
       if (parameters3 === void 0) {
         fail4(
           "LESSON_PLAN_EXPRESSION",
@@ -19082,7 +19730,7 @@ var MATH_HOOKS = {
           "a function plot requires an explicit mathematical expression"
         );
       }
-      const visualParameters = record7(parameters3, `${path}.parameters`);
+      const visualParameters = record8(parameters3, `${path}.parameters`);
       const expressionFields = ["expression", "expressions", "expression_tokens"].filter((field) => visualParameters[field] !== void 0);
       if (expressionFields.length !== 1) {
         fail4(
@@ -19422,7 +20070,7 @@ var teacherExpressions = /* @__PURE__ */ new Set(["neutral", "encouraging", "car
 function fail3(code, path, message) {
   throw new LessonPlanError(code, path, message);
 }
-function record6(value2, path) {
+function record7(value2, path) {
   if (!value2 || typeof value2 !== "object" || Array.isArray(value2)) {
     fail3("LESSON_PLAN_TYPE", path, "expected an object");
   }
@@ -19470,7 +20118,7 @@ function validateParameters(value2, path) {
     value2.forEach((item, index) => validateParameters(item, `${path}[${index}]`));
     return;
   }
-  const object2 = record6(value2, path);
+  const object2 = record7(value2, path);
   for (const [key, item] of Object.entries(object2)) {
     if (FORBIDDEN_PARAMETER_KEYS.has(key) || key.endsWith("_id")) {
       fail3("LESSON_PLAN_MODEL_ID", `${path}.${key}`, "business identity fields are not allowed in model-authored parameters");
@@ -19479,7 +20127,7 @@ function validateParameters(value2, path) {
   }
 }
 function recipeValidationContext(path, numberCount) {
-  return { path, numberCount, fail: fail3, record: record6, array, validateMathExpression };
+  return { path, numberCount, fail: fail3, record: record7, array, validateMathExpression };
 }
 function validateMathExpression(value2, path, numberCount, allowInput = false) {
   const tokens = array(value2, path);
@@ -19488,7 +20136,7 @@ function validateMathExpression(value2, path, numberCount, allowInput = false) {
   const numbers = /* @__PURE__ */ new Set();
   tokens.forEach((entry, index) => {
     const tokenPath = `${path}[${index}]`;
-    const token = record6(entry, tokenPath);
+    const token = record7(entry, tokenPath);
     const kind = token.kind;
     if (kind === "input") {
       allowedKeys(token, ["kind"], tokenPath);
@@ -19534,7 +20182,7 @@ function capability(value2, path) {
   return value2;
 }
 function validatePart(value2, path) {
-  const part = record6(value2, path);
+  const part = record7(value2, path);
   const kind = part.kind;
   if (kind === "capability") {
     allowedKeys(part, ["kind", "role"], path);
@@ -19547,7 +20195,7 @@ function validatePart(value2, path) {
   fail3("LESSON_PLAN_PART", `${path}.kind`, "unsupported part reference");
 }
 function validateReference(value2, path) {
-  const ref = record6(value2, path);
+  const ref = record7(value2, path);
   const part = ref.part === void 0 ? void 0 : validatePart(ref.part, `${path}.part`);
   if (ref.source === "local_board_item" || ref.source === "local_connection" || ref.source === "local_group") {
     allowedKeys(ref, ["source", "moment", "item", "part"], path);
@@ -19578,7 +20226,7 @@ function validateReference(value2, path) {
   fail3("LESSON_PLAN_REFERENCE", `${path}.source`, "unsupported reference source");
 }
 function validatePlacement2(value2, path) {
-  const placement = record6(value2, path);
+  const placement = record7(value2, path);
   allowedKeys(placement, ["relation", "reference", "align", "gap"], path);
   const relation = placement.relation;
   const relations = /* @__PURE__ */ new Set(["new_region", "below", "above", "left_of", "right_of", "near", "inside", "overlay"]);
@@ -19591,7 +20239,7 @@ function validatePlacement2(value2, path) {
   return placement;
 }
 function validateBoardContent(kind, value2, path, numberCount, resourceCount) {
-  const content = record6(value2, path);
+  const content = record7(value2, path);
   if (kind === "text" || kind === "shape") {
     allowedKeys(content, ["text"], path);
     nonEmptyString(content.text, `${path}.text`);
@@ -19667,7 +20315,7 @@ function validateLessonPlanNumbers(value2, path) {
   if (numbers.length > 16) fail3("LESSON_PLAN_NUMBERS", path, "expected at most 16 numeric states");
   numbers.forEach((entry, index) => {
     const numberPath = `${path}[${index}]`;
-    const number = record6(entry, numberPath);
+    const number = record7(entry, numberPath);
     allowedKeys(number, ["initial", "min", "max", "label", "unit", "student_control"], numberPath);
     const initial = finiteNumber(number.initial, `${numberPath}.initial`);
     const min = finiteNumber(number.min, `${numberPath}.min`);
@@ -19679,7 +20327,7 @@ function validateLessonPlanNumbers(value2, path) {
     optionalString(number.unit, `${numberPath}.unit`, 32);
     if (number.student_control === void 0) return;
     const controlPath = `${numberPath}.student_control`;
-    const control = record6(number.student_control, controlPath);
+    const control = record7(number.student_control, controlPath);
     allowedKeys(control, ["kind", "step"], controlPath);
     if (control.kind !== "slider") fail3("LESSON_PLAN_CONTROL", `${controlPath}.kind`, "only slider is supported");
     if (control.step === void 0) return;
@@ -19698,7 +20346,7 @@ function validateLessonPlanNumbers(value2, path) {
   return numbers;
 }
 function resolveLessonPlan(value2, options = {}) {
-  const root2 = record6(value2, "$lessonPlan");
+  const root2 = record7(value2, "$lessonPlan");
   allowedKeys(root2, ["version", "title", "goals", "teaching_strategies", "numbers", "sections", "close"], "$lessonPlan");
   if (root2.version !== LESSON_PLAN_VERSION) fail3("LESSON_PLAN_VERSION", "$lessonPlan.version", `expected '${LESSON_PLAN_VERSION}'`);
   nonEmptyString(root2.title, "$lessonPlan.title", 160);
@@ -19773,14 +20421,14 @@ function resolveLessonPlan(value2, options = {}) {
   rawSections.forEach((rawSection, sectionOffset) => {
     const sectionIndex = sectionOffset + 1;
     const path = `$lessonPlan.sections[${sectionOffset}]`;
-    const section = record6(rawSection, path);
+    const section = record7(rawSection, path);
     allowedKeys(section, ["purpose", "reusable_items", "moments", "student_activities"], path);
     nonEmptyString(section.purpose, `${path}.purpose`, 480);
     const reusableDeclarations = section.reusable_items === void 0 ? [] : array(section.reusable_items, `${path}.reusable_items`);
     if (reusableDeclarations.length > 32) fail3("LESSON_PLAN_REUSABLE", `${path}.reusable_items`, "expected at most 32 reusable items");
     const declarations = reusableDeclarations.map((entry, declarationOffset) => {
       const declarationPath = `${path}.reusable_items[${declarationOffset}]`;
-      const declaration = record6(entry, declarationPath);
+      const declaration = record7(entry, declarationPath);
       allowedKeys(declaration, ["kind", "board_kind", "capability"], declarationPath);
       if (!["board_item", "connection", "group"].includes(String(declaration.kind))) fail3("LESSON_PLAN_REUSABLE", `${declarationPath}.kind`, "unsupported reusable item kind");
       if (declaration.kind === "board_item") {
@@ -19812,7 +20460,7 @@ function resolveLessonPlan(value2, options = {}) {
     rawMoments.forEach((rawMoment, momentOffset) => {
       const momentIndex = momentOffset + 1;
       const momentPath = `${path}.moments[${momentOffset}]`;
-      const moment = record6(rawMoment, momentPath);
+      const moment = record7(rawMoment, momentPath);
       allowedKeys(moment, ["narration", "delivery", "actions", "restart_numbers"], momentPath);
       if (moment.restart_numbers !== void 0) {
         const restarts = array(moment.restart_numbers, `${momentPath}.restart_numbers`);
@@ -19834,7 +20482,7 @@ function resolveLessonPlan(value2, options = {}) {
       let groupIndex = 0;
       actions.forEach((entry, actionOffset) => {
         const itemPath = `${momentPath}.actions[${actionOffset}]`;
-        const action = record6(entry, itemPath);
+        const action = record7(entry, itemPath);
         const actionKind = action.action;
         if (actionKind === "create") {
           allowedKeys(action, ["action", "kind", "role", "content", "timing", "placement", "reusable_item", "distinct_visual"], itemPath);
@@ -19926,7 +20574,7 @@ function resolveLessonPlan(value2, options = {}) {
           requiredVisualNumberUses.push({ number, path: `${itemPath}.number` });
           if (number > rawNumbers.length) fail3("LESSON_PLAN_NUMBER_REFERENCE", `${itemPath}.number`, "number reference is unavailable");
           const end = finiteNumber(action.end_value, `${itemPath}.end_value`);
-          const definition = record6(rawNumbers[number - 1], `$lessonPlan.numbers[${number - 1}]`);
+          const definition = record7(rawNumbers[number - 1], `$lessonPlan.numbers[${number - 1}]`);
           if (!cardMovedNumbers2.has(number) && (end < Number(definition.min) || end > Number(definition.max))) fail3("LESSON_PLAN_ANIMATION", `${itemPath}.end_value`, "animation end is outside the number range");
           if (action.easing !== void 0 && !["linear", "ease_in_out"].includes(String(action.easing))) fail3("LESSON_PLAN_ANIMATION", `${itemPath}.easing`, "unsupported easing");
           if (action.duration_intent !== void 0 && !["brief", "normal", "extended"].includes(String(action.duration_intent))) fail3("LESSON_PLAN_ANIMATION", `${itemPath}.duration_intent`, "unsupported duration intent");
@@ -19953,7 +20601,7 @@ function resolveLessonPlan(value2, options = {}) {
     const activities = section.student_activities === void 0 ? [] : array(section.student_activities, `${path}.student_activities`);
     activities.forEach((entry, index) => {
       const activityPath = `${path}.student_activities[${index}]`;
-      const activity = record6(entry, activityPath);
+      const activity = record7(entry, activityPath);
       if (activity.kind === "reflection") {
         allowedKeys(activity, ["kind", "prompt", "answer", "reference"], activityPath);
         nonEmptyString(activity.prompt, `${activityPath}.prompt`, 480);
@@ -19979,7 +20627,7 @@ function resolveLessonPlan(value2, options = {}) {
         const seenNumbers = /* @__PURE__ */ new Set();
         numberControls.forEach((entry2, controlIndex) => {
           const controlPath = `${activityPath}.number_controls[${controlIndex}]`;
-          const control = record6(entry2, controlPath);
+          const control = record7(entry2, controlPath);
           allowedKeys(control, ["number", "controls"], controlPath);
           const number = positiveIndex(control.number, `${controlPath}.number`);
           requiredVisualNumberUses.push({ number, path: `${controlPath}.number` });
@@ -20056,7 +20704,7 @@ function resolveLessonPlan(value2, options = {}) {
       reusable_items: resolvedReusable
     });
   });
-  const close = record6(root2.close, "$lessonPlan.close");
+  const close = record7(root2.close, "$lessonPlan.close");
   allowedKeys(close, ["summary", "focus"], "$lessonPlan.close");
   nonEmptyString(close.summary, "$lessonPlan.close.summary", 1200);
   const closeFocus = array(close.focus, "$lessonPlan.close.focus");
@@ -20206,7 +20854,7 @@ function validateLessonPlan(value2, options = {}) {
   return resolveLessonPlan(value2, options).plan;
 }
 function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
-  const outline = record6(value2, "$lessonPlanOutline");
+  const outline = record7(value2, "$lessonPlanOutline");
   allowedKeys(outline, ["version", "title", "goals", "teaching_strategies", "numbers", "request_coverage", "course_visuals", "sections", "close"], "$lessonPlanOutline");
   if (expectedRequestParts > 0 && outline.course_visuals === void 0) {
     fail3(
@@ -20233,7 +20881,7 @@ function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
   const declarationsBySection = [];
   sections.forEach((entry, index) => {
     const path = `$lessonPlanOutline.sections[${index}]`;
-    const section = record6(entry, path);
+    const section = record7(entry, path);
     allowedKeys(section, ["purpose", "allowed_capabilities", "reusable_items"], path);
     nonEmptyString(section.purpose, `${path}.purpose`, 480);
     const allowedCapabilities = array(section.allowed_capabilities, `${path}.allowed_capabilities`);
@@ -20247,7 +20895,7 @@ function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
     if (declarations.length > 32) fail3("LESSON_PLAN_REUSABLE", `${path}.reusable_items`, "expected at most 32 reusable items");
     declarationsBySection.push(declarations.map((declarationValue, declarationIndex) => {
       const declarationPath = `${path}.reusable_items[${declarationIndex}]`;
-      const declaration = record6(declarationValue, declarationPath);
+      const declaration = record7(declarationValue, declarationPath);
       allowedKeys(declaration, ["kind", "board_kind", "capability"], declarationPath);
       if (!["board_item", "connection", "group"].includes(String(declaration.kind))) fail3("LESSON_PLAN_REUSABLE", `${declarationPath}.kind`, "unsupported reusable item kind");
       if (declaration.kind === "board_item") {
@@ -20271,7 +20919,7 @@ function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
   const firstVisualByCapability = /* @__PURE__ */ new Map();
   courseVisuals.forEach((entry, index) => {
     const path = `$lessonPlanOutline.course_visuals[${index}]`;
-    const visual = record6(entry, path);
+    const visual = record7(entry, path);
     allowedKeys(visual, ["capability", "create_section", "use_sections", "relation", "related_visual", "reusable_item"], path);
     const visualCapability = capability(visual.capability, `${path}.capability`);
     const createSection = positiveIndex(visual.create_section, `${path}.create_section`);
@@ -20321,7 +20969,7 @@ function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
     const seen = /* @__PURE__ */ new Set();
     coverage.forEach((entry, index) => {
       const path = `$lessonPlanOutline.request_coverage[${index}]`;
-      const item = record6(entry, path);
+      const item = record7(entry, path);
       allowedKeys(item, ["request_part", "treatment", "sections", "reason"], path);
       const requestPart = positiveIndex(item.request_part, `${path}.request_part`);
       if (expectedRequestParts > 0 && requestPart > expectedRequestParts) fail3("LESSON_PLAN_REQUEST_COVERAGE", `${path}.request_part`, "request part is unavailable");
@@ -20350,7 +20998,7 @@ function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
       }
     }
   }
-  const close = record6(outline.close, "$lessonPlanOutline.close");
+  const close = record7(outline.close, "$lessonPlanOutline.close");
   allowedKeys(close, ["summary", "focus"], "$lessonPlanOutline.close");
   nonEmptyString(close.summary, "$lessonPlanOutline.close.summary", 1200);
   const closeFocus = array(close.focus, "$lessonPlanOutline.close.focus");
@@ -20377,7 +21025,7 @@ function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
   return structuredClone(value2);
 }
 function assembleLessonPlan(outlineValue, draftValues, options = {}) {
-  const outline = record6(validateLessonPlanOutline(outlineValue), "$lessonPlanOutline");
+  const outline = record7(validateLessonPlanOutline(outlineValue), "$lessonPlanOutline");
   allowedKeys(outline, ["version", "title", "goals", "teaching_strategies", "numbers", "request_coverage", "course_visuals", "sections", "close"], "$lessonPlanOutline");
   if (outline.version !== LESSON_PLAN_VERSION) {
     fail3("LESSON_PLAN_VERSION", "$lessonPlanOutline.version", `expected '${LESSON_PLAN_VERSION}'`);
@@ -20390,7 +21038,7 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
   }
   sections.forEach((entry, index) => {
     const path = `$lessonPlanOutline.sections[${index}]`;
-    const section = record6(entry, path);
+    const section = record7(entry, path);
     allowedKeys(section, ["purpose", "allowed_capabilities", "reusable_items"], path);
     nonEmptyString(section.purpose, `${path}.purpose`, 480);
     const allowedCapabilities = array(section.allowed_capabilities, `${path}.allowed_capabilities`);
@@ -20402,7 +21050,7 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
     });
     if (section.reusable_items !== void 0) {
       array(section.reusable_items, `${path}.reusable_items`).forEach((entry2, reusableIndex) => {
-        const declaration = record6(entry2, `${path}.reusable_items[${reusableIndex}]`);
+        const declaration = record7(entry2, `${path}.reusable_items[${reusableIndex}]`);
         if (declaration.capability !== void 0) {
           const value2 = capability(declaration.capability, `${path}.reusable_items[${reusableIndex}].capability`);
           if (!seenCapabilities.has(value2)) fail3("LESSON_PLAN_CAPABILITY", `${path}.reusable_items[${reusableIndex}].capability`, "reusable capability is not allowed for this section");
@@ -20410,7 +21058,7 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
       });
     }
   });
-  const close = record6(outline.close, "$lessonPlanOutline.close");
+  const close = record7(outline.close, "$lessonPlanOutline.close");
   allowedKeys(close, ["summary", "focus"], "$lessonPlanOutline.close");
   nonEmptyString(close.summary, "$lessonPlanOutline.close.summary", 1200);
   const outlineFocus = array(close.focus, "$lessonPlanOutline.close.focus");
@@ -20432,7 +21080,7 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
   const bySection = /* @__PURE__ */ new Map();
   drafts.forEach((entry, index) => {
     const path = `$lessonPlanSectionDrafts[${index}]`;
-    const draft = record6(entry, path);
+    const draft = record7(entry, path);
     allowedKeys(draft, ["version", "section", "moments", "student_activities"], path);
     if (draft.version !== LESSON_PLAN_VERSION) fail3("LESSON_PLAN_VERSION", `${path}.version`, `expected '${LESSON_PLAN_VERSION}'`);
     const section = positiveIndex(draft.section, `${path}.section`);
@@ -20443,11 +21091,11 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
     const outlineSection = sections[section - 1];
     const allowedCapabilities = new Set(array(outlineSection.allowed_capabilities, `$lessonPlanOutline.sections[${section - 1}].allowed_capabilities`));
     array(draft.moments, `${path}.moments`).forEach((momentValue, momentIndex) => {
-      const moment = record6(momentValue, `${path}.moments[${momentIndex}]`);
+      const moment = record7(momentValue, `${path}.moments[${momentIndex}]`);
       array(moment.actions, `${path}.moments[${momentIndex}].actions`).forEach((actionValue, actionIndex) => {
-        const action = record6(actionValue, `${path}.moments[${momentIndex}].actions[${actionIndex}]`);
+        const action = record7(actionValue, `${path}.moments[${momentIndex}].actions[${actionIndex}]`);
         if (action.action !== "create" || action.kind !== "visual") return;
-        const content = record6(action.content, `${path}.moments[${momentIndex}].actions[${actionIndex}].content`);
+        const content = record7(action.content, `${path}.moments[${momentIndex}].actions[${actionIndex}].content`);
         if (!allowedCapabilities.has(content.capability)) {
           fail3("LESSON_PLAN_CAPABILITY", `${path}.moments[${momentIndex}].actions[${actionIndex}].content.capability`, "visual capability is not allowed by the course outline");
         }
@@ -20486,9 +21134,9 @@ function cardIdentity(kind, content) {
       return;
     }
     if (!value2 || typeof value2 !== "object") return;
-    const record7 = value2;
-    if (typeof record7.as === "string" && !fragments.has(record7.as)) fragments.set(record7.as, `part-${fragments.size}`);
-    Object.values(record7).forEach(collect);
+    const record8 = value2;
+    if (typeof record8.as === "string" && !fragments.has(record8.as)) fragments.set(record8.as, `part-${fragments.size}`);
+    Object.values(record8).forEach(collect);
   };
   collect(content);
   const localReference = (value2) => {
@@ -20608,8 +21256,8 @@ function niceStep(raw) {
   const normalized = raw / power2;
   return ([1, 2, 2.5, 5, 10].find((value2) => normalized <= value2 + 1e-9) ?? 10) * power2;
 }
-function snap3(range, unit3 = 1) {
-  const step = unit3 === 1 ? niceStep(span2(range) / 20) : unit3 * Math.max(1, Math.round(span2(range) / unit3 / 8));
+function snap3(range, unit4 = 1) {
+  const step = unit4 === 1 ? niceStep(span2(range) / 20) : unit4 * Math.max(1, Math.round(span2(range) / unit4 / 8));
   const round = (value2) => Number(value2.toPrecision(12));
   return { min: round(Math.floor(range.min / step + 1e-9) * step), max: round(Math.ceil(range.max / step - 1e-9) * step) };
 }
@@ -20907,8 +21555,8 @@ function planPlotView(input) {
     const structural = features.filter((feature) => feature.kind !== "intercept");
     let region = hull((structural.length ? structural : features).map((feature) => feature.x));
     if (item.quadratic) {
-      const halfWidth3 = quadraticHalfWidth(item.quadratic.a);
-      region = union(region, { min: item.quadratic.vertex - halfWidth3, max: item.quadratic.vertex + halfWidth3 });
+      const halfWidth4 = quadraticHalfWidth(item.quadratic.a);
+      region = union(region, { min: item.quadratic.vertex - halfWidth4, max: item.quadratic.vertex + halfWidth4 });
     }
     return region;
   };
@@ -20974,8 +21622,8 @@ function planPlotView(input) {
     for (const item of items) {
       const features = item.features.filter((feature) => keptSet.has(feature) || inCluster(feature)).filter((feature) => feature.x >= window.min && feature.x <= window.max);
       if (item.quadratic) {
-        const halfWidth3 = quadraticHalfWidth(item.quadratic.a);
-        const own = { min: Math.max(window.min, item.quadratic.vertex - halfWidth3), max: Math.min(window.max, item.quadratic.vertex + halfWidth3) };
+        const halfWidth4 = quadraticHalfWidth(item.quadratic.a);
+        const own = { min: Math.max(window.min, item.quadratic.vertex - halfWidth4), max: Math.min(window.max, item.quadratic.vertex + halfWidth4) };
         sampled(item, span2(own) > 0 ? own : window);
       } else if (item.period === void 0 && features.some((feature) => feature.kind === "extremum") && !(undefinedBeyond([item], window.min, -1) && undefinedBeyond([item], window.max, 1))) {
         const levels = hull(features.filter((feature) => feature.y !== void 0 && feature.kind !== "intercept").map((feature) => feature.y));
@@ -21985,9 +22633,9 @@ var nameOf = (definition, value2) => {
   return label && Number(label) !== value2 ? label : void 0;
 };
 var ROUNDING_PLACES = { hundreds: 100, tens: 10, ones: 1, tenths: 0.1, hundredths: 0.01 };
-function roundingTicks(value2, unit3) {
-  const major = Number((unit3 / 10).toPrecision(12));
-  for (const minor of [major, Number((unit3 / 100).toPrecision(12))]) {
+function roundingTicks(value2, unit4) {
+  const major = Number((unit4 / 10).toPrecision(12));
+  for (const minor of [major, Number((unit4 / 100).toPrecision(12))]) {
     const steps = value2 / minor;
     if (Math.abs(steps - Math.round(steps)) <= 1e-9 * Math.max(1, Math.abs(steps))) return { major, minor };
   }
@@ -21996,27 +22644,27 @@ function roundingTicks(value2, unit3) {
 function compileNumberLineRounding(base, content, role, placement, plan, path) {
   const input = parameters(content);
   allowParameterKeys(input, ["title", "place"], path);
-  const unit3 = ROUNDING_PLACES[input.place];
-  if (!unit3) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.place`, `place is one of ${Object.keys(ROUNDING_PLACES).join(", ")}`);
+  const unit4 = ROUNDING_PLACES[input.place];
+  if (!unit4) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.place`, `place is one of ${Object.keys(ROUNDING_PLACES).join(", ")}`);
   const [numberIndex] = content.numbers ?? [];
   if (!numberIndex) fail2("LESSON_PLAN_OUTLINE_VISUAL", `${path}.numbers`, "rounding on a number line needs the lesson number it rounds");
   const definition = numberDefinition(plan, numberIndex, `${path}.numbers[0]`);
   const reached = [definition.min, definition.max, definition.initial, ...lessonValues(plan, numberIndex)];
-  const ticks = reached.map((value2) => roundingTicks(value2, unit3));
+  const ticks = reached.map((value2) => roundingTicks(value2, unit4));
   if (ticks.some((tick) => !tick)) {
     fail2("LESSON_PLAN_OUTLINE_VISUAL", `${path}.numbers`, "a rounding line marks every hundredth of the place at most; this number needs finer ticks, so choose another visual");
   }
   const minor = Math.min(...ticks.map((tick) => tick.minor));
   const major = ticks[0].major;
-  const scale2 = unit3 < 1 ? Math.round(1 / unit3) : 1;
-  const steps = (variable2) => unit3 < 1 ? `floor(${variable2} * ${scale2} + 0.000000001)` : `floor(${variable2} / ${unit3} + 0.000000001)`;
-  const at2 = (expression) => unit3 < 1 ? `(${expression}) / ${scale2}` : `(${expression}) * ${unit3}`;
-  const stepsOf = (value2) => Math.floor(unit3 < 1 ? value2 * scale2 + 1e-9 : value2 / unit3 + 1e-9);
-  const valueAt = (count) => Number((unit3 < 1 ? count / scale2 : count * unit3).toPrecision(12));
+  const scale2 = unit4 < 1 ? Math.round(1 / unit4) : 1;
+  const steps = (variable2) => unit4 < 1 ? `floor(${variable2} * ${scale2} + 0.000000001)` : `floor(${variable2} / ${unit4} + 0.000000001)`;
+  const at2 = (expression) => unit4 < 1 ? `(${expression}) / ${scale2}` : `(${expression}) * ${unit4}`;
+  const stepsOf = (value2) => Math.floor(unit4 < 1 ? value2 * scale2 + 1e-9 : value2 / unit4 + 1e-9);
+  const valueAt = (count) => Number((unit4 < 1 ? count / scale2 : count * unit4).toPrecision(12));
   const variable = variableAlias(numberIndex);
   const lowerSteps = stepsOf(definition.initial);
   const lower = valueAt(lowerSteps), upper = valueAt(lowerSteps + 1), middle = valueAt(lowerSteps + 0.5);
-  const result = definition.initial - lower >= unit3 / 2 - 1e-9 ? upper : lower;
+  const result = definition.initial - lower >= unit4 / 2 - 1e-9 ? upper : lower;
   const lowest = valueAt(stepsOf(Math.min(...reached))), highest = valueAt(stepsOf(Math.max(...reached)) + 1);
   const margin = major * 2;
   const range = { min: Number((lowest - margin).toPrecision(12)), max: Number((highest + margin).toPrecision(12)) };
@@ -22042,7 +22690,7 @@ function compileNumberLineRounding(base, content, role, placement, plan, path) {
       // Its tick already shows the number; a name that only repeats it ("362") is left off.
       { as: "number", value: { expression: variable, initial: definition.initial }, ...nameOf(definition, definition.initial) ? { label: nameOf(definition, definition.initial) } : {} }
     ],
-    jumps: [{ as: "move", from: "number", by: { expression: `${at2(unit3 < 1 ? `floor(${variable} * ${scale2} + 0.5 + 0.000000001)` : `floor(${variable} / ${unit3} + 0.5 + 0.000000001)`)} - ${variable}`, initial: Number((result - definition.initial).toPrecision(12)) }, hops: false }]
+    jumps: [{ as: "move", from: "number", by: { expression: `${at2(unit4 < 1 ? `floor(${variable} * ${scale2} + 0.5 + 0.000000001)` : `floor(${variable} / ${unit4} + 0.5 + 0.000000001)`)} - ${variable}`, initial: Number((result - definition.initial).toPrecision(12)) }, hops: false }]
   });
   return { ...builtVisual(built), parts: new Map(Object.entries({ ...built.parts, primary_control: built.parts.move })) };
 }
@@ -22068,11 +22716,11 @@ function compileNumberLine(base, content, role, placement, plan, path) {
   ];
   const frame = numberLineFrame(values, grid, shown, labelStyle, path);
   const { step, subdivisions } = frame;
-  const unit3 = step / subdivisions;
-  const whole2 = (value2) => onGrid(value2 / unit3, 1);
+  const unit4 = step / subdivisions;
+  const whole2 = (value2) => onGrid(value2 / unit4, 1);
   const reach = change ? Math.max(Math.abs(change.min), Math.abs(change.max)) : 0;
   const sliderStep = change?.student_control?.step;
-  const hopsFit = change !== void 0 && [change.min, change.max, change.initial].every(whole2) && (sliderStep === void 0 || whole2(sliderStep)) && Math.ceil(reach / unit3 - 1e-9) <= NUMBER_LINE_LIMITS.hops;
+  const hopsFit = change !== void 0 && [change.min, change.max, change.initial].every(whole2) && (sliderStep === void 0 || whole2(sliderStep)) && Math.ceil(reach / unit4 - 1e-9) <= NUMBER_LINE_LIMITS.hops;
   const hops = hopsFit;
   const startVariable = startNumber ? variableAlias(startNumber) : void 0;
   const changeVariable = changeNumber ? variableAlias(changeNumber) : void 0;
@@ -22124,11 +22772,11 @@ function compileNumberLineSteps(base, content, role, placement, plan, path) {
     ...moveLandings(plan, [startNumber, ...moveNumbers])
   ];
   const frame = numberLineFrame(values, grid, shown, labelStyle, path);
-  const unit3 = frame.step / frame.subdivisions;
-  const whole2 = (value2) => onGrid(value2 / unit3, 1);
+  const unit4 = frame.step / frame.subdivisions;
+  const whole2 = (value2) => onGrid(value2 / unit4, 1);
   const takes = moves.map((move, position) => move.student_control ? [move.min, move.max, move.initial] : [move.initial, ...lessonValues(plan, moveNumbers[position])]);
   const oneWay = takes.every((values2) => values2.every((value2) => value2 >= 0)) || takes.every((values2) => values2.every((value2) => value2 <= 0));
-  const hops = oneWay && moves.every((move, position) => takes[position].every(whole2) && (move.student_control?.step === void 0 || whole2(move.student_control.step)) && Math.ceil(Math.max(...takes[position].map(Math.abs)) / unit3 - 1e-9) <= NUMBER_LINE_LIMITS.hops);
+  const hops = oneWay && moves.every((move, position) => takes[position].every(whole2) && (move.student_control?.step === void 0 || whole2(move.student_control.step)) && Math.ceil(Math.max(...takes[position].map(Math.abs)) / unit4 - 1e-9) <= NUMBER_LINE_LIMITS.hops);
   const startVariable = variableAlias(startNumber);
   const moveVariables = moveNumbers.map((number) => variableAlias(number));
   const sum = (count) => [startVariable, ...moveVariables.slice(0, count)].map((name) => `(${name})`).join("+");
@@ -22160,17 +22808,17 @@ var REGULAR_SIDES = { min: 3, max: 8 };
 var SOLID_MEASURES = ["volume", "surface_area", "counts"];
 function modelSolid(value2, path, adjustments) {
   if (!value2 || typeof value2 !== "object" || Array.isArray(value2)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", path, "expected a solid: its shape and sizes");
-  const record7 = value2;
-  if (!SOLID_SHAPES.includes(record7.shape)) {
+  const record8 = value2;
+  if (!SOLID_SHAPES.includes(record8.shape)) {
     fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.shape`, `expected one of ${SOLID_SHAPES.join(", ")}`);
   }
-  const solid = { shape: record7.shape };
+  const solid = { shape: record8.shape };
   const used = SHAPE_SIZES[solid.shape];
   for (const key of SOLID_SIZES) {
-    const size = record7[key];
+    const size = record8[key];
     if (size === void 0 || size === null) continue;
     const round = solid.shape === "cylinder" || solid.shape === "cone" || solid.shape === "sphere" || solid.shape === "hemisphere";
-    if (!used.includes(key) && (size === 0 || key === "sides" && round || key === "top_radius" && solid.shape === "cylinder" && size === record7.radius)) {
+    if (!used.includes(key) && (size === 0 || key === "sides" && round || key === "top_radius" && solid.shape === "cylinder" && size === record8.radius)) {
       adjustments.push({ reason: "solid_unused_size", detail: `${path}.${key}: ${String(size)} on a ${solid.shape}, not used` });
       continue;
     }
@@ -22349,8 +22997,8 @@ function compileFractionModel(base, content, role, placement, plan, path) {
   if (!Array.isArray(written) || written.length !== count) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions`, `${view} shows ${count === 2 ? "two fractions" : "one fraction"}`);
   const fractions = written.map((item, index) => {
     const at2 = `${path}.fractions[${index}]`;
-    const record7 = item && typeof item === "object" && !Array.isArray(item) ? item : fail2("LESSON_PLAN_CAPABILITY_PARAMETER", at2, "expected {numerator, denominator}");
-    const numerator = record7.numerator, denominator = record7.denominator;
+    const record8 = item && typeof item === "object" && !Array.isArray(item) ? item : fail2("LESSON_PLAN_CAPABILITY_PARAMETER", at2, "expected {numerator, denominator}");
+    const numerator = record8.numerator, denominator = record8.denominator;
     if (typeof numerator !== "number" || !Number.isInteger(numerator) || numerator < 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${at2}.numerator`, "the numerator is a whole number of parts, 0 or more");
     if (typeof denominator !== "number" || !Number.isInteger(denominator) || denominator < 1) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${at2}.denominator`, "the denominator is a whole number of equal parts, 1 or more");
     return { numerator, denominator };
@@ -22702,8 +23350,8 @@ var PLACE_VALUE_TRADE_TEXT = {
 function tradeRange(values, columns) {
   const min = Math.min(...values), max = Math.max(...values);
   if (min < max) return { min, max };
-  const unit3 = 10 ** (columns.at(-1) + 3);
-  return max + unit3 < 10 ** (columns[0] + 4) ? { min, max: max + unit3 } : { min: min - unit3, max };
+  const unit4 = 10 ** (columns.at(-1) + 3);
+  return max + unit4 < 10 ** (columns[0] + 4) ? { min, max: max + unit4 } : { min: min - unit4, max };
 }
 function compilePlaceValueTrade(base, content, role, placement, plan, path) {
   const input = parameters(content);
@@ -22807,6 +23455,101 @@ function compilePlaceValueTrade(base, content, role, placement, plan, path) {
     }
   };
 }
+var MAKE_TEN_TEXT = {
+  "en-US": { a: "the first number", b: "the second number", filled: "in the bigger number's frame", moved: "moved across" },
+  "zh-CN": { a: "\u7B2C\u4E00\u4E2A\u6570", b: "\u7B2C\u4E8C\u4E2A\u6570", filled: "\u5927\u6570\u90A3\u4E00\u6846\u91CC\u6709\u51E0\u4E2A", moved: "\u79FB\u8FC7\u53BB\u51E0\u4E2A" }
+};
+function compileMakeTen(base, content, role, placement, plan, path) {
+  allowParameterKeys(parameters(content), [], path);
+  const numbers = content.numbers ?? [];
+  const values = numbers.map((number, index) => numberDefinition(plan, number, `${path}.numbers[${index}]`).initial);
+  const sharesNumbers = (action) => action.action === "create" && action.kind === "visual" && action.content.capability !== "make_ten" && (action.content.numbers ?? []).some((number) => numbers.includes(number));
+  const sharingAt = plan.sections.findIndex((section) => section.moments.some((moment) => moment.actions.some(sharesNumbers)));
+  if (sharingAt >= 0) {
+    const sharing = plan.sections[sharingAt].moments.flatMap((moment) => moment.actions).find(sharesNumbers);
+    const cardAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
+    const sharingCapability = sharing.content.capability;
+    fail2(
+      "LESSON_PLAN_SHARED_NUMBER",
+      `${path}.numbers`,
+      `the make-ten card needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the numbers on the card only, or in words`,
+      sharingAt > cardAt ? sharingCapability : "make_ten"
+    );
+  }
+  const fault = makeTenStartFault2(values);
+  if (fault) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault, "make_ten");
+  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "make_ten");
+  if (first && JSON.stringify(first.content.numbers ?? []) !== JSON.stringify(numbers)) {
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a lesson has one make-ten card: use the same lesson numbers each time, or write another sum in words", "make_ten");
+  }
+  const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
+  const text5 = MAKE_TEN_TEXT[language];
+  const [a, b, pa, pb] = values.slice(0, 4);
+  const stem = base.replace(/[^A-Za-z0-9]+/gu, "_").toLowerCase();
+  const aVariable = `${stem}_a`, bVariable = `${stem}_b`, filledVariable = `${stem}_filled`, movedVariable = `${stem}_moved`;
+  const built = buildMakeTen({
+    as: base,
+    role,
+    place: placement,
+    ...language === "zh-CN" ? { language } : {},
+    a: { expression: aVariable, initial: a },
+    b: { expression: bVariable, initial: b },
+    filled: { expression: filledVariable, initial: makeTenFreshCount(a, b) },
+    moved: { expression: movedVariable, initial: 0 }
+  });
+  const variables = [
+    { as: aVariable, initial: a, min: 1, max: 9, label: text5.a },
+    { as: bVariable, initial: b, min: 1, max: 9, label: text5.b },
+    { as: filledVariable, initial: makeTenFreshCount(a, b), min: 0, max: MAKE_TEN_PLACES, label: text5.filled },
+    { as: movedVariable, initial: 0, min: 0, max: MAKE_TEN_MAX_MOVED, label: text5.moved }
+  ];
+  const sum = makeTenSum(pa, pb);
+  return {
+    actions: built.actions,
+    whole: built.whole,
+    parts: new Map(Object.entries(built.parts)),
+    variables,
+    mover: {
+      unbound: true,
+      numbers: [...numbers],
+      // A step moves the count in the bigger frame forward: the card moves one counter for each. Nothing else moves.
+      play(steps) {
+        const actions = [];
+        for (const step of steps) {
+          if (step.position !== MAKE_TEN_NUMBER.filled || step.to[step.position] === step.from[step.position]) continue;
+          actions.push({ do: "animate", variable: filledVariable, value: step.to[step.position] });
+        }
+        return actions;
+      },
+      // The model's practice is "the learner makes the ten with the practice pair": the card starts again, fresh,
+      // on that pair; the task ends on the tap that makes the ten (no "done"), and the program asks the row of four
+      // blanks the card's pair gives (OLL's makeTenRow, the part beside the bigger number first). The value the
+      // model wrote is not read. Words that write the practice's sum give it away: that task is dropped and
+      // recorded, never the lesson.
+      task(_position, _value, _end, words = []) {
+        if (words.some((each) => makeTenWordsGiveAnswer(each, sum))) {
+          return { drop: `the task's words write ${sum}, the sum the learner is to find on the card`, reason: "practice_answer_in_words" };
+        }
+        const values2 = { [aVariable]: pa, [bVariable]: pb, [filledVariable]: makeTenFreshCount(pa, pb), [movedVariable]: 0 };
+        return {
+          task: {
+            start: { kind: "practice", variables: Object.keys(values2), values: values2 },
+            allowed_operations: [{ kind: "card_tap", node: base }],
+            completion: { kind: "card_fact", node: base, fact: "complete" }
+          },
+          then: [{
+            prompt: compileText(plan, "\u5199\u6210\u7B97\u5F0F\u3002"),
+            hints: [compileText(plan, "\u5148\u8BFB\u6EE1\u5341\u7684\u90A3\u4E00\u6846\uFF0C\u518D\u8BFB\u53E6\u4E00\u6846\u3002")],
+            anchor: base,
+            allowed_operations: [{ kind: "row_entry" }],
+            completion: { kind: "numeric_row", parts: makeTenRow(pa, pb, language) },
+            success_message: makeTenChainText(makeTenProblemOf(pa, pb))
+          }]
+        };
+      }
+    }
+  };
+}
 var MATH_COMPILERS = {
   number_line: compileNumberLine,
   number_line_compare: compileNumberLineCompare,
@@ -22828,7 +23571,8 @@ var MATH_COMPILERS = {
   fraction_model: compileFractionModel,
   base_ten_trade: compileBaseTenTrade,
   place_value_chart: compilePlaceValueChart,
-  place_value_trade: compilePlaceValueTrade
+  place_value_trade: compilePlaceValueTrade,
+  make_ten: compileMakeTen
 };
 
 // src/plugins/physics-compilers.ts
@@ -22887,7 +23631,7 @@ function compileConstantSpeedMotion(base, content, role, placement, plan, path) 
     fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers[0]`, "time must be able to grow past 0");
   }
   const units = motionUnits(speedDefinition?.unit, timeDefinition?.unit);
-  const unitSuffix = (unit3) => unit3 ? compileText(plan, "\uFF08{{v0}}\uFF09", { v0: unit3 }) : "";
+  const unitSuffix = (unit4) => unit4 ? compileText(plan, "\uFF08{{v0}}\uFF09", { v0: unit4 }) : "";
   const built = buildConstantSpeedMotion({
     as: base,
     role,
@@ -23451,9 +24195,9 @@ function normalizeProgramOwnedNumberRanges(plan) {
       if (activity.value !== original) {
         const value2 = Number(activity.value.toPrecision(12));
         const label = definition.label?.trim() || compileText(plan, "\u6570\u503C");
-        const unit3 = definition.unit?.trim();
-        activity.prompt = compileText(plan, "\u8BF7\u628A{{v0}}\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: value2, v2: unit3 ? ` ${unit3}` : "" });
-        activity.success_message = compileText(plan, "\u5B8C\u6210\uFF0C{{v0}}\u5DF2\u7ECF\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: value2, v2: unit3 ? ` ${unit3}` : "" });
+        const unit4 = definition.unit?.trim();
+        activity.prompt = compileText(plan, "\u8BF7\u628A{{v0}}\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: value2, v2: unit4 ? ` ${unit4}` : "" });
+        activity.success_message = compileText(plan, "\u5B8C\u6210\uFF0C{{v0}}\u5DF2\u7ECF\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: value2, v2: unit4 ? ` ${unit4}` : "" });
       }
     }
   }
@@ -23502,11 +24246,11 @@ function moveMetTarget(plan, activity, definition, path) {
   if (alternative === void 0) fail2("LESSON_PLAN_ACTIVITY", path, "numeric task has no reachable target distinct from the initial value");
   activity.value = alternative;
   const label = definition.label?.trim() || compileText(plan, "\u6570\u503C");
-  const unit3 = definition.unit?.trim();
+  const unit4 = definition.unit?.trim();
   const formatted = Number(alternative.toPrecision(12));
-  activity.prompt = compileText(plan, "\u8BF7\u628A{{v0}}\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: formatted, v2: unit3 ? ` ${unit3}` : "" });
+  activity.prompt = compileText(plan, "\u8BF7\u628A{{v0}}\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: formatted, v2: unit4 ? ` ${unit4}` : "" });
   activity.hints = [compileText(plan, "\u62D6\u52A8\u5DE6\u4E0B\u89D2\u7684\u6ED1\u6746\uFF0C\u89C2\u5BDF\u6570\u503C\u548C\u753B\u9762\u540C\u6B65\u53D8\u5316\u3002")];
-  activity.success_message = compileText(plan, "\u5B8C\u6210\uFF0C{{v0}}\u5DF2\u7ECF\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: formatted, v2: unit3 ? ` ${unit3}` : "" });
+  activity.success_message = compileText(plan, "\u5B8C\u6210\uFF0C{{v0}}\u5DF2\u7ECF\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: formatted, v2: unit4 ? ` ${unit4}` : "" });
 }
 function resolveMetNumberTargets(plan) {
   const lineNumbers = /* @__PURE__ */ new Set();
@@ -24167,16 +24911,16 @@ function vertexCompatible(value2) {
   let usesDecimal = false;
   const visit = (candidate) => {
     if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return;
-    const record7 = candidate;
-    delete record7.minItems;
-    delete record7.maxItems;
-    if (record7.type === "number") {
+    const record8 = candidate;
+    delete record8.minItems;
+    delete record8.maxItems;
+    if (record8.type === "number") {
       usesDecimal = true;
-      for (const key of Object.keys(record7)) delete record7[key];
-      record7.$ref = "#/$defs/modelDecimal";
+      for (const key of Object.keys(record8)) delete record8[key];
+      record8.$ref = "#/$defs/modelDecimal";
       return;
     }
-    for (const child of Object.values(record7)) {
+    for (const child of Object.values(record8)) {
       if (Array.isArray(child)) child.forEach(visit);
       else visit(child);
     }
@@ -24849,6 +25593,36 @@ var MATH_SECTION_FACTS = {
       chart_now: card.cells.map((cell2) => cell2.down ? { column: name(cell2.place), below_line: cell2.answer } : op === "add" ? { column: name(cell2.place), row_1: cell2.top, row_2: cell2.second, ...cell2.carry ? { carried_in: cell2.carry } : {} } : { column: name(cell2.place), row_1: cell2.top, take_away: cell2.second }),
       ...card.next ? { next: { value: card.next.finished, finishes: name(card.next.place), does: placeValueTradeStepSentences(problem, card.next.finished, cardLanguage) } } : { every_column_finished: true },
       practice_pair: [tradeDecimal(pa), tradeDecimal(pb)]
+    } };
+  },
+  // The make-ten card in its own terms (OLL 0027), once it is drawn: the pair and its sum, which frame fills (the
+  // bigger number's) and which gives, how many cross to make ten and the ones left then, where the demonstration
+  // stands (the count in the bigger frame now, each frame's count), what the next value does in the card's own
+  // sentences, and the practice pair. Facts, not instructions: a lesson may rightly stop before the frame is full.
+  make_ten: ({ established, numbers, state, language }) => {
+    if (!numbers || !established?.numbers?.length) return {};
+    const lessonNumbers = established.numbers;
+    const values = lessonNumbers.map((number) => Number(numbers[number - 1]?.initial ?? 0));
+    if (makeTenStartFault2(values)) return {};
+    const cardLanguage = /^en(?:-|$)/iu.test(language ?? "") ? "en-US" : "zh-CN";
+    const [a, b, pa, pb] = values;
+    const problem = makeTenProblemOf(a, b);
+    const start = makeTenFreshCount(a, b);
+    const now = Number(state.get(lessonNumbers[MAKE_TEN_NUMBER.filled]) ?? start);
+    const filled = Number.isFinite(now) ? Math.min(MAKE_TEN_PLACES, Math.max(start, Math.floor(now + 1e-9))) : start;
+    const card = { problem, moved: filled - start };
+    return { facts: {
+      numbers: lessonNumbers,
+      pair: [a, b],
+      sum: a + b,
+      fills: { number: Math.max(a, b), frame: problem.big === 0 ? "first" : "second" },
+      gives: Math.min(a, b) === Math.max(a, b) ? b : Math.min(a, b),
+      to_make_ten: makeTenToTen(problem),
+      ones_left: problem.left,
+      in_bigger_frame_now: filled,
+      frames_now: [makeTenFrame(card, 0).count, makeTenFrame(card, 1).count],
+      ...filled < MAKE_TEN_PLACES ? { next: { value: filled + 1, does: makeTenNext(a, b, filled), says: makeTenStepSentences(problem, filled, filled + 1, cardLanguage) } } : { ten_made: true },
+      practice_pair: [pa, pb]
     } };
   },
   function_plot: ({ established }) => established && fixedLineSamples(established) ? { lead: { sample_slope: "constant" } } : {},
@@ -25825,14 +26599,14 @@ function lowerModelActionReferences(actionName, action, currentMoment, numberCou
   }
   return lowered;
 }
-function lowerIntegerDecimal(record7, prefix, path) {
-  const mantissa = record7[`${prefix}_mantissa`];
-  const scale2 = record7[`${prefix}_scale`];
+function lowerIntegerDecimal(record8, prefix, path) {
+  const mantissa = record8[`${prefix}_mantissa`];
+  const scale2 = record8[`${prefix}_scale`];
   if (!Number.isInteger(mantissa) || Math.abs(Number(mantissa)) > 1e12 || !Number.isInteger(scale2) || Number(scale2) < 0 || Number(scale2) > 12) {
     throw new LessonPlanError("LESSON_PLAN_MODEL_NUMBER", path, "expected bounded integer mantissa and scale from 0 to 12");
   }
-  delete record7[`${prefix}_mantissa`];
-  delete record7[`${prefix}_scale`];
+  delete record8[`${prefix}_mantissa`];
+  delete record8[`${prefix}_scale`];
   return Number(mantissa) / 10 ** Number(scale2);
 }
 function cardMovedNumbers(actions) {
@@ -25909,10 +26683,10 @@ function lowerModelActivityNumbers(activity, kind, path, outline, expectedSectio
       reachableValue = alternative;
       const formattedValue = Number(reachableValue.toPrecision(12));
       const label = definition.label?.trim() || lessonText(language, "\u6570\u503C");
-      const unit3 = definition.unit?.trim();
-      lowered.prompt = lessonText(language, "\u8BF7\u628A{{v0}}\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: formattedValue, v2: unit3 ? ` ${unit3}` : "" });
+      const unit4 = definition.unit?.trim();
+      lowered.prompt = lessonText(language, "\u8BF7\u628A{{v0}}\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: formattedValue, v2: unit4 ? ` ${unit4}` : "" });
       lowered.hints = [lessonText(language, "\u62D6\u52A8\u5DE6\u4E0B\u89D2\u7684\u6ED1\u6746\uFF0C\u89C2\u5BDF\u6570\u503C\u548C\u753B\u9762\u540C\u6B65\u53D8\u5316\u3002")];
-      lowered.success_message = lessonText(language, "\u5B8C\u6210\uFF0C{{v0}}\u5DF2\u7ECF\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: formattedValue, v2: unit3 ? ` ${unit3}` : "" });
+      lowered.success_message = lessonText(language, "\u5B8C\u6210\uFF0C{{v0}}\u5DF2\u7ECF\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: formattedValue, v2: unit4 ? ` ${unit4}` : "" });
     }
     const precision = 10 ** 12;
     lowered.value = Math.round(reachableValue * precision) / precision;
@@ -26068,14 +26842,14 @@ function reconcileBootstrapFirstSectionPositions(value2, outline) {
   return root2;
 }
 function lowerAnswerActivity(value2, card) {
-  const { prompt, answer, check, unit: unit3, simplest_fraction, hints } = value2;
-  const hasUnit = unit3 !== void 0 && !(typeof unit3 === "string" && !unit3.trim());
+  const { prompt, answer, check, unit: unit4, simplest_fraction, hints } = value2;
+  const hasUnit = unit4 !== void 0 && !(typeof unit4 === "string" && !unit4.trim());
   return {
     kind: "numeric_answer",
     prompt,
     answer,
     check,
-    ...hasUnit ? { unit: unit3 } : {},
+    ...hasUnit ? { unit: unit4 } : {},
     ...simplest_fraction !== void 0 ? { simplest_fraction } : {},
     hints,
     reference: structuredClone(card)
@@ -27687,8 +28461,8 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
 
 // src/raw-reply.ts
 var RAW_REPLY_PREFIX = "learning-coach: raw ";
-function frameRawReply(record7) {
-  return `${RAW_REPLY_PREFIX}${JSON.stringify(record7)}
+function frameRawReply(record8) {
+  return `${RAW_REPLY_PREFIX}${JSON.stringify(record8)}
 `;
 }
 function envelopeText(payload) {
@@ -27701,9 +28475,9 @@ function modelTextFromRawReply(line) {
   const rest = line.startsWith(RAW_REPLY_PREFIX) ? line.slice(RAW_REPLY_PREFIX.length) : line;
   if (rest.startsWith("{")) {
     try {
-      const record7 = JSON.parse(rest);
-      if (record7.kind === "content" && typeof record7.body === "string") return record7.body;
-      if (record7.kind === "payload") return envelopeText(record7.body);
+      const record8 = JSON.parse(rest);
+      if (record8.kind === "content" && typeof record8.body === "string") return record8.body;
+      if (record8.kind === "payload") return envelopeText(record8.body);
     } catch {
     }
   }
