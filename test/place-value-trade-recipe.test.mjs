@@ -498,8 +498,9 @@ test("a later section's card the outline gave too few numbers is withdrawn befor
 
 // Coach #181 review follow-ups. A create naming the card's first four numbers is bound to the fifth when every
 // outline number is the card's (the program supplied the fifth, or the outline holds exactly the card's five);
-// an outline number beyond the card's may be another picture's, and is never bound. The card's minimum is counted
-// on the numbers its own create names, so a create left with four goes at once, never retried for a fifth.
+// an outline number beyond the card's may be another picture's, and is never bound. A create left with four is
+// retried as before: the outline holds a fifth, so a retry can name it. Only an outline that holds too few loses
+// the card at once.
 const CARD_IN_SECTION_2 = `
   // Section 1 writes the sum; the card is planned for section 2, and section 2 creates it as section 1 would have.
   outline.course_visuals = [{ ...outline.course_visuals[0], use_sections: [2] }];
@@ -535,26 +536,27 @@ test("an outline of the card's five numbers: a create naming four is bound to th
   assert.match(later.lesson, /"kind":"place_value_trade"/u);
 });
 
-test("a create naming four numbers is not bound to an outline number beyond the card's: the card goes at once, with no retry", () => {
+test("a create naming four numbers is not bound to an outline number beyond the card's: the section is retried, and a retry naming five draws the card", () => {
   // The outline holds the card's five numbers and another picture's sixth; the create names four.
   const sixth = `outline.numbers.push({ initial: 3, min: 0, max: 10, label: "another picture's number" });`;
+  // Section 1: refused for the card's numbers (not withdrawn), and the retry (the section naming 1 to 5) draws it.
   const first = stubbedRun(`${sixth}
     for (const moment of first.moments) for (const create of moment.visual_creates ?? []) create.content.numbers = [1, 2, 3, 4];
   `);
-  // Section 1: a new outline is asked without the card.
-  assert.deepEqual(first.requests.map((request) => request.label), ["lesson-plan-bootstrap", "lesson-plan-outline"]);
-  assert.equal(first.error, "replacement outline asked");
-  assert.deepEqual(first.adjustments, [{ kind: "visual_removed", section: 1, capability: "place_value_trade", reason: "outline_numbers_missing" }]);
-  assert.ok(first.rejected.includes("LESSON_PLAN_OUTLINE_NUMBERS_MISSING"));
-  assert.equal(first.rejected.includes("LESSON_PLAN_CAPABILITY_PARAMETER"), false);
-  // A later section: the section that created the card with four is written once more, without it.
-  const later = stubbedRun(`${sixth} ${CARD_IN_SECTION_2}`);
+  assert.equal(first.error, undefined);
+  assert.deepEqual(first.requests.map((request) => [request.label, request.section]), [["lesson-plan-bootstrap", undefined], ["lesson-plan-section", 1], ["lesson-plan-section", 2]]);
+  assert.deepEqual([first.rejected, first.adjustments], [["LESSON_PLAN_CAPABILITY_PARAMETER"], []]);
+  assert.match(first.lesson, /"kind":"place_value_trade"/u);
+  // A later section the same way: its retry names five.
+  const later = stubbedRun(`${sixth} ${CARD_IN_SECTION_2}
+    const named = { ...structuredClone(card) };
+    named.course_visual_creates.visual_1.content.numbers = [1, 2, 3, 4, 5];
+    reply = (request) => JSON.stringify(request.attempt > 1 ? named : card);
+  `);
   assert.equal(later.error, undefined);
   assert.deepEqual(later.requests.map((request) => [request.label, request.section]), [["lesson-plan-bootstrap", undefined], ["lesson-plan-section", 2], ["lesson-plan-section", 2]]);
-  assert.deepEqual(later.adjustments, [{ kind: "visual_removed", section: 2, capability: "place_value_trade", reason: "outline_numbers_missing" }]);
-  assert.deepEqual(later.rejected, ["LESSON_PLAN_OUTLINE_NUMBERS_MISSING"]);
-  assert.match(later.requests[2].prompt.removed_picture, /column_add_subtract_trades.*do not mention it/u);
-  assert.doesNotMatch(later.lesson, /"kind":"place_value_trade"/u);
+  assert.deepEqual([later.rejected, later.adjustments], [["LESSON_PLAN_CAPABILITY_PARAMETER"], []]);
+  assert.match(later.lesson, /"kind":"place_value_trade"/u);
   assert.equal(later.numbers.at(-1).label, "another picture's number");
 });
 

@@ -26942,24 +26942,6 @@ function outlineNumbersMissing(outline, section) {
   }
   return void 0;
 }
-function createNumbersMissing(draft) {
-  for (const [momentIndex, moment] of draft.moments.entries()) {
-    for (const [actionIndex, action] of moment.actions.entries()) {
-      if (action.action !== "create" || action.kind !== "visual") continue;
-      const content = action.content;
-      const needed = recipeMinLessonNumbers(content.capability);
-      const own = new Set(content.numbers ?? []).size;
-      if (own >= needed) continue;
-      return new LessonPlanError(
-        OUTLINE_NUMBERS_MISSING,
-        `$lessonPlanSection${draft.section}.moments[${momentIndex}].actions[${actionIndex}].content.numbers`,
-        `the ${content.capability} visual starts on ${needed} lesson numbers of its own and its create names ${own}`,
-        content.capability
-      );
-    }
-  }
-  return void 0;
-}
 var OUTLINE_OWNED_FAULT = "LESSON_PLAN_OUTLINE_VISUAL";
 var isOutlineOwnedFault = (error) => error instanceof LessonPlanError && error.code === OUTLINE_OWNED_FAULT;
 var outlineCapabilities = (outline) => new Set((outline.course_visuals ?? []).map((visual) => visual.capability));
@@ -27503,22 +27485,6 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
     if (missing) await withdrawLaterSectionVisual(section, missing.capability, "outline_numbers_missing", missing.message);
     while (true) {
       candidate ??= await generateSection(section);
-      const createMissing = createNumbersMissing(candidate);
-      if (createMissing && section === 1) throw createMissing;
-      if (createMissing && await withdrawLaterSectionVisual(
-        section,
-        createMissing.capability,
-        "outline_numbers_missing",
-        createMissing.message,
-        async () => {
-          await options.on_rejected_part?.({ label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(createMissing) });
-        }
-      )) {
-        sectionErrors.delete(section);
-        sectionAttempts.set(section, Math.min(sectionAttempts.get(section) ?? 0, maxAttempts - 1));
-        candidate = void 0;
-        continue;
-      }
       await dropUncheckedAnswerActivities(candidate, section);
       drafts[section - 1] = candidate;
       let prefix;

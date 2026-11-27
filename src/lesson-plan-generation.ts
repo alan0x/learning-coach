@@ -2746,9 +2746,10 @@ export function supplyProgramNumbers(
 }
 
 /**
- * A card no section can draw: its recipe starts on more lesson numbers (`min_lesson_numbers`) than it has. Before
- * the section is written, the outline's count is the most the card could have; once a section creates the card,
- * the numbers that create names (with any the program bound to it) are the card's own, and they are counted.
+ * A card no section can draw: its recipe starts on more lesson numbers (`min_lesson_numbers`) than the outline
+ * holds, after the program supplied its own. Only then is a retry sure to fail (a section cannot add an outline
+ * number). An outline that holds enough keeps the normal retries: a create naming too few can be written again
+ * naming the right ones.
  */
 const OUTLINE_NUMBERS_MISSING = "LESSON_PLAN_OUTLINE_NUMBERS_MISSING";
 function outlineNumbersMissing(outline: LessonPlanOutline, section: number): LessonPlanError | undefined {
@@ -2758,20 +2759,6 @@ function outlineNumbersMissing(outline: LessonPlanOutline, section: number): Les
     if (visual.create_section !== section || declared >= needed) continue;
     return new LessonPlanError(OUTLINE_NUMBERS_MISSING, `$lessonPlanOutline.course_visuals[${index}]`,
       `the ${visual.capability} visual starts on ${needed} lesson numbers and the outline declares ${declared}; a section cannot add one`, visual.capability);
-  }
-  return undefined;
-}
-function createNumbersMissing(draft: LessonPlanSectionDraft): LessonPlanError | undefined {
-  for (const [momentIndex, moment] of draft.moments.entries()) {
-    for (const [actionIndex, action] of moment.actions.entries()) {
-      if (action.action !== "create" || action.kind !== "visual") continue;
-      const content = action.content as LessonPlanVisualContent;
-      const needed = recipeMinLessonNumbers(content.capability);
-      const own = new Set(content.numbers ?? []).size;
-      if (own >= needed) continue;
-      return new LessonPlanError(OUTLINE_NUMBERS_MISSING, `$lessonPlanSection${draft.section}.moments[${momentIndex}].actions[${actionIndex}].content.numbers`,
-        `the ${content.capability} visual starts on ${needed} lesson numbers of its own and its create names ${own}`, content.capability);
-    }
   }
   return undefined;
 }
@@ -3432,19 +3419,6 @@ export async function generateLessonPlanWithModel(
     if (missing) await withdrawLaterSectionVisual(section, missing.capability!, "outline_numbers_missing", missing.message);
     while (true) {
       candidate ??= await generateSection(section);
-      // A card whose create names too few lesson numbers of its own goes the same way, before it is compiled or
-      // retried; the later section is written once more without it.
-      const createMissing = createNumbersMissing(candidate);
-      if (createMissing && section === 1) throw createMissing;
-      if (createMissing && await withdrawLaterSectionVisual(
-        section, createMissing.capability!, "outline_numbers_missing", createMissing.message,
-        async () => { await options.on_rejected_part?.({ label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(createMissing) }); },
-      )) {
-        sectionErrors.delete(section);
-        sectionAttempts.set(section, Math.min(sectionAttempts.get(section) ?? 0, maxAttempts - 1));
-        candidate = undefined;
-        continue;
-      }
       await dropUncheckedAnswerActivities(candidate, section);
       drafts[section - 1] = candidate;
       let prefix: CompiledLessonPlan;
