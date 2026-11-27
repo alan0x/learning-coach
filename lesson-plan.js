@@ -26918,12 +26918,14 @@ function soleProgramNumberCard(outline, recipe = registryProgramNumbers) {
 function supplyProgramNumbers(outline, language, recipe = registryProgramNumbers) {
   const known = SUPPLIED_PROGRAM_NUMBERS.get(outline);
   if (known) return known;
-  const capability2 = soleProgramNumberCard(outline, recipe);
+  const sole = soleProgramNumberCard(outline, recipe);
+  const first = (outline.course_visuals ?? []).find((visual) => recipe(visual.capability).limit > 0)?.capability;
+  const capability2 = sole ?? (first !== void 0 && recipe(first).inputs.length > 0 ? first : void 0);
   if (capability2 === void 0) return void 0;
   const { inputs, limit } = recipe(capability2);
   const declared = outline.numbers ?? [];
   const missing = limit - declared.length;
-  if (declared.length === 0 || missing < 1 || missing > inputs.length) return void 0;
+  if (declared.length === 0 || missing < 1 || missing > inputs.length || !sole && missing !== inputs.length) return void 0;
   const supplied = programNumberDefinitions(inputs.slice(inputs.length - missing), declared, language);
   if (!supplied) return void 0;
   outline.numbers = [...declared, ...supplied];
@@ -27137,8 +27139,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       ),
       fixedRequestParts.length
     );
-    supplyProgramNumbers(outline, input.language);
-    programNumberCard = soleProgramNumberCard(outline);
+    programNumberCard = supplyProgramNumbers(outline, input.language)?.capability ?? soleProgramNumberCard(outline);
     for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
     try {
       checkOutlineVisuals(outline, excludedCapabilities);
@@ -27294,8 +27295,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   };
   const acceptOutline = async () => {
     if (!outline) throw outlineError;
-    supplyProgramNumbers(outline, input.language);
-    programNumberCard = soleProgramNumberCard(outline);
+    programNumberCard = supplyProgramNumbers(outline, input.language)?.capability ?? soleProgramNumberCard(outline);
     for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
     await options.on_outline_ready?.({
       sections: outline.sections.length,

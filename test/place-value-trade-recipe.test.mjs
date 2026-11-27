@@ -560,6 +560,24 @@ test("a create naming four numbers is not bound to an outline number beyond the 
   assert.equal(later.numbers.at(-1).label, "another picture's number");
 });
 
+test("PT-14's shape beside a later picture: the card's four numbers lead, the fifth is supplied and the card drawn; the picture sharing its number goes", () => {
+  // The card is the outline's first numbered picture, so its numbers lead; a place-value chart in section 2 shows
+  // lesson number 1, the card's. The card is the served question's picture: the chart is the one lost.
+  for (const refs of [[1, 2, 3, 4], [1, 2, 3, 4, 5]]) {
+    const result = stubbedRun(`
+      outline.numbers = outline.numbers.slice(0, 4);
+      for (const moment of first.moments) for (const create of moment.visual_creates ?? []) create.content.numbers = ${JSON.stringify(refs)};
+      outline.course_visuals.push({ required_features: ["place_value_parts"], use_sections: [2], relation: "supporting", related_visual: 1 });
+      const chart = { ...structuredClone(drafts[1]), course_visual_creates: { visual_2: { moment: 1, role: "supporting_visual", content: { parameters: { given: "name" }, numbers: [1] }, placement: { relation: "new_region" } } } };
+      reply = (request) => JSON.stringify(request.section === 2 && !JSON.parse(request.prompt).removed_picture ? chart : drafts[1]);
+    `);
+    assert.equal(result.error, undefined, String(refs));
+    assert.deepEqual(result.numbers.at(-1), { initial: 0, min: 0, max: 6, label: "columns finished" });
+    assert.deepEqual(result.adjustments, [{ kind: "visual_removed", section: 2, capability: "place_value_chart", reason: "visual_limits_after_retries" }]);
+    assert.match(result.lesson, /"kind":"place_value_trade"/u);
+  }
+});
+
 test("the card's most columns is OLL's own limit, not a number of Coach's", () => {
   const supplied = withTrial(`
     const api = await import(${here("../lesson-plan.js")});

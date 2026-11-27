@@ -121,20 +121,31 @@ test("a supplied number is checked as the outline's own, and its computed start 
   assert.equal(api.supplyProgramNumbers(fakeOutline(structuredClone(declared), "number_line")), undefined);
 });
 
-test("make ten beside another numbered picture: nothing is supplied, whichever place the other picture's number takes", () => {
+test("make ten beside another numbered picture: supplied only when its numbers lead and all its inputs are missing", () => {
   const recipe = fakeRecipe(MAKE_TEN_INPUTS, 6);
   const point = number(30, "number line point");
   const [a, b, pa, pb] = [number(8, "a"), number(5, "b"), number(7, "practice a"), number(6, "practice b")];
   // The card alone: it is the outline's only numbered picture, and its numbers are the outline's.
   assert.equal(api.soleProgramNumberCard(fakeOutline([a, b, pa, pb]), recipe), "fake_make_ten");
-  // [30 (number line), a, b, practice a]: read by position, filled would have started at 30.
-  // [a, b, practice a, practice b, number-line point]: the point would have been taken as filled.
-  for (const numbers of [[point, a, b, pa], [a, b, pa, pb, point]]) {
-    const outline = fakeOutline(structuredClone(numbers), "number_line", "fake_make_ten");
+  // Refused: [30 (number line), a, b, practice a], where read by position filled would start at 30; and
+  // [a, b, practice a, practice b, number-line point], where the point would be taken as filled, whichever picture
+  // comes first.
+  for (const [numbers, order] of [
+    [[point, a, b, pa], ["number_line", "fake_make_ten"]],
+    [[a, b, pa, pb, point], ["number_line", "fake_make_ten"]],
+    [[a, b, pa, pb, point], ["fake_make_ten", "number_line"]],
+    // The card's four numbers, but the number line comes first: its numbers would lead.
+    [[a, b, pa, pb], ["number_line", "fake_make_ten"]],
+  ]) {
+    const outline = fakeOutline(structuredClone(numbers), ...order);
     assert.equal(api.soleProgramNumberCard(outline, recipe), undefined);
-    assert.equal(api.supplyProgramNumbers(outline, "en-US", recipe), undefined);
+    assert.equal(api.supplyProgramNumbers(outline, "en-US", recipe), undefined, JSON.stringify([numbers.length, order]));
     assert.deepEqual(outline.numbers, numbers);
   }
+  // The card first, and the outline holding exactly its four: both inputs supplied after them (PT-14's shape).
+  const leading = fakeOutline(structuredClone([a, b, pa, pb]), "fake_make_ten", "number_line");
+  assert.deepEqual(api.supplyProgramNumbers(leading, "en-US", recipe), { capability: "fake_make_ten", first: 5, count: 2 });
+  assert.deepEqual(leading.numbers.slice(4).map(({ initial, label }) => [initial, label]), [[8, "filled"], [0, "moved"]]);
   // A picture that takes no lesson numbers beside the card leaves the card the only numbered one.
   const unnumbered = Object.entries(api.LESSON_PLAN_CAPABILITY_NUMBER_LIMITS).find(([, limit]) => limit === 0)?.[0];
   if (unnumbered) {
