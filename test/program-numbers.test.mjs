@@ -17,8 +17,12 @@ const COUNT_FROM_BIGGER = {
   max: ([first, second]) => first + second,
   label: "count so far",
 };
-const fakeOutline = (numbers, capability = "fake_make_ten") => ({ numbers, course_visuals: [{ capability, create_section: 1 }] });
-const fakeRecipe = (inputs, limit = 5) => (capability) => capability === "fake_make_ten" ? { inputs, limit } : { inputs: [], limit: 0 };
+const fakeOutline = (numbers, ...capabilities) => ({
+  numbers, course_visuals: (capabilities.length ? capabilities : ["fake_make_ten"]).map((capability) => ({ capability, create_section: 1 })),
+});
+// The fake card, beside the registry's own recipes (a number line takes lesson numbers).
+const fakeRecipe = (inputs, limit = 5) => (capability) => capability === "fake_make_ten"
+  ? { inputs, limit } : { inputs: [], limit: api.LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[capability] ?? 0 };
 
 test("a computed start: the number starts and ranges as the recipe computes from the card's other numbers", () => {
   const declared = [number(8, "first addend"), number(5, "second addend"), number(7, "practice first"), number(6, "practice second")];
@@ -46,7 +50,7 @@ const MAKE_TEN_INPUTS = [
 ];
 
 test("make ten's shape: both trailing numbers supplied, filled from the bigger addend; or only moved, after the model's own filled", () => {
-  const recipe = (capability) => capability === "fake_make_ten" ? { inputs: MAKE_TEN_INPUTS, limit: 6 } : { inputs: [], limit: 0 };
+  const recipe = fakeRecipe(MAKE_TEN_INPUTS, 6);
   const declared = [number(8, "a"), number(5, "b"), number(7, "practice a"), number(6, "practice b")];
   const shape = (numbers) => numbers.map(({ initial, min, max, label }) => [initial, min, max, label]);
   // Four declared: both supplied, numbers 5 and 6 (a create naming 1 to 4 is bound to both).
@@ -76,12 +80,15 @@ test("the trade card's columns finished is supplied as before: 0, from 0 to OLL'
   assert.equal(api.programNumberDefinitions(trade, declared, "zh-CN")[0].label, "做完了几列");
 });
 
-test("a supplied number is lowered and checked as the outline's own; one that fails is not supplied, and the outline is kept", () => {
+test("a supplied number is checked as the outline's own, and its computed start is never widened; one that fails is not supplied, and the outline is kept", () => {
   const declared = [number(8, "first addend"), number(5, "second addend"), number(7, "practice first"), number(6, "practice second")];
   const supplied = (input, numbers = declared) => api.programNumberDefinitions([{ ...COUNT_FROM_BIGGER, ...input }], numbers);
-  // As an outline's number: a start outside its range widens the range to it, and a range of one value is padded.
-  assert.deepEqual(supplied({ max: () => 7 }).map(({ min, max }) => [min, max]), [[7, 8]]);
-  assert.deepEqual(supplied({ max: ([first]) => first }).map(({ min, max }) => [min, max]), [[7, 9]]);
+  // Unlike a model's number, a start outside its computed range is refused, not widened (make ten's filled
+  // starting at 12 with its range to 10), and so is an empty range (not padded).
+  assert.equal(supplied({ initial: () => 12, min: 0, max: 10 }), undefined);
+  assert.equal(supplied({ max: () => 7 }), undefined);
+  assert.equal(supplied({ max: ([first]) => first }), undefined);
+  assert.equal(supplied({ min: () => 13 }), undefined);
   // Faults: a value that is not a finite number, a computation that throws, a label too long, more than 16 numbers,
   // a start written far outside a sane range (the outline's own scale check).
   assert.equal(supplied({ initial: () => Number.NaN }), undefined);
@@ -112,4 +119,26 @@ test("a supplied number is lowered and checked as the outline's own; one that fa
   assert.equal(failing.numbers.length, 4);
   // The registry's recipes: no default recipe supplies a number.
   assert.equal(api.supplyProgramNumbers(fakeOutline(structuredClone(declared), "number_line")), undefined);
+});
+
+test("make ten beside another numbered picture: nothing is supplied, whichever place the other picture's number takes", () => {
+  const recipe = fakeRecipe(MAKE_TEN_INPUTS, 6);
+  const point = number(30, "number line point");
+  const [a, b, pa, pb] = [number(8, "a"), number(5, "b"), number(7, "practice a"), number(6, "practice b")];
+  // The card alone: it is the outline's only numbered picture, and its numbers are the outline's.
+  assert.equal(api.soleProgramNumberCard(fakeOutline([a, b, pa, pb]), recipe), "fake_make_ten");
+  // [30 (number line), a, b, practice a]: read by position, filled would have started at 30.
+  // [a, b, practice a, practice b, number-line point]: the point would have been taken as filled.
+  for (const numbers of [[point, a, b, pa], [a, b, pa, pb, point]]) {
+    const outline = fakeOutline(structuredClone(numbers), "number_line", "fake_make_ten");
+    assert.equal(api.soleProgramNumberCard(outline, recipe), undefined);
+    assert.equal(api.supplyProgramNumbers(outline, "en-US", recipe), undefined);
+    assert.deepEqual(outline.numbers, numbers);
+  }
+  // A picture that takes no lesson numbers beside the card leaves the card the only numbered one.
+  const unnumbered = Object.entries(api.LESSON_PLAN_CAPABILITY_NUMBER_LIMITS).find(([, limit]) => limit === 0)?.[0];
+  if (unnumbered) {
+    const outline = fakeOutline(structuredClone([a, b, pa, pb]), unnumbered, "fake_make_ten");
+    assert.deepEqual(api.supplyProgramNumbers(outline, "en-US", recipe), { capability: "fake_make_ten", first: 5, count: 2 });
+  }
 });

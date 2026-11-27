@@ -649,7 +649,7 @@ function lowerModelBoardContent(
   value: unknown,
   numberCount: number,
   numberLabels: readonly string[] = [],
-  programNumbers?: ProgramNumberSupply,
+  programNumberCard?: string,
 ): unknown {
   if (typeof kind !== "string" || !value || typeof value !== "object" || Array.isArray(value)) return value;
   const content = value as Record<string, unknown>;
@@ -697,18 +697,16 @@ function lowerModelBoardContent(
   if (forceNoNumbers) validNumbers = [];
   const parameterNumbers = hooks?.numbers_from_parameters?.(parameters, { numberCount, limit: numberLimit }) ?? [];
   if (parameterNumbers.length > 0) validNumbers = parameterNumbers;
-  // A card with trailing numbers the program can supply (recipe `program_number_inputs`): a create naming only the
-  // numbers before them (1 to k, in any order) is bound to the rest. Bound when every outline number is the card's
-  // (the outline holds exactly the card's count, as the program leaves it after supplying, or as the model wrote
-  // them all); otherwise only to numbers the program itself supplied: an outline's number beyond the card's may be
-  // another picture's, and is never bound by this.
-  const programInputs = typeof capability === "string" ? recipeProgramNumbers(capability).length : 0;
+  // The outline's only numbered card, one with trailing numbers the program can supply (recipe
+  // `program_number_inputs`), in an outline that holds exactly the card's numbers: every outline number is the
+  // card's. A create naming exactly lesson numbers 1 to k, each once, where k is at least the card's count before
+  // its supplied inputs, gets the numbers after k appended, in order (the card reads its numbers in the order the
+  // create names them). In an outline with another numbered picture nothing is bound: its numbers may be anywhere.
+  const programInputs = programNumberCard !== undefined && programNumberCard === capability ? recipeProgramNumbers(capability).length : 0;
   const bindFrom = validNumbers.length + 1;
-  const bindable = numberCount === numberLimit && programInputs > 0
-    ? bindFrom > numberLimit - programInputs && bindFrom <= numberLimit
-    : programNumbers?.capability === capability && bindFrom === programNumbers.first
-      && programNumbers.first + programNumbers.count - 1 === numberCount;
-  if (bindable && !forceNoNumbers && validNumbers.every((number) => Number(number) < bindFrom)) {
+  if (programInputs > 0 && !forceNoNumbers && numberCount === numberLimit
+    && bindFrom > numberLimit - programInputs && bindFrom <= numberLimit
+    && validNumbers.every((number) => Number(number) < bindFrom)) {
     for (let number = bindFrom; number <= numberCount; number += 1) validNumbers.push(number);
   }
   if (!forceNoNumbers
@@ -1302,11 +1300,11 @@ function lowerModelActionReferences(
   currentMoment: number,
   numberCount: number,
   numberLabels: readonly string[] = [],
-  programNumbers?: ProgramNumberSupply,
+  programNumberCard?: string,
 ): Record<string, unknown> {
   const lowered = { ...action };
   if (actionName === "create" || actionName === "revise") {
-    lowered.content = lowerModelBoardContent(lowered.kind, lowered.content, numberCount, numberLabels, programNumbers);
+    lowered.content = lowerModelBoardContent(lowered.kind, lowered.content, numberCount, numberLabels, programNumberCard);
   }
   if (actionName === "create" && lowered.placement && typeof lowered.placement === "object"
     && !Array.isArray(lowered.placement)) {
@@ -1735,8 +1733,8 @@ function lowerModelSectionDraft(
   language?: string,
   /** Numbers of a card that moves them itself (the trading mat), drawn in sections already written. */
   earlierCardNumbers: ReadonlySet<number> = new Set(),
-  /** The numbers the program supplied to this outline for a card, which a create naming the card's others is bound to. */
-  programNumbers?: ProgramNumberSupply,
+  /** The accepted outline's only numbered card with numbers the program can supply (`soleProgramNumberCard`). */
+  programNumberCard?: string,
 ): LessonPlanSectionDraft {
   // Read before pruning, which copies the section: the program's revisions are keyed by the reconciled object.
   const programRevisions = value && typeof value === "object" ? PROGRAM_VISUAL_REVISIONS.get(value) : undefined;
@@ -2000,7 +1998,7 @@ function lowerModelSectionDraft(
               momentIndex + 1,
               outline.numbers?.length ?? 0,
               (outline.numbers ?? []).map((number) => number.label ?? ""),
-              programNumbers,
+              programNumberCard,
             ),
           },
         });
@@ -2032,7 +2030,7 @@ function lowerModelSectionDraft(
             momentIndex + 1,
             outline.numbers?.length ?? 0,
             (outline.numbers ?? []).map((number) => number.label ?? ""),
-            programNumbers,
+            programNumberCard,
           ),
         },
       });
@@ -2678,9 +2676,10 @@ export function withdrawSectionVisual(
 /**
  * The numbers a card's `program_number_inputs` give, after the numbers the outline declares for the card
  * (`declared`, in the card's number order): each start and range fixed or computed from the declared starting
- * values, then lowered and checked as the outline's own numbers are (range, slider step, label, at most 16 in
- * all). Undefined when a value cannot be computed or a number fails those checks: the program then supplies
- * nothing, and only the card can be lost (`min_lesson_numbers`), never the outline.
+ * values, then lowered and checked as the outline's own numbers are (slider step, label, at most 16 in all).
+ * Undefined when a value cannot be computed, a start lies outside its range or the range is empty (never widened,
+ * as a model's number is), or a number fails those checks: the program then supplies nothing, and only the card
+ * can be lost (`min_lesson_numbers`), never the outline.
  */
 export function programNumberDefinitions(
   inputs: ReadonlyArray<ProgramNumberInput>,
@@ -2690,8 +2689,12 @@ export function programNumberDefinitions(
   const values = declared.map((number) => number.initial);
   const resolve = (value: ProgramNumberValue) => typeof value === "function" ? value(values) : value;
   try {
-    const supplied = inputs.map(({ initial, min, max, label }, offset) => lowerModelOutlineNumber(
-      { initial: resolve(initial), min: resolve(min), max: resolve(max), label: lessonText(language, label) },
+    const resolved = inputs.map(({ initial, min, max, label }) => ({ initial: resolve(initial), min: resolve(min), max: resolve(max), label }));
+    // A program number is never widened or padded as a model's is: its start lies inside a range it computed.
+    if (!resolved.every(({ initial, min, max }) => [initial, min, max].every((value) => typeof value === "number" && Number.isFinite(value))
+      && min < max && initial >= min && initial <= max)) return undefined;
+    const supplied = resolved.map(({ initial, min, max, label }, offset) => lowerModelOutlineNumber(
+      { initial, min, max, label: lessonText(language, label) },
       declared.length + offset,
     ));
     validateLessonPlanNumbers([...declared, ...supplied], "$lessonPlanOutline.numbers");
@@ -2707,42 +2710,54 @@ export interface ProgramNumberSupply { capability: string; first: number; count:
 /** The numbers supplied to each outline, so supplying again to the same outline reports them and changes nothing. */
 const SUPPLIED_PROGRAM_NUMBERS = new WeakMap<LessonPlanOutline, ProgramNumberSupply>();
 
-const registryProgramNumbers = (capability: string) => ({
+/** A recipe's program-supplied inputs and its number count, as the registry declares them. */
+type ProgramNumberRecipe = (capability: string) => { inputs: ReadonlyArray<ProgramNumberInput>; limit: number };
+const registryProgramNumbers: ProgramNumberRecipe = (capability) => ({
   inputs: recipeProgramNumbers(capability),
   limit: LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[capability as keyof typeof LESSON_PLAN_CAPABILITY_NUMBER_LIMITS] ?? 0,
 });
 
 /**
- * Appends the numbers a chosen card's recipe supplies itself (`program_number_inputs`: the trade card's columns
- * finished, which always starts at 0) when the outline declares exactly the card's other numbers, or those and
- * the first of the supplied ones (then only the rest are appended), and returns which they are. An outline that
- * declares them all keeps its own; one that declares any other count is left alone. Either way the outline then
- * holds only the card's numbers, so a create of the card naming the first ones is bound to the rest. Supplying
- * again to an outline already prepared changes nothing and reports the same numbers. `recipe` reads a recipe's
- * inputs and number count (the registry's; a test passes its own).
+ * The outline's card with numbers the program can supply (`program_number_inputs`), when it is the outline's only
+ * numbered picture (no other course visual takes lesson numbers): only then are the outline's numbers the card's,
+ * in its own order. Undefined otherwise. Lesson numbers live on the outline and the card's create is written only
+ * after the outline is accepted, so the create's own references cannot place the card's numbers when they are
+ * supplied; a mixed outline gets nothing supplied and nothing bound.
+ */
+export function soleProgramNumberCard(outline: LessonPlanOutline, recipe: ProgramNumberRecipe = registryProgramNumbers): string | undefined {
+  const numbered = [...outlineCapabilities(outline)].filter((capability) => recipe(capability).limit > 0);
+  return numbered.length === 1 && recipe(numbered[0]!).inputs.length > 0 ? numbered[0] : undefined;
+}
+
+/**
+ * Appends the numbers the outline's only numbered card supplies itself (`program_number_inputs`: the trade card's
+ * columns finished, which always starts at 0) when the outline declares exactly the card's other numbers, or those
+ * and the first of the supplied ones (then only the rest are appended), and returns which they are. An outline
+ * that declares them all keeps its own; one that declares any other count, or has another numbered picture, is
+ * left alone. Supplying again to an outline already prepared changes nothing and reports the same numbers.
+ * `recipe` reads a recipe's inputs and number count (the registry's; a test passes its own).
  */
 export function supplyProgramNumbers(
   outline: LessonPlanOutline,
   language?: string,
-  recipe: (capability: string) => { inputs: ReadonlyArray<ProgramNumberInput>; limit: number } = registryProgramNumbers,
+  recipe: ProgramNumberRecipe = registryProgramNumbers,
 ): ProgramNumberSupply | undefined {
   const known = SUPPLIED_PROGRAM_NUMBERS.get(outline);
   if (known) return known;
-  for (const capability of outlineCapabilities(outline)) {
-    const { inputs, limit } = recipe(capability);
-    const declared = outline.numbers ?? [];
-    // The inputs the outline left out: every program input, or the last of them when the outline declared the
-    // card's numbers and the first of those (make ten's count filled, then the 0-start count moved).
-    const missing = limit - declared.length;
-    if (!inputs.length || declared.length === 0 || missing < 1 || missing > inputs.length) continue;
-    const supplied = programNumberDefinitions(inputs.slice(inputs.length - missing), declared, language);
-    if (!supplied) return undefined;
-    outline.numbers = [...declared, ...supplied];
-    const supply = { capability, first: declared.length + 1, count: supplied.length };
-    SUPPLIED_PROGRAM_NUMBERS.set(outline, supply);
-    return supply;
-  }
-  return undefined;
+  const capability = soleProgramNumberCard(outline, recipe);
+  if (capability === undefined) return undefined;
+  const { inputs, limit } = recipe(capability);
+  const declared = outline.numbers ?? [];
+  // The inputs the outline left out: every program input, or the last of them when the outline declared the card's
+  // numbers and the first of those (make ten's count filled, then the 0-start count moved).
+  const missing = limit - declared.length;
+  if (declared.length === 0 || missing < 1 || missing > inputs.length) return undefined;
+  const supplied = programNumberDefinitions(inputs.slice(inputs.length - missing), declared, language);
+  if (!supplied) return undefined;
+  outline.numbers = [...declared, ...supplied];
+  const supply = { capability, first: declared.length + 1, count: supplied.length };
+  SUPPLIED_PROGRAM_NUMBERS.set(outline, supply);
+  return supply;
 }
 
 /**
@@ -2843,9 +2858,9 @@ export async function generateLessonPlanWithModel(
   const admissionInput = input.input_modality === "voice" || input.input_modality === "text";
   let modelCalls = 0;
   let outline: LessonPlanOutline | undefined;
-  // The numbers the program supplied to the accepted outline for a card. Kept here, not on the outline: a
-  // withdrawal copies the outline (its numbers unchanged), and the outline's numbers take no other field.
-  let programNumbers: ProgramNumberSupply | undefined;
+  // The accepted outline's only numbered card with numbers the program can supply, read when the outline is
+  // accepted: a later withdrawal of another picture does not make its numbers the card's.
+  let programNumberCard: string | undefined;
   type ProgramAdjustment = Parameters<NonNullable<GenerateLessonPlanOptions["on_program_adjustment"]>>[0];
   const draftAdjustments = new WeakMap<LessonPlanSectionDraft, ProgramAdjustment[]>();
   const specializeDraft = (draft: LessonPlanSectionDraft, outline: LessonPlanOutline, accepted: readonly LessonPlanSectionDraft[]) => {
@@ -3003,7 +3018,8 @@ export async function generateLessonPlanWithModel(
       ),
       fixedRequestParts.length,
     );
-    programNumbers = supplyProgramNumbers(outline, input.language);
+    supplyProgramNumbers(outline, input.language);
+    programNumberCard = soleProgramNumberCard(outline);
     for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
     try {
       checkOutlineVisuals(outline, excludedCapabilities);
@@ -3023,7 +3039,7 @@ export async function generateLessonPlanWithModel(
         true,
         input.language,
         undefined,
-        programNumbers,
+        programNumberCard,
       );
       bootstrappedFirstSection = specializeDraft(firstSection, outline, []);
     } catch (error) {
@@ -3187,7 +3203,8 @@ export async function generateLessonPlanWithModel(
   // plugin preparation, the outline-ready report, and the check for content it cannot present.
   const acceptOutline = async (): Promise<LessonPlanGenerationResult | undefined> => {
     if (!outline) throw outlineError;
-    programNumbers = supplyProgramNumbers(outline, input.language);
+    supplyProgramNumbers(outline, input.language);
+    programNumberCard = soleProgramNumberCard(outline);
     for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
     await options.on_outline_ready?.({
       sections: outline.sections.length,
@@ -3348,7 +3365,7 @@ export async function generateLessonPlanWithModel(
         true,
         input.language,
         new Set(cardMovedNumbers(drafts.slice(0, section - 1).flatMap((draft) => draft.moments).flatMap((moment) => moment.actions))),
-        programNumbers,
+        programNumberCard,
       );
       specializeDraft(candidate, outline, drafts.slice(0, section - 1));
     } catch (error) {
