@@ -542,6 +542,9 @@ function resolveMetNumberTargets(plan: LessonPlan): void {
  * learner changes) is never copied: the card's own check refuses the other picture, as before. One copy per number.
  * The model never sees a copy: it keeps writing the outline's number.
  */
+/** The most lesson numbers an outline declares (`validateLessonPlanNumbers`): copies are numbered after them. */
+const MAX_OUTLINE_NUMBERS = 16;
+
 /** A copy `separateCardProblemNumbers` made: the outline's number, and whether the moves of it from `from` on are the copy's. */
 export interface CardNumberCopy { number: number; routed: boolean; from: readonly [number, number, number] }
 
@@ -579,6 +582,10 @@ export function separateCardProblemNumbers(plan: Pick<LessonPlan, "numbers" | "s
       if (held.picture === picture || copied.has(number) || (held.role !== "problem" && role !== "problem")) return;
       const definition = outlineDefinitions[number - 1];
       if (!definition) return;
+      // Copies are numbered after every number an outline can hold (16), never next to the outline's last: a later
+      // section may append outline numbers (a program's own, before it is written), and a published copy must keep its
+      // variable (review of #197, B2). The places in between are never declared (no picture uses them).
+      while (numbers.length < MAX_OUTLINE_NUMBERS) numbers.push({ initial: 0, min: 0, max: 1 });
       numbers.push(structuredClone(definition));
       const copy = numbers.length;
       copied.add(number);
@@ -619,6 +626,9 @@ export function separateCardProblemNumbers(plan: Pick<LessonPlan, "numbers" | "s
   }));
   return copyOf;
 }
+
+/** A move of a card's problem or practice number, which the card keeps as written (`wrong_number_moves`). */
+export const CARD_NUMBER_STAYS = "LESSON_PLAN_CARD_NUMBER_STAYS";
 
 export function compileLessonPlan(value: unknown, options: CompileLessonPlanOptions = {}): CompiledLessonPlan {
   const resolved = resolveLessonPlan(value, options);
@@ -746,10 +756,23 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
           fail("LESSON_PLAN_NUMBER_NOT_DRAWABLE", `${momentPath}.actions[${at.offset}].end_value`, result.refused.reason, capability);
         }
         // An animation the card leaves out (a number it never moves) is recorded, each at its own offset; the rest
-        // play, at the timing of the first that plays (review of #188).
+        // play, at the timing of the first that plays (review of #188). A recipe that declares `wrong_number_moves:
+        // "refused"` refuses a move of its problem or practice numbers instead, stating what the number is to the card
+        // and which number its demonstration moves: a move left out let the card sit still while the narration moved
+        // it (pilot 1, MT-13, 2026-11-27). Generation leaves the move out only once the section's repairs are spent.
+        const entry = LESSON_PLAN_CAPABILITY_REGISTRY[capability] as { wrong_number_moves?: string; card_name?: string; number_names?: readonly string[] };
         const left = new Set<number>();
         for (const ignored of result.ignored ?? []) {
           const at = ignored.index !== undefined ? animations[ignored.index]! : animations.find((animation) => animation.position === ignored.position)!;
+          const role = recipeNumberRole(capability, ignored.position);
+          if (entry.wrong_number_moves === "refused" && (role === "problem" || role === "practice")) {
+            const numbers = visual.mover!.numbers;
+            const demonstration = numbers.findIndex((_number, position) => recipeNumberRole(capability, position) === "demonstration");
+            const name = (position: number) => entry.number_names?.[position] ?? "number";
+            fail(CARD_NUMBER_STAYS, `${momentPath}.actions[${at.offset}].end_value`,
+              `lesson number ${numbers[ignored.position]} is the ${entry.card_name ?? capability}'s ${name(ignored.position)} ${plan.numbers?.[numbers[ignored.position]! - 1]?.initial}, which stays as written`
+                + (demonstration >= 0 ? `; the demonstration moves lesson number ${numbers[demonstration]}, the ${name(demonstration)}` : ""), capability);
+          }
           left.add(at.offset);
           viewAdjustments.push({ section: sectionIndex, reason: "animation_left_out", detail: `${momentPath}.actions[${at.offset}]: ${ignored.reason}; left out` });
         }

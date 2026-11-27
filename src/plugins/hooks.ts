@@ -107,6 +107,11 @@ export interface DraftSpecializationContext {
 export interface PluginHooks {
   /** Adjusts the accepted outline for the request. */
   prepare_outline?(outline: LessonPlanOutline, context: { request: string; language?: string }): void;
+  /**
+   * Adjusts the outline in place before `section` is written, once the sections before it are accepted: lesson numbers
+   * appended then are new to the lesson (a later part adds them; no published variable changes).
+   */
+  prepare_section?(outline: LessonPlanOutline, section: number, context: { language?: string }): void;
   /** Adjusts a section draft for the request, before it is compiled. */
   specialize_draft?(draft: LessonPlanSectionDraft, context: DraftSpecializationContext): void;
   /** Normalizes the resolved plan before compiling. Runs for every plugin before any check_plan. */

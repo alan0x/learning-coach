@@ -18655,7 +18655,7 @@ var SIDE_COUNT = { min: 3, max: 384 };
 var UNIT_SQUARES_PER_SIDE = { min: 1, max: 8 };
 var SCENE_FIRST_CAMERA = { yaw: 0.72, pitch: 0.55, zoom: 1 };
 var PLACE_VALUE_CHART_GUIDANCE_HEAD = "\u6570\u4F4D\u8868\uFF1A\u7167\u8BFB\u6CD5\u3001\u5C55\u5F00\u5F0F\u6216\u6BCF\u4E00\u4F4D\u6709\u51E0\u4E2A\u6446\u51FA\u4E00\u4E2A\u6570\uFF0C\u6216\u628A\u4E00\u4E2A\u6570\u6309\u6570\u4F4D\u4E00\u4F4D\u4E00\u4F4D\u62C6\u5F00\uFF08\u5230\u767E\u4E07\u4F4D\u548C\u5343\u5206\u4F4D\uFF09\u3002\u4E0D\u7528\u4E8E\u6BD4\u8F83\u4E24\u4E2A\u6570\u3001\u5341\u4E2A\u8FD9\u4E00\u4F4D\u662F\u5DE6\u8FB9\u4E00\u4F4D\u7684\u4E00\u4E2A\u3001\u5728\u8868\u4E0A\u52A0\u51CF\u3001\u51D1\u6574";
-var PLACE_VALUE_CHART_GUIDANCE_TAIL = "\uFF0C\u4E5F\u4E0D\u7528\u4E8E\u4F4E\u5E74\u7EA7\u7684\u5341\u4E2A\u4E00\u6362\u4E00\u4E2A\u5341\uFF08\u7528\u65B9\u5757\uFF09\u3002\u6570\u503C\u4F9D\u6B21\u662F\u9898\u76EE\u7684\u6570\u548C\u7EC3\u4E60\u7684\u6570\uFF08\u53E6\u4E00\u4E2A\u6570\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u514D\u5F97\u5B69\u5B50\u7167\u6284\u6F14\u793A\uFF09\uFF0C\u6570\u503C\u5199\u8FD9\u4E2A\u6570\u672C\u8EAB\uFF08\u5982 0.309\uFF09\uFF0C\u4E0D\u5199 0\uFF1A\u8868\u4E00\u5F00\u59CB\u662F\u7A7A\u7684\uFF0C\u7531\u7A0B\u5E8F\u6446\uFF0C\u5199\u5B9E\u9645\u5927\u5C0F\uFF0826.075\uFF09\uFF0C\u6700\u591A\u4E09\u4F4D\u5C0F\u6570\u3002given \u662F\u5361\u7247\u4E0A\u7ED9\u51FA\u7684\uFF1A\u6446\u6570\u5199 name\uFF08\u8BFB\u6CD5\uFF09\u3001expanded\uFF08\u503C\u7684\u548C\uFF0C\u5982 4,000 + 50\uFF09\u3001expanded_factors\uFF08\u5982 4 \xD7 1,000 + 5 \xD7 10\uFF09\u6216 place_counts\uFF08\u5982 8\u4E2A\u5343\u30016\u4E2A\u5341\u548C3\u4E2A\u4E00\uFF09\uFF1B\u62C6\u6570\u5199 numeral\uFF0C\u62C6\u7684\u6570\u6709\u5C0F\u6570\u65F6\u6574\u6570\u90E8\u5206\u82F1\u6587\u8BFE\u4E0D\u8D85\u8FC7\u4E09\u4F4D\u3001\u4E2D\u6587\u8BFE\u4E0D\u8D85\u8FC7\u56DB\u4F4D\u3002\u53EA\u6709\u4E00\u4F4D\u4E0D\u662F\u96F6\u7684\u6570\uFF084000\u30010.05\uFF09\u4E0D\u7528 expanded\uFF0C\u4E5F\u4E0D\u62C6\u3002\u5E26\u4E58\u53F7\u7684\u5C0F\u6570\u5199\u6CD5\uFF083 \xD7 (1/10)\uFF09\u53EA\u7528\u4E8E\u82F1\u6587\u4E94\u5E74\u7EA7\u7684\u5C0F\u6570\u9898\u6216\u9898\u76EE\u81EA\u5DF1\u8FD9\u6837\u5199\uFF1B\u4E2D\u6587\u8BFE\u7528 place_counts\uFF083\u4E2A0.1\u30019\u4E2A0.01\u548C2\u4E2A0.001\uFF09\u6216\u503C\u7684\u548C\uFF080.3 + 0.09 + 0.002\uFF09\u3002\u5361\u7247\u4E0A\u7684\u8BFB\u6CD5\u3001\u5C55\u5F00\u5F0F\u548C\u6570\u5B57\u90FD\u7531\u7A0B\u5E8F\u5199\u3002\u6446\u6570\u6F14\u793A\u65F6\u628A\u9898\u76EE\u7684\u6570\u52A8\u753B\u5230\u8868\u4E0A\u73B0\u5728\u7684\u503C\uFF1A\u4ECE 0 \u8D77\uFF0C\u6BCF\u4E00\u6B65\u6446\u4E0A\u4E00\u4F4D\u6216\u51E0\u4F4D\uFF0C\u901A\u5E38\u4ECE\u6700\u9AD8\u4F4D\u8D77\uFF0860408\uFF1A\u5148\u5230 60000\uFF0C\u518D\u5230 60400\uFF0C\u6700\u540E 60408\uFF09\uFF1B\u540E\u9762\u7684\u8282\u518D\u5199\u8FD9\u4E2A\u6570\uFF0C\u8868\u4E0D\u53D8\u3002\u62C6\u6570\u6F14\u793A\u65F6\u628A\u9898\u76EE\u7684\u6570\u52A8\u753B\u5230\u8868\u4E0A\u8FD8\u5269\u7684\uFF1A\u6BCF\u4E00\u6B65\u62FF\u51FA\u4E00\u4F4D\u6216\u51E0\u4F4D\uFF0C\u5982 60408 \u5148\u5230 408\uFF0C\u518D\u5230 8\uFF0C\u6700\u540E\u5230 0\u3002\u7EC3\u4E60\uFF1A\u5BF9\u9898\u76EE\u7684\u6570\u5199\u4E00\u4E2A\u6570\u503C\u76EE\u6807\u9898\uFF08\u6570\u503C\u5199\u7EC3\u4E60\u7684\u6570\uFF09\uFF0C\u5B69\u5B50\u5728\u8868\u4E0A\u6446\u51FA\u6216\u62C6\u5F00\u7EC3\u4E60\u7684\u6570\uFF1B\u6446\u6570\u9898\u7684\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u6570\uFF08\u5361\u7247\u4E0A\u5DF2\u7ECF\u7ED9\u51FA\u5B83\u7684\u8BFB\u6CD5\u6216\u5C55\u5F00\u5F0F\uFF09\uFF1B\u62C6\u5B8C\u4EE5\u540E\u7A0B\u5E8F\u51FA\u4E00\u884C\u7A7A\uFF0C\u5199\u6BCF\u4E00\u90E8\u5206\u662F\u591A\u5C11\u3002\u8BF4\u6570\u4F4D\u7528\u540D\u5B57\uFF08\u5343\u4F4D\u3001\u5341\u5206\u4F4D\u3001hundreds\uFF09\uFF0C\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247";
+var PLACE_VALUE_CHART_GUIDANCE_TAIL = "\uFF0C\u4E5F\u4E0D\u7528\u4E8E\u4F4E\u5E74\u7EA7\u7684\u5341\u4E2A\u4E00\u6362\u4E00\u4E2A\u5341\uFF08\u7528\u65B9\u5757\uFF09\u3002\u6570\u503C\u4F9D\u6B21\u662F\u9898\u76EE\u7684\u6570\u548C\u7EC3\u4E60\u7684\u6570\uFF08\u53E6\u4E00\u4E2A\u6570\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u514D\u5F97\u5B69\u5B50\u7167\u6284\u6F14\u793A\uFF09\uFF0C\u6570\u503C\u5199\u8FD9\u4E2A\u6570\u672C\u8EAB\uFF08\u5982 0.309\uFF09\uFF0C\u4E0D\u5199 0\uFF1A\u8868\u4E00\u5F00\u59CB\u662F\u7A7A\u7684\uFF0C\u7531\u7A0B\u5E8F\u6446\uFF0C\u5199\u5B9E\u9645\u5927\u5C0F\uFF0826.075\uFF09\uFF0C\u6700\u591A\u4E09\u4F4D\u5C0F\u6570\u3002given \u662F\u5361\u7247\u4E0A\u7ED9\u51FA\u7684\uFF1A\u6446\u6570\u5199 name\uFF08\u8BFB\u6CD5\uFF09\u3001expanded\uFF08\u503C\u7684\u548C\uFF0C\u5982 4,000 + 50\uFF09\u3001expanded_factors\uFF08\u5982 4 \xD7 1,000 + 5 \xD7 10\uFF09\u6216 place_counts\uFF08\u5982 8\u4E2A\u5343\u30016\u4E2A\u5341\u548C3\u4E2A\u4E00\uFF09\uFF1B\u62C6\u6570\u5199 numeral\uFF0C\u62C6\u7684\u6570\u6709\u5C0F\u6570\u65F6\u6574\u6570\u90E8\u5206\u82F1\u6587\u8BFE\u4E0D\u8D85\u8FC7\u4E09\u4F4D\u3001\u4E2D\u6587\u8BFE\u4E0D\u8D85\u8FC7\u56DB\u4F4D\u3002\u53EA\u6709\u4E00\u4F4D\u4E0D\u662F\u96F6\u7684\u6570\uFF084000\u30010.05\uFF09\u4E0D\u7528 expanded\uFF0C\u4E5F\u4E0D\u62C6\u3002\u5E26\u4E58\u53F7\u7684\u5C0F\u6570\u5199\u6CD5\uFF083 \xD7 (1/10)\uFF09\u53EA\u7528\u4E8E\u82F1\u6587\u4E94\u5E74\u7EA7\u7684\u5C0F\u6570\u9898\u6216\u9898\u76EE\u81EA\u5DF1\u8FD9\u6837\u5199\uFF1B\u4E2D\u6587\u8BFE\u7528 place_counts\uFF083\u4E2A0.1\u30019\u4E2A0.01\u548C2\u4E2A0.001\uFF09\u6216\u503C\u7684\u548C\uFF080.3 + 0.09 + 0.002\uFF09\u3002\u5361\u7247\u4E0A\u7684\u8BFB\u6CD5\u3001\u5C55\u5F00\u5F0F\u548C\u6570\u5B57\u90FD\u7531\u7A0B\u5E8F\u5199\u3002\u6446\u6570\u6F14\u793A\u65F6\u628A\u9898\u76EE\u7684\u6570\u52A8\u753B\u5230\u8868\u4E0A\u73B0\u5728\u7684\u503C\uFF1A\u4ECE 0 \u8D77\uFF0C\u6BCF\u4E00\u6B65\u6446\u4E0A\u4E00\u4F4D\u6216\u51E0\u4F4D\uFF0C\u901A\u5E38\u4ECE\u6700\u9AD8\u4F4D\u8D77\uFF0860408\uFF1A\u5148\u5230 60000\uFF0C\u518D\u5230 60400\uFF0C\u6700\u540E 60408\uFF09\uFF1B\u540E\u9762\u7684\u8282\u518D\u5199\u8FD9\u4E2A\u6570\uFF0C\u8868\u4E0D\u53D8\u3002\u62C6\u6570\u6F14\u793A\u65F6\u628A\u9898\u76EE\u7684\u6570\u52A8\u753B\u5230\u8868\u4E0A\u8FD8\u5269\u7684\uFF1A\u6BCF\u4E00\u6B65\u62FF\u51FA\u4E00\u4F4D\u6216\u51E0\u4F4D\uFF0C\u5982 60408 \u5148\u5230 408\uFF0C\u518D\u5230 8\uFF0C\u6700\u540E\u5230 0\u3002\u7EC3\u4E60\u7684\u6570\u662F\u5B69\u5B50\u8BFE\u540E\u81EA\u5DF1\u505A\u7684\uFF1A\u8BFE\u4E0A\u53EF\u4EE5\u8BF4\u201C\u8BFE\u540E\u8BD5\u8BD5\u2026\u2026\u201D\uFF0C\u4F46\u4E0D\u8BB2\u5B83\u600E\u4E48\u505A\u3001\u4E0D\u5199\u51FA\u5B83\u7684\u7B97\u5F0F\u3001\u4E0D\u8BF4\u5B83\u7684\u7B54\u6848\uFF0Coutline \u4E5F\u4E0D\u4E3A\u5B83\u5B89\u6392\u4E00\u8282\u3002\u7EC3\u4E60\uFF1A\u5BF9\u9898\u76EE\u7684\u6570\u5199\u4E00\u4E2A\u6570\u503C\u76EE\u6807\u9898\uFF08\u6570\u503C\u5199\u7EC3\u4E60\u7684\u6570\uFF09\uFF0C\u5B69\u5B50\u5728\u8868\u4E0A\u6446\u51FA\u6216\u62C6\u5F00\u7EC3\u4E60\u7684\u6570\uFF1B\u6446\u6570\u9898\u7684\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u6570\uFF08\u5361\u7247\u4E0A\u5DF2\u7ECF\u7ED9\u51FA\u5B83\u7684\u8BFB\u6CD5\u6216\u5C55\u5F00\u5F0F\uFF09\uFF1B\u62C6\u5B8C\u4EE5\u540E\u7A0B\u5E8F\u51FA\u4E00\u884C\u7A7A\uFF0C\u5199\u6BCF\u4E00\u90E8\u5206\u662F\u591A\u5C11\u3002\u8BF4\u6570\u4F4D\u7528\u540D\u5B57\uFF08\u5343\u4F4D\u3001\u5341\u5206\u4F4D\u3001hundreds\uFF09\uFF0C\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247";
 var MATH_RECIPES = {
   function_plot: {
     parts: ["whole", "primary_curve", "moving_point", "primary_control"],
@@ -18866,6 +18866,11 @@ var MATH_RECIPES = {
     number_inputs: ["first", "second", "practice_first", "practice_second", "columns_finished"],
     // The pair is the problem, which the card only reads: another picture may show it on a copy of its own.
     number_roles: ["problem", "problem", "practice", "practice", "demonstration"],
+    // A move of the pair or the practice pair is refused with what the number is to the card (pilot 1, 2026-11-27: a move
+    // left out let a card sit still under narration that moved it); left out only once the section's repairs are spent.
+    wrong_number_moves: "refused",
+    card_name: "place-value trade card",
+    number_names: ["first number", "second number", "practice first number", "practice second number", "columns finished"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
     // Columns finished starts at 0 whatever the outline holds (the card is drawn with no column done), so the
     // program supplies it: an outline that declares only the four numbers before it gets it (0, from 0 to the
@@ -18886,7 +18891,7 @@ var MATH_RECIPES = {
     // fixed text says how it is used.
     student_controls: [],
     required_features: ["column_add_subtract_trades"],
-    model_guidance: "\u6570\u4F4D\u8868\u52A0\u51CF\uFF08\u7AD6\u5F0F\uFF0C\u8FDB\u4F4D\u3001\u9000\u4F4D\u5C31\u662F\u4EA4\u6362\uFF09\uFF1A\u591A\u4F4D\u6570\u52A0\u51CF\uFF08\u5230\u5341\u4E07\u4F4D\uFF09\u548C\u5C0F\u6570\u52A0\u51CF\uFF08\u5230\u767E\u5206\u4F4D\uFF09\uFF0C\u81F3\u5C11\u6709\u4E00\u4F4D\u8981\u8FDB\u4F4D\u6216\u9000\u4F4D\uFF0C\u6700\u591A\u516D\u5217\uFF08\u4ECE\u4E24\u4E2A\u6570\u6700\u4F4E\u7684\u4E00\u4F4D\u5230\u4E24\u4E2A\u6570\u548C\u5F97\u6570\u6700\u9AD8\u7684\u4E00\u4F4D\uFF09\u3002\u4E0D\u7528\u4E8E\u6446\u6570\u3001\u62C6\u6570\u3001\u6BD4\u8F83\u3001\u51D1\u6574\u3001\u4E58\u6CD5\uFF0C\u4E5F\u4E0D\u7528\u4E8E\u4F4E\u5E74\u7EA7\u7684\u51D1\u5341\uFF08\u7528\u65B9\u5757\uFF09\u3002operation \u5199 add \u6216 subtract\u3002outline \u7684 numbers \u4F9D\u6B21\u5199\u8FD9\u4E94\u4E2A\u6570\uFF08\u4E0D\u52A8\u7684\u4E5F\u8981\u5199\uFF09\uFF1A\u7B2C\u4E00\u4E2A\u6570\u3001\u7B2C\u4E8C\u4E2A\u6570\uFF08\u51CF\u6CD5\u7B2C\u4E00\u4E2A\u6570\u4E0D\u5C0F\u4E8E\u7B2C\u4E8C\u4E2A\u6570\uFF09\u3001\u7EC3\u4E60\u7684\u7B2C\u4E00\u4E2A\u6570\u3001\u7EC3\u4E60\u7684\u7B2C\u4E8C\u4E2A\u6570\u3001\u505A\u5B8C\u4E86\u51E0\u5217\u3002\u6570\u503C\u5199\u5B9E\u9645\u5927\u5C0F\uFF082.75\uFF09\uFF0C\u6700\u591A\u4E24\u4F4D\u5C0F\u6570\u3002\u7EC3\u4E60\u7684\u4E00\u5BF9\u662F\u53E6\u4E00\u5BF9\uFF08\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u514D\u5F97\u5B69\u5B50\u7167\u6284\u6F14\u793A\uFF09\uFF0C\u4E5F\u8981\u8FDB\u4F4D\u6216\u9000\u4F4D\uFF0C\u5217\u548C\u9898\u76EE\u7684\u4E00\u6837\uFF08\u540C\u6837\u591A\u7684\u6574\u6570\u4F4D\u548C\u5C0F\u6570\u4F4D\uFF0C\u9898\u76EE\u7684\u5F97\u6570\u591A\u51FA\u4E00\u4F4D\u65F6\u7EC3\u4E60\u7684\u4E5F\u591A\u51FA\u4E00\u4F4D\uFF09\u3002\u505A\u5B8C\u4E86\u51E0\u5217\u4ECE\u6700\u53F3\u8FB9\u4E00\u5217\u6570\u8D77\uFF0C\u5199 0\uFF1A\u8868\u4E00\u5F00\u59CB\u4E00\u5217\u4E5F\u6CA1\u6709\u505A\u3002\u6F14\u793A\u65F6\u628A\u5B83\u52A8\u753B\u5230 1\u30012\u2026\u2026\uFF1A\u6BCF\u5230\u4E00\u4E2A\u503C\uFF0C\u7A0B\u5E8F\u6309\u89C4\u5219\u505A\u5B8C\u53F3\u8FB9\u53C8\u4E00\u5217\uFF08\u5408\u8D77\u6765\u3001\u6EE1\u5341\u6362\u4E00\u3001\u4E0D\u591F\u62C6\u4E00\uFF09\uFF0C\u53EA\u5F80\u524D\u8D70\uFF0C\u540C\u4E00\u4E2A\u503C\u518D\u5199\u8868\u4E0D\u53D8\uFF1B\u6F14\u793A\u505A\u5B8C\u6BCF\u4E00\u5217\uFF0C\u4E00\u76F4\u5230\u5F97\u6570\uFF08\u6700\u540E\u4E00\u4E2A\u503C\u662F\u5217\u6570\uFF09\u3002\u4E24\u4E2A\u6570\u548C\u7EC3\u4E60\u7684\u6570\u4E0D\u52A8\u753B\u3002\u7EC3\u4E60\uFF1A\u5BF9\u505A\u5B8C\u4E86\u51E0\u5217\u5199\u4E00\u4E2A\u6570\u503C\u76EE\u6807\u9898\uFF08\u6570\u503C\u5199\u5217\u6570\uFF09\uFF0C\u5B69\u5B50\u5728\u8868\u4E0A\u505A\u5B8C\u7EC3\u4E60\u7684\u4E00\u5BF9\uFF0C\u7A0B\u5E8F\u518D\u81EA\u5DF1\u95EE\u5F97\u6570\uFF0C\u4E0D\u53E6\u51FA\u95EE\u8FD9\u4E00\u5BF9\u5F97\u6570\u7684\u586B\u6570\u9898\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u5F97\u6570\u3002\u8868\u4E0A\u7684\u6570\u3001\u5706\u7247\u548C\u64CD\u4F5C\u8BF4\u660E\u90FD\u7531\u5361\u7247\u81EA\u5DF1\u5199\uFF1B\u8BF4\u6570\u4F4D\u7528\u540D\u5B57\uFF08\u4E2A\u4F4D\u3001\u5341\u5206\u4F4D\u3001hundreds\uFF09\uFF0C\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
+    model_guidance: "\u6570\u4F4D\u8868\u52A0\u51CF\uFF08\u7AD6\u5F0F\uFF0C\u8FDB\u4F4D\u3001\u9000\u4F4D\u5C31\u662F\u4EA4\u6362\uFF09\uFF1A\u591A\u4F4D\u6570\u52A0\u51CF\uFF08\u5230\u5341\u4E07\u4F4D\uFF09\u548C\u5C0F\u6570\u52A0\u51CF\uFF08\u5230\u767E\u5206\u4F4D\uFF09\uFF0C\u81F3\u5C11\u6709\u4E00\u4F4D\u8981\u8FDB\u4F4D\u6216\u9000\u4F4D\uFF0C\u6700\u591A\u516D\u5217\uFF08\u4ECE\u4E24\u4E2A\u6570\u6700\u4F4E\u7684\u4E00\u4F4D\u5230\u4E24\u4E2A\u6570\u548C\u5F97\u6570\u6700\u9AD8\u7684\u4E00\u4F4D\uFF09\u3002\u4E0D\u7528\u4E8E\u6446\u6570\u3001\u62C6\u6570\u3001\u6BD4\u8F83\u3001\u51D1\u6574\u3001\u4E58\u6CD5\uFF0C\u4E5F\u4E0D\u7528\u4E8E\u4F4E\u5E74\u7EA7\u7684\u51D1\u5341\uFF08\u7528\u65B9\u5757\uFF09\u3002operation \u5199 add \u6216 subtract\u3002outline \u7684 numbers \u4F9D\u6B21\u5199\u8FD9\u4E94\u4E2A\u6570\uFF08\u4E0D\u52A8\u7684\u4E5F\u8981\u5199\uFF09\uFF1A\u7B2C\u4E00\u4E2A\u6570\u3001\u7B2C\u4E8C\u4E2A\u6570\uFF08\u51CF\u6CD5\u7B2C\u4E00\u4E2A\u6570\u4E0D\u5C0F\u4E8E\u7B2C\u4E8C\u4E2A\u6570\uFF09\u3001\u7EC3\u4E60\u7684\u7B2C\u4E00\u4E2A\u6570\u3001\u7EC3\u4E60\u7684\u7B2C\u4E8C\u4E2A\u6570\u3001\u505A\u5B8C\u4E86\u51E0\u5217\u3002\u6570\u503C\u5199\u5B9E\u9645\u5927\u5C0F\uFF082.75\uFF09\uFF0C\u6700\u591A\u4E24\u4F4D\u5C0F\u6570\u3002\u7EC3\u4E60\u7684\u4E00\u5BF9\u662F\u53E6\u4E00\u5BF9\uFF08\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u514D\u5F97\u5B69\u5B50\u7167\u6284\u6F14\u793A\uFF09\uFF0C\u4E5F\u8981\u8FDB\u4F4D\u6216\u9000\u4F4D\uFF0C\u5217\u548C\u9898\u76EE\u7684\u4E00\u6837\uFF08\u540C\u6837\u591A\u7684\u6574\u6570\u4F4D\u548C\u5C0F\u6570\u4F4D\uFF0C\u9898\u76EE\u7684\u5F97\u6570\u591A\u51FA\u4E00\u4F4D\u65F6\u7EC3\u4E60\u7684\u4E5F\u591A\u51FA\u4E00\u4F4D\uFF09\u3002\u505A\u5B8C\u4E86\u51E0\u5217\u4ECE\u6700\u53F3\u8FB9\u4E00\u5217\u6570\u8D77\uFF0C\u5199 0\uFF1A\u8868\u4E00\u5F00\u59CB\u4E00\u5217\u4E5F\u6CA1\u6709\u505A\u3002\u6F14\u793A\u65F6\u628A\u5B83\u52A8\u753B\u5230 1\u30012\u2026\u2026\uFF1A\u6BCF\u5230\u4E00\u4E2A\u503C\uFF0C\u7A0B\u5E8F\u6309\u89C4\u5219\u505A\u5B8C\u53F3\u8FB9\u53C8\u4E00\u5217\uFF08\u5408\u8D77\u6765\u3001\u6EE1\u5341\u6362\u4E00\u3001\u4E0D\u591F\u62C6\u4E00\uFF09\uFF0C\u53EA\u5F80\u524D\u8D70\uFF0C\u540C\u4E00\u4E2A\u503C\u518D\u5199\u8868\u4E0D\u53D8\uFF1B\u6F14\u793A\u505A\u5B8C\u6BCF\u4E00\u5217\uFF0C\u4E00\u76F4\u5230\u5F97\u6570\uFF08\u6700\u540E\u4E00\u4E2A\u503C\u662F\u5217\u6570\uFF09\u3002\u4E24\u4E2A\u6570\u548C\u7EC3\u4E60\u7684\u6570\u4E0D\u52A8\u753B\u3002\u7EC3\u4E60\u7684\u6570\u662F\u5B69\u5B50\u8BFE\u540E\u81EA\u5DF1\u505A\u7684\uFF1A\u8BFE\u4E0A\u53EF\u4EE5\u8BF4\u201C\u8BFE\u540E\u8BD5\u8BD5\u2026\u2026\u201D\uFF0C\u4F46\u4E0D\u8BB2\u5B83\u600E\u4E48\u505A\u3001\u4E0D\u5199\u51FA\u5B83\u7684\u7B97\u5F0F\u3001\u4E0D\u8BF4\u5B83\u7684\u7B54\u6848\uFF0Coutline \u4E5F\u4E0D\u4E3A\u5B83\u5B89\u6392\u4E00\u8282\u3002\u7EC3\u4E60\uFF1A\u5BF9\u505A\u5B8C\u4E86\u51E0\u5217\u5199\u4E00\u4E2A\u6570\u503C\u76EE\u6807\u9898\uFF08\u6570\u503C\u5199\u5217\u6570\uFF09\uFF0C\u5B69\u5B50\u5728\u8868\u4E0A\u505A\u5B8C\u7EC3\u4E60\u7684\u4E00\u5BF9\uFF0C\u7A0B\u5E8F\u518D\u81EA\u5DF1\u95EE\u5F97\u6570\uFF0C\u4E0D\u53E6\u51FA\u95EE\u8FD9\u4E00\u5BF9\u5F97\u6570\u7684\u586B\u6570\u9898\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u5F97\u6570\u3002\u8868\u4E0A\u7684\u6570\u3001\u5706\u7247\u548C\u64CD\u4F5C\u8BF4\u660E\u90FD\u7531\u5361\u7247\u81EA\u5DF1\u5199\uFF1B\u8BF4\u6570\u4F4D\u7528\u540D\u5B57\uFF08\u4E2A\u4F4D\u3001\u5341\u5206\u4F4D\u3001hundreds\uFF09\uFF0C\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
   },
   // OLL decision 0027 (a trial): making ten to add on two ten frames (8 + 6 = 8 + 2 + 4 = 10 + 4). The model writes
   // the question's pair and a practice pair; the program supplies the count in the bigger number's frame (it starts
@@ -18899,6 +18904,11 @@ var MATH_RECIPES = {
     number_inputs: ["first", "second", "practice_first", "practice_second", "filled", "moved"],
     // The pair is the problem, which the card only reads: another picture may show it on a copy of its own.
     number_roles: ["problem", "problem", "practice", "practice", "demonstration", "program"],
+    // A move of the pair or the practice pair is refused with what the number is to the card (pilot 1, MT-13: the first
+    // addend animated to 10 was left out and the card sat still); left out only once the section's repairs are spent.
+    wrong_number_moves: "refused",
+    card_name: "make-ten card",
+    number_names: ["first addend", "second addend", "practice first addend", "practice second addend", "count in the bigger frame", "count moved"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
     // The two counts start where the pair puts them (the frames apart, nothing moved), so the program supplies
     // them: an outline that declares the four numbers before them gets both, one that also declares the first
@@ -18920,7 +18930,7 @@ var MATH_RECIPES = {
     // fixed text says how it is used.
     student_controls: [],
     required_features: ["make_ten_to_add"],
-    model_guidance: "\u51D1\u5341\uFF08\u4E24\u4E2A\u5341\u683C\u6846\uFF09\uFF1A\u4E24\u4E2A\u4E00\u4F4D\u6570\u76F8\u52A0\u3001\u548C\u5927\u4E8E10\uFF08\u59828+6\uFF09\uFF0C\u5C0F\u6570\u5206\u51FA\u4E00\u90E8\u5206\u628A\u5927\u6570\u8865\u6210\u5341\u3002\u4E5F\u7528\u4E8E\u95EE\u201C\u5E94\u8BE5\u62C6\u54EA\u4E2A\u6570\u201D\u201C\u600E\u6837\u62C6\u7B97\u5F97\u5FEB\u201D\uFF1A\u5361\u7247\u753B\u5FEB\u7684\u62C6\u6CD5\uFF08\u62C6\u5C0F\u6570\u8865\u5927\u6570\uFF0C\u59824+9\u62C64\u88659\uFF09\uFF0C\u6162\u7684\u62C6\u6CD5\u53EA\u7528\u8BDD\u8BF4\uFF0C\u4E0D\u753B\u3002\u4E0D\u7528\u4E8E\u548C\u6B63\u597D\u662F10\u3001\u63A5\u7740\u6570\u3001\u7834\u5341\u51CF\u3001\u4E24\u4F4D\u6570\u52A0\u4E00\u4F4D\u6570\u3001\u4E09\u4E2A\u6570\u76F8\u52A0\u3002\u8FD9\u9053\u52A0\u6CD5\u7684\u753B\u9762\u662F\u8FD9\u5F20\u5361\u7247\uFF1B\u540E\u9762\u7684\u8282\u53EF\u4EE5\u518D\u7528\u6570\u8F74\u628A\u540C\u4E00\u9053\u52A0\u6CD5\u8D70\u4E00\u904D\uFF0C\u6570\u8F74\u4E0D\u4EE3\u66FF\u8FD9\u5F20\u5361\u7247\u3002outline \u7684 numbers \u4F9D\u6B21\u5199\u56DB\u4E2A\u6570\uFF1A\u9898\u76EE\u7684\u4E24\u4E2A\u6570\u3001\u7EC3\u4E60\u7684\u4E24\u4E2A\u6570\uFF08\u53E6\u4E00\u5BF9\uFF0C\u4E5F\u662F\u4E00\u4F4D\u6570\u3001\u548C\u5927\u4E8E10\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u6362\u987A\u5E8F\u4E5F\u4E0D\u7B97\uFF09\u3002\u7A0B\u5E8F\u518D\u8865\u4E24\u4E2A\u6570\uFF1A\u5927\u6570\u90A3\u4E00\u6846\u91CC\u6709\u51E0\u4E2A\uFF08\u5F00\u59CB\u5C31\u662F\u5927\u6570\uFF09\u3001\u79FB\u8FC7\u53BB\u51E0\u4E2A\uFF080\uFF09\u3002\u6F14\u793A\u65F6\u628A\u7B2C\u4E94\u4E2A\u6570\u52A8\u753B\u523010\uFF0C\u4E00\u76F4\u5230\u5927\u6570\u90A3\u4E00\u6846\u6EE1\u5341\uFF0C\u7A0B\u5E8F\u4E00\u4E2A\u4E00\u4E2A\u5730\u79FB\u5706\u7247\uFF1B\u522B\u7684\u6570\u4E0D\u52A8\u753B\u3002\u7EC3\u4E60\uFF1A\u5BF9\u7B2C\u4E94\u4E2A\u6570\u5199\u4E00\u4E2A\u6570\u503C\u76EE\u6807\u9898\uFF08\u6570\u503C\u519910\uFF09\uFF0C\u5B69\u5B50\u81EA\u5DF1\u8865\u6EE1\u5341\uFF0C\u7A0B\u5E8F\u518D\u51FA\u4E00\u884C\u7A7A\uFF088+6=8+__+__=10+__=__\uFF09\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u548C\u3002\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
+    model_guidance: "\u51D1\u5341\uFF08\u4E24\u4E2A\u5341\u683C\u6846\uFF09\uFF1A\u4E24\u4E2A\u4E00\u4F4D\u6570\u76F8\u52A0\u3001\u548C\u5927\u4E8E10\uFF08\u59828+6\uFF09\uFF0C\u5C0F\u6570\u5206\u51FA\u4E00\u90E8\u5206\u628A\u5927\u6570\u8865\u6210\u5341\u3002\u4E5F\u7528\u4E8E\u95EE\u201C\u5E94\u8BE5\u62C6\u54EA\u4E2A\u6570\u201D\u201C\u600E\u6837\u62C6\u7B97\u5F97\u5FEB\u201D\uFF1A\u5361\u7247\u753B\u5FEB\u7684\u62C6\u6CD5\uFF08\u62C6\u5C0F\u6570\u8865\u5927\u6570\uFF0C\u59824+9\u62C64\u88659\uFF09\uFF0C\u6162\u7684\u62C6\u6CD5\u53EA\u7528\u8BDD\u8BF4\uFF0C\u4E0D\u753B\u3002\u4E0D\u7528\u4E8E\u548C\u6B63\u597D\u662F10\u3001\u63A5\u7740\u6570\u3001\u7834\u5341\u51CF\u3001\u4E24\u4F4D\u6570\u52A0\u4E00\u4F4D\u6570\u3001\u4E09\u4E2A\u6570\u76F8\u52A0\u3002\u8FD9\u9053\u52A0\u6CD5\u7684\u753B\u9762\u662F\u8FD9\u5F20\u5361\u7247\uFF1B\u540E\u9762\u7684\u8282\u53EF\u4EE5\u518D\u7528\u6570\u8F74\u628A\u540C\u4E00\u9053\u52A0\u6CD5\u8D70\u4E00\u904D\uFF0C\u6570\u8F74\u4E0D\u4EE3\u66FF\u8FD9\u5F20\u5361\u7247\u3002outline \u7684 numbers \u4F9D\u6B21\u5199\u56DB\u4E2A\u6570\uFF1A\u9898\u76EE\u7684\u4E24\u4E2A\u6570\u3001\u7EC3\u4E60\u7684\u4E24\u4E2A\u6570\uFF08\u53E6\u4E00\u5BF9\uFF0C\u4E5F\u662F\u4E00\u4F4D\u6570\u3001\u548C\u5927\u4E8E10\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u6362\u987A\u5E8F\u4E5F\u4E0D\u7B97\uFF09\u3002\u7A0B\u5E8F\u518D\u8865\u4E24\u4E2A\u6570\uFF1A\u5927\u6570\u90A3\u4E00\u6846\u91CC\u6709\u51E0\u4E2A\uFF08\u5F00\u59CB\u5C31\u662F\u5927\u6570\uFF09\u3001\u79FB\u8FC7\u53BB\u51E0\u4E2A\uFF080\uFF09\u3002\u6F14\u793A\u65F6\u628A\u7B2C\u4E94\u4E2A\u6570\u52A8\u753B\u523010\uFF0C\u4E00\u76F4\u5230\u5927\u6570\u90A3\u4E00\u6846\u6EE1\u5341\uFF0C\u7A0B\u5E8F\u4E00\u4E2A\u4E00\u4E2A\u5730\u79FB\u5706\u7247\uFF1B\u522B\u7684\u6570\u4E0D\u52A8\u753B\u3002\u7EC3\u4E60\u7684\u6570\u662F\u5B69\u5B50\u8BFE\u540E\u81EA\u5DF1\u505A\u7684\uFF1A\u8BFE\u4E0A\u53EF\u4EE5\u8BF4\u201C\u8BFE\u540E\u8BD5\u8BD5\u2026\u2026\u201D\uFF0C\u4F46\u4E0D\u8BB2\u5B83\u600E\u4E48\u505A\u3001\u4E0D\u5199\u51FA\u5B83\u7684\u7B97\u5F0F\u3001\u4E0D\u8BF4\u5B83\u7684\u7B54\u6848\uFF0Coutline \u4E5F\u4E0D\u4E3A\u5B83\u5B89\u6392\u4E00\u8282\u3002\u7EC3\u4E60\uFF1A\u5BF9\u7B2C\u4E94\u4E2A\u6570\u5199\u4E00\u4E2A\u6570\u503C\u76EE\u6807\u9898\uFF08\u6570\u503C\u519910\uFF09\uFF0C\u5B69\u5B50\u81EA\u5DF1\u8865\u6EE1\u5341\uFF0C\u7A0B\u5E8F\u518D\u51FA\u4E00\u884C\u7A7A\uFF088+6=8+__+__=10+__=__\uFF09\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u548C\u3002\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
   },
   // OLL decision 0028 (a trial): the same amount counted in another unit on the place-value chart, a count (3 tenths =
   // ? thousandths) or a times pair (700 is ? times 70). The model writes the amount, the unit asked and a practice of
@@ -18935,6 +18945,10 @@ var MATH_RECIPES = {
     number_inputs: ["amount", "unit_asked", "practice_amount", "practice_unit_asked", "start_unit"],
     // The amount and the unit asked are the problem, which the card only reads: another picture may show them on a copy.
     number_roles: ["problem", "problem", "practice", "practice", "demonstration"],
+    // Left out since #188; refused like the other cards' since pilot 1 (2026-11-27), behind this flag ("left_out" goes back).
+    wrong_number_moves: "refused",
+    card_name: "times-ten card",
+    number_names: ["amount", "unit asked", "practice amount", "practice unit asked", "start unit"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
     // Counted in starts at the unit the question names: for a count that breaks and for a times pair it is the
     // amount's own place, so the program supplies it from the amount when the outline declares only the four numbers
@@ -18955,7 +18969,7 @@ var MATH_RECIPES = {
     // text says how it is used.
     student_controls: [],
     required_features: ["count_in_another_unit"],
-    model_guidance: "\u6362\u4E00\u4E2A\u5355\u4F4D\u6765\u6570\uFF08\u6570\u4F4D\u8868\uFF1A\u5F80\u53F3\u4E00\u4F4D\u4E00\u4E2A\u62C6\u6210\u5341\u4E2A\uFF0C\u5F80\u5DE6\u4E00\u4F4D\u5341\u4E2A\u5408\u6210\u4E00\u4E2A\uFF09\uFF1A\u6570\u5355\u4F4D\uFF083\u4E2A\u5341\u5206\u4E4B\u4E00=?\u4E2A\u5343\u5206\u4E4B\u4E00\uFF1B6\u4E2A\u5343=?\u4E2A\u767E\uFF1B\u4E00\u5343\u91CC\u6709\u51E0\u4E2A\u5341\uFF09\u6216\u500D\u6570\uFF08700\u662F70\u7684\u51E0\u500D\uFF1B0.3\u662F3\u7684\u5341\u5206\u4E4B\u4E00\uFF09\u3002\u8FD9\u4E9B\u9898\u7528\u8FD9\u5F20\u5361\uFF0C\u4E0D\u7528 trade_ten_for_one\uFF08\u5B83\u53EA\u628A\u5341\u4E2A\u5408\u6210\u4E00\u4E2A\uFF09\u3002\u6570\u53EA\u6709\u4E00\u4F4D\u4E0D\u662F\u96F6\uFF085550\u91CC\u7684\u4E24\u4E2A5\u5199500\u548C50\uFF09\uFF0C\u5355\u4F4D\u6700\u591A\u9694\u4E24\u4F4D\uFF0C\u500D\u6570\u662F\u76F8\u90BB\u4E24\u4F4D\u3002\u4E0D\u7528\u4E8E\u4E00\u4E2A\u6570\u5B57\u8868\u793A\u591A\u5C11\u3001\u6BD4\u8F83\u3001\u52A0\u51CF\u3001\u4E58\u9664\u4EE510\u6216100\u3001\u9664\u4EE5\u5C0F\u6570\u3002outline \u7684 numbers \u4F9D\u6B21\u662F\u4E94\u4E2A\u89D2\u8272\uFF0C\u6BCF\u4E2A\u6570\u7684 label \u7528\u8BFE\u7684\u8BED\u8A00\u5199\u5B83\u7684\u89D2\u8272\uFF08\u5982 unit asked\u3001\u95EE\u7684\u5355\u4F4D\uFF09\uFF1Aamount \u8981\u6570\u7684\u6570\uFF08\u5199\u503C\uFF0C3\u4E2A\u5341\u5206\u4E4B\u4E00\u51990.3\uFF09\uFF1Bunit_asked \u95EE\u7684\u5355\u4F4D\uFF08\u95EE\u201C\u662F\u51E0\u4E2A\u767E\u5206\u4E4B\u4E00\u201D\u51990.01\uFF1B\u500D\u6570\u5199\u5C0F\u7684\u657070\uFF09\uFF1Bpractice_amount\u3001practice_unit_asked \u7EC3\u4E60\u7684\u4E24\u4E2A\u6570\uFF08\u540C\u4E00\u79CD\u95EE\u6CD5\uFF0C\u9694\u540C\u6837\u51E0\u4F4D\u3001\u540C\u4E00\u65B9\u5411\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF09\uFF1Bstart_unit \u8981\u6570\u7684\u6570\u73B0\u5728\u7528\u4EC0\u4E48\u5355\u4F4D\u5728\u6570\uFF08\u9898\u76EE\u8BF4\u5B83\u65F6\u7528\u7684\u5355\u4F4D\uFF09\u3002\u62C6\u5F00\u7684\u9898\uFF08\u5F80\u5C0F\u7684\u5355\u4F4D\u6570\uFF09\u548C\u500D\u6570\u4E0D\u5199 start_unit\uFF0C\u7A0B\u5E8F\u8865\u6210\u8981\u6570\u7684\u6570\u81EA\u5DF1\u90A3\u4E00\u4F4D\uFF1A7\u4E2A\u5341\u5206\u4E4B\u4E00=?\u4E2A\u767E\u5206\u4E4B\u4E00 \u51990.7\u30010.01\u3001\u7EC3\u4E60\u4E24\u4E2A\u6570\uFF1B\u4E00\u5343\u91CC\u6709\u51E0\u4E2A\u5341 \u51991000\u300110\u3001\u7EC3\u4E60\u4E24\u4E2A\u6570\u3002\u5408\u8D77\u6765\u7684\u9898\uFF08\u5F80\u5927\u7684\u5355\u4F4D\u6570\uFF09\u8981\u5199\uFF1A70\u4E2A\u767E\u5206\u4E4B\u4E00=?\u4E2A\u5341\u5206\u4E4B\u4E00 \u51990.7\u30010.1\u3001\u7EC3\u4E60\u4E24\u4E2A\u6570\u30010.01\u3002start_unit \u548C unit_asked \u662F\u4E24\u4E2A\u4E0D\u540C\u7684\u5355\u4F4D\u3002\u6F14\u793A\u53EA\u52A8\u753B start_unit\uFF08\u7B2C\u4E94\u4E2A\u6570\uFF09\uFF1A\u4ECE\u5B83\u4E00\u6B65\u4E00\u6B65\u52A8\u753B\u5230 unit_asked \u7684\u503C\uFF080.1\u30010.01\u30010.001\uFF1B\u500D\u6570\u523070\uFF09\uFF0C\u53EA\u5F80\u524D\u8D70\uFF0C\u4E00\u76F4\u5230\u95EE\u7684\u5355\u4F4D\uFF1B\u522B\u7684\u6570\u4E0D\u52A8\u753B\u3002\u7EC3\u4E60\uFF1A\u5BF9\u7B2C\u4E94\u4E2A\u6570\u5199\u6570\u503C\u76EE\u6807\u9898\uFF0C\u7A0B\u5E8F\u518D\u51FA\u7B54\u6848\u90A3\u4E00\u884C\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u7B54\u6848\u3002\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
+    model_guidance: "\u6362\u4E00\u4E2A\u5355\u4F4D\u6765\u6570\uFF08\u6570\u4F4D\u8868\uFF1A\u5F80\u53F3\u4E00\u4F4D\u4E00\u4E2A\u62C6\u6210\u5341\u4E2A\uFF0C\u5F80\u5DE6\u4E00\u4F4D\u5341\u4E2A\u5408\u6210\u4E00\u4E2A\uFF09\uFF1A\u6570\u5355\u4F4D\uFF083\u4E2A\u5341\u5206\u4E4B\u4E00=?\u4E2A\u5343\u5206\u4E4B\u4E00\uFF1B6\u4E2A\u5343=?\u4E2A\u767E\uFF1B\u4E00\u5343\u91CC\u6709\u51E0\u4E2A\u5341\uFF09\u6216\u500D\u6570\uFF08700\u662F70\u7684\u51E0\u500D\uFF1B0.3\u662F3\u7684\u5341\u5206\u4E4B\u4E00\uFF09\u3002\u8FD9\u4E9B\u9898\u7528\u8FD9\u5F20\u5361\uFF0C\u4E0D\u7528 trade_ten_for_one\uFF08\u5B83\u53EA\u628A\u5341\u4E2A\u5408\u6210\u4E00\u4E2A\uFF09\u3002\u6570\u53EA\u6709\u4E00\u4F4D\u4E0D\u662F\u96F6\uFF085550\u91CC\u7684\u4E24\u4E2A5\u5199500\u548C50\uFF09\uFF0C\u5355\u4F4D\u6700\u591A\u9694\u4E24\u4F4D\uFF0C\u500D\u6570\u662F\u76F8\u90BB\u4E24\u4F4D\u3002\u4E0D\u7528\u4E8E\u4E00\u4E2A\u6570\u5B57\u8868\u793A\u591A\u5C11\u3001\u6BD4\u8F83\u3001\u52A0\u51CF\u3001\u4E58\u9664\u4EE510\u6216100\u3001\u9664\u4EE5\u5C0F\u6570\u3002outline \u7684 numbers \u4F9D\u6B21\u662F\u4E94\u4E2A\u89D2\u8272\uFF0C\u6BCF\u4E2A\u6570\u7684 label \u7528\u8BFE\u7684\u8BED\u8A00\u5199\u5B83\u7684\u89D2\u8272\uFF08\u5982 unit asked\u3001\u95EE\u7684\u5355\u4F4D\uFF09\uFF1Aamount \u8981\u6570\u7684\u6570\uFF08\u5199\u503C\uFF0C3\u4E2A\u5341\u5206\u4E4B\u4E00\u51990.3\uFF09\uFF1Bunit_asked \u95EE\u7684\u5355\u4F4D\uFF08\u95EE\u201C\u662F\u51E0\u4E2A\u767E\u5206\u4E4B\u4E00\u201D\u51990.01\uFF1B\u500D\u6570\u5199\u5C0F\u7684\u657070\uFF09\uFF1Bpractice_amount\u3001practice_unit_asked \u7EC3\u4E60\u7684\u4E24\u4E2A\u6570\uFF08\u540C\u4E00\u79CD\u95EE\u6CD5\uFF0C\u9694\u540C\u6837\u51E0\u4F4D\u3001\u540C\u4E00\u65B9\u5411\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF09\uFF1Bstart_unit \u8981\u6570\u7684\u6570\u73B0\u5728\u7528\u4EC0\u4E48\u5355\u4F4D\u5728\u6570\uFF08\u9898\u76EE\u8BF4\u5B83\u65F6\u7528\u7684\u5355\u4F4D\uFF09\u3002\u62C6\u5F00\u7684\u9898\uFF08\u5F80\u5C0F\u7684\u5355\u4F4D\u6570\uFF09\u548C\u500D\u6570\u4E0D\u5199 start_unit\uFF0C\u7A0B\u5E8F\u8865\u6210\u8981\u6570\u7684\u6570\u81EA\u5DF1\u90A3\u4E00\u4F4D\uFF1A7\u4E2A\u5341\u5206\u4E4B\u4E00=?\u4E2A\u767E\u5206\u4E4B\u4E00 \u51990.7\u30010.01\u3001\u7EC3\u4E60\u4E24\u4E2A\u6570\uFF1B\u4E00\u5343\u91CC\u6709\u51E0\u4E2A\u5341 \u51991000\u300110\u3001\u7EC3\u4E60\u4E24\u4E2A\u6570\u3002\u5408\u8D77\u6765\u7684\u9898\uFF08\u5F80\u5927\u7684\u5355\u4F4D\u6570\uFF09\u8981\u5199\uFF1A70\u4E2A\u767E\u5206\u4E4B\u4E00=?\u4E2A\u5341\u5206\u4E4B\u4E00 \u51990.7\u30010.1\u3001\u7EC3\u4E60\u4E24\u4E2A\u6570\u30010.01\u3002start_unit \u548C unit_asked \u662F\u4E24\u4E2A\u4E0D\u540C\u7684\u5355\u4F4D\u3002\u6F14\u793A\u53EA\u52A8\u753B start_unit\uFF08\u7B2C\u4E94\u4E2A\u6570\uFF09\uFF1A\u4ECE\u5B83\u4E00\u6B65\u4E00\u6B65\u52A8\u753B\u5230 unit_asked \u7684\u503C\uFF080.1\u30010.01\u30010.001\uFF1B\u500D\u6570\u523070\uFF09\uFF0C\u53EA\u5F80\u524D\u8D70\uFF0C\u4E00\u76F4\u5230\u95EE\u7684\u5355\u4F4D\uFF1B\u522B\u7684\u6570\u4E0D\u52A8\u753B\u3002\u7EC3\u4E60\u7684\u6570\u662F\u5B69\u5B50\u8BFE\u540E\u81EA\u5DF1\u505A\u7684\uFF1A\u8BFE\u4E0A\u53EF\u4EE5\u8BF4\u201C\u8BFE\u540E\u8BD5\u8BD5\u2026\u2026\u201D\uFF0C\u4F46\u4E0D\u8BB2\u5B83\u600E\u4E48\u505A\u3001\u4E0D\u5199\u51FA\u5B83\u7684\u7B97\u5F0F\u3001\u4E0D\u8BF4\u5B83\u7684\u7B54\u6848\uFF0Coutline \u4E5F\u4E0D\u4E3A\u5B83\u5B89\u6392\u4E00\u8282\u3002\u7EC3\u4E60\uFF1A\u5BF9\u7B2C\u4E94\u4E2A\u6570\u5199\u6570\u503C\u76EE\u6807\u9898\uFF0C\u7A0B\u5E8F\u518D\u51FA\u7B54\u6848\u90A3\u4E00\u884C\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u7B54\u6848\u3002\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
   },
   // OLL decision 0029 (a trial): comparing two numbers by place, from the largest place down: two rows of one chart,
   // lined up by place; the learner judges each place from the left ("Same" or "Different", the card's own buttons),
@@ -19116,7 +19130,7 @@ var MATH_RECIPES = {
     model_guidance: "\u6570\u8F74\u5206\u6B65\uFF1A\u4E24\u5230\u4E09\u6B65\u7684\u52A0\u51CF\uFF08\u6570\u8F74\u52A0\u51CF\u662F\u4E00\u6B65\uFF09\uFF0C\u5982\u51D1\u5341\u3001\u5148\u6574\u5341\u518D\u4E2A\u4F4D\u3001\u4E0A\u4E0B\u79FB\u52A8\uFF1B\u6570\u503C\u4F9D\u6B21\u662F\u8D77\u70B9\u548C\u5404\u6B65\u79FB\u52A8\u91CF\uFF08\u4E24\u6B65\u5199\u4E24\u4E2A\uFF09\uFF0C\u843D\u70B9\u548C\u7EC8\u70B9\u7531\u7A0B\u5E8F\u7B97\uFF1B\u5F80\u56DE\u8D70\u7684\u4E00\u6B65\u4E0D\u8BB2\u4E00\u683C\u4E00\u683C",
     // Beside the make-ten card (a trial, OLL 0027) the line does not claim making ten with two one-digit numbers
     // (MT-07: "4 + 9, which number should I split?" drew the line in 2 of 2 runs). Without the trial its text is unchanged.
-    model_guidance_with: { make_ten: "\u6570\u8F74\u5206\u6B65\uFF1A\u4E24\u5230\u4E09\u6B65\u7684\u52A0\u51CF\uFF08\u6570\u8F74\u52A0\u51CF\u662F\u4E00\u6B65\uFF09\uFF0C\u5982\u5148\u6574\u5341\u518D\u4E2A\u4F4D\u3001\u4E0A\u4E0B\u79FB\u52A8\u3001\u4E24\u4F4D\u6570\u52A0\u4E00\u4F4D\u6570\u5148\u51D1\u6574\u5341\uFF0838+5\uFF09\uFF1B\u4E24\u4E2A\u4E00\u4F4D\u6570\u76F8\u52A0\u7684\u51D1\u5341\uFF084+9\u30018+6\uFF0C\u4E5F\u5305\u62EC\u95EE\u62C6\u54EA\u4E2A\u6570\uFF09\uFF0C\u9898\u76EE\u7684\u753B\u9762\u662F\u51D1\u5341\u5361\u7247\uFF0C\u6570\u8F74\u5206\u6B65\u53EA\u5728\u5361\u7247\u4E4B\u540E\u7684\u8282\u91CC\u4F5C\u7B2C\u4E8C\u79CD\u770B\u6CD5\uFF1B\u6570\u503C\u4F9D\u6B21\u662F\u8D77\u70B9\u548C\u5404\u6B65\u79FB\u52A8\u91CF\uFF08\u4E24\u6B65\u5199\u4E24\u4E2A\uFF09\uFF0C\u843D\u70B9\u548C\u7EC8\u70B9\u7531\u7A0B\u5E8F\u7B97\uFF1B\u5F80\u56DE\u8D70\u7684\u4E00\u6B65\u4E0D\u8BB2\u4E00\u683C\u4E00\u683C" }
+    model_guidance_with: { make_ten: "\u6570\u8F74\u5206\u6B65\uFF1A\u4E24\u5230\u4E09\u6B65\u7684\u52A0\u51CF\uFF08\u6570\u8F74\u52A0\u51CF\u662F\u4E00\u6B65\uFF09\uFF0C\u5982\u5148\u6574\u5341\u518D\u4E2A\u4F4D\u3001\u4E0A\u4E0B\u79FB\u52A8\u3001\u4E24\u4F4D\u6570\u52A0\u4E00\u4F4D\u6570\u5148\u51D1\u6574\u5341\uFF0838+5\uFF09\uFF1B\u4E24\u4E2A\u4E00\u4F4D\u6570\u76F8\u52A0\u7684\u51D1\u5341\uFF084+9\u30018+6\uFF0C\u4E5F\u5305\u62EC\u95EE\u62C6\u54EA\u4E2A\u6570\uFF09\uFF0C\u9898\u76EE\u7684\u753B\u9762\u662F\u51D1\u5341\u5361\u7247\uFF0C\u6570\u8F74\u5206\u6B65\u53EA\u5728\u5361\u7247\u4E4B\u540E\u7684\u8282\u91CC\u4F5C\u7B2C\u4E8C\u79CD\u770B\u6CD5\uFF0C\u6570\u503C\u5199\u7A0B\u5E8F\u5728 numbers \u91CC\u7ED9\u51FA\u7684\u4E09\u4E2A\u6570\uFF1A\u6570\u8F74\u7684\u8D77\u70B9\uFF08\u5927\u6570\uFF09\u3001\u8865\u6210\u5341\u7684\u4E00\u6B65\u3001\u5269\u4E0B\u7684\u4E00\u6B65\uFF088+5\uFF1A8\uFF0C+2\uFF0C+3\uFF09\uFF1B\u6570\u503C\u4F9D\u6B21\u662F\u8D77\u70B9\u548C\u5404\u6B65\u79FB\u52A8\u91CF\uFF08\u4E24\u6B65\u5199\u4E24\u4E2A\uFF09\uFF0C\u843D\u70B9\u548C\u7EC8\u70B9\u7531\u7A0B\u5E8F\u7B97\uFF1B\u5F80\u56DE\u8D70\u7684\u4E00\u6B65\u4E0D\u8BB2\u4E00\u683C\u4E00\u683C" }
   }
 };
 var text4 = { type: "string" };
@@ -19741,6 +19755,9 @@ var EN = {
   "\u4ECE\u5DE6\u5230\u53F3\u8BFB\u6A2A\u7EBF\u4E0B\u9762\u6BCF\u4E00\u5217\u7684\u5706\u7247\u4E2A\u6570\u3002": "Read how many disks each column has below the line, from left to right.",
   "\u5927\u6570\u90A3\u4E00\u6846\u91CC\u6709\u51E0\u4E2A": "in the bigger number's frame",
   "\u79FB\u8FC7\u53BB\u51E0\u4E2A": "moved across",
+  "\u6570\u8F74\u7684\u8D77\u70B9\uFF08\u5927\u6570\uFF09": "the line's start (the bigger number)",
+  "\u8865\u6210\u5341\u7684\u4E00\u6B65": "the step that makes ten",
+  "\u5269\u4E0B\u7684\u4E00\u6B65": "the step left",
   "\u5199\u6210\u7B97\u5F0F\u3002": "Write it as a number sentence.",
   "\u5199\u51FA\u6709\u591A\u5C11\u4E2A\u3002": "Write how many.",
   "\u5199\u51FA\u7B54\u6848\u3002": "Write the answers.",
@@ -21809,6 +21826,24 @@ function lowerPieces(parameters3, numberCount) {
 function requestsTwoIndependentPoints(request) {
   return /(?:两个|两)\s*(?:个)?(?:可以|可)?(?:分别|独立|各自).{0,8}(?:移动|调整).{0,4}点|(?:分别|独立|各自).{0,8}(?:移动|调整).{0,8}(?:两个点|两点)|two.{0,12}(?:independent|separate).{0,12}(?:point|sample)/i.test(request);
 }
+function prepareMakeTenSteps(outline, section, language) {
+  const visuals = outline.course_visuals ?? [];
+  const numbers = outline.numbers ?? [];
+  if (!visuals.some((visual) => visual.capability === "number_line_steps" && visual.create_section === section)) return;
+  const firstNumbered = visuals.find((visual) => (LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[visual.capability] ?? 0) > 0);
+  if (firstNumbered?.capability !== "make_ten" || firstNumbered.create_section >= section || numbers.length < 2) return;
+  const [a, b] = [numbers[0].initial, numbers[1].initial];
+  if (![a, b].every((value2) => Number.isInteger(value2) && value2 >= 1 && value2 <= 9) || a + b <= 10) return;
+  const big = Math.max(a, b), toTen = 10 - big, rest = Math.min(a, b) - toTen;
+  const labels = ["\u6570\u8F74\u7684\u8D77\u70B9\uFF08\u5927\u6570\uFF09", "\u8865\u6210\u5341\u7684\u4E00\u6B65", "\u5269\u4E0B\u7684\u4E00\u6B65"].map((label) => lessonText(language, label));
+  if (numbers.some((number) => number.label === labels[0]) || numbers.length + 3 > 16) return;
+  outline.numbers = [
+    ...numbers,
+    { initial: big, min: 0, max: 20, label: labels[0] },
+    { initial: toTen, min: 0, max: 10, label: labels[1] },
+    { initial: rest, min: 0, max: 10, label: labels[2] }
+  ];
+}
 function prepareTwoPointOutline(outline, request, language) {
   if (!requestsTwoIndependentPoints(request)) return;
   outline.numbers ??= [];
@@ -21843,6 +21878,7 @@ function specializeTwoPointDraft(draft, outline, request) {
 }
 var MATH_PLUGIN_HOOKS = {
   prepare_outline: (outline, { request, language }) => prepareTwoPointOutline(outline, request, language),
+  prepare_section: (outline, section, { language }) => prepareMakeTenSteps(outline, section, language),
   specialize_draft(draft, context) {
     specializeTwoPointDraft(draft, context.outline, context.request);
     normalizePlotDraftBindings(draft, context);
@@ -26462,6 +26498,7 @@ function resolveMetNumberTargets(plan) {
     }
   }
 }
+var MAX_OUTLINE_NUMBERS = 16;
 function separateCardProblemNumbers(plan, adjustments = []) {
   const copyOf = /* @__PURE__ */ new Map();
   const numbers = plan.numbers;
@@ -26493,6 +26530,7 @@ function separateCardProblemNumbers(plan, adjustments = []) {
       if (held.picture === picture || copied.has(number) || held.role !== "problem" && role !== "problem") return;
       const definition = outlineDefinitions[number - 1];
       if (!definition) return;
+      while (numbers.length < MAX_OUTLINE_NUMBERS) numbers.push({ initial: 0, min: 0, max: 1 });
       numbers.push(structuredClone(definition));
       const copy = numbers.length;
       copied.add(number);
@@ -26531,6 +26569,7 @@ function separateCardProblemNumbers(plan, adjustments = []) {
   }));
   return copyOf;
 }
+var CARD_NUMBER_STAYS = "LESSON_PLAN_CARD_NUMBER_STAYS";
 function compileLessonPlan(value2, options = {}) {
   const resolved = resolveLessonPlan(value2, options);
   const plan = resolved.plan;
@@ -26626,9 +26665,22 @@ function compileLessonPlan(value2, options = {}) {
           const at2 = animations.find((animation) => animation.position === result.refused.position);
           fail2("LESSON_PLAN_NUMBER_NOT_DRAWABLE", `${momentPath}.actions[${at2.offset}].end_value`, result.refused.reason, capability2);
         }
+        const entry = LESSON_PLAN_CAPABILITY_REGISTRY[capability2];
         const left = /* @__PURE__ */ new Set();
         for (const ignored of result.ignored ?? []) {
           const at2 = ignored.index !== void 0 ? animations[ignored.index] : animations.find((animation) => animation.position === ignored.position);
+          const role = recipeNumberRole(capability2, ignored.position);
+          if (entry.wrong_number_moves === "refused" && (role === "problem" || role === "practice")) {
+            const numbers = visual.mover.numbers;
+            const demonstration = numbers.findIndex((_number, position) => recipeNumberRole(capability2, position) === "demonstration");
+            const name = (position) => entry.number_names?.[position] ?? "number";
+            fail2(
+              CARD_NUMBER_STAYS,
+              `${momentPath}.actions[${at2.offset}].end_value`,
+              `lesson number ${numbers[ignored.position]} is the ${entry.card_name ?? capability2}'s ${name(ignored.position)} ${plan.numbers?.[numbers[ignored.position] - 1]?.initial}, which stays as written` + (demonstration >= 0 ? `; the demonstration moves lesson number ${numbers[demonstration]}, the ${name(demonstration)}` : ""),
+              capability2
+            );
+          }
           left.add(at2.offset);
           viewAdjustments.push({ section: sectionIndex, reason: "animation_left_out", detail: `${momentPath}.actions[${at2.offset}]: ${ignored.reason}; left out` });
         }
@@ -27808,7 +27860,7 @@ var MATH_SECTION_FACTS = {
         places_still_on_chart: placeValueParts(now).map((part) => placeValueColumnName(part.place, chartLanguage)),
         ...now > 0 ? { next_values: placeValueNextValues(number, now, false).map(placeValueDecimal) } : {}
       },
-      ...values[1] !== void 0 ? { practice_number: values[1] } : {}
+      ...values[1] !== void 0 ? { after_class_practice: values[1] } : {}
     } };
   },
   // The place-value trade card in its own terms (OLL 0026), once it is drawn: the pair, its answer and columns,
@@ -27843,7 +27895,7 @@ var MATH_SECTION_FACTS = {
       demonstration_to: { columns_finished: columns.length, answer: tradeDecimal(op === "add" ? a + b : a - b) },
       chart_now: card.cells.map((cell2) => cell2.down ? { column: name(cell2.place), below_line: cell2.answer } : op === "add" ? { column: name(cell2.place), row_1: cell2.top, row_2: cell2.second, ...cell2.carry ? { carried_in: cell2.carry } : {} } : { column: name(cell2.place), row_1: cell2.top, take_away: cell2.second }),
       ...card.next ? { next: { value: card.next.finished, finishes: name(card.next.place), does: placeValueTradeStepSentences(problem, card.next.finished, cardLanguage) } } : { every_column_finished: true },
-      practice_pair: [tradeDecimal(pa), tradeDecimal(pb)]
+      after_class_practice: [tradeDecimal(pa), tradeDecimal(pb)]
     } };
   },
   // The make-ten card in its own terms (OLL 0027), once it is drawn: the pair and its sum, which frame fills (the
@@ -27875,7 +27927,7 @@ var MATH_SECTION_FACTS = {
       demonstration_to: { in_bigger_frame: MAKE_TEN_PLACES },
       frames_now: [makeTenFrame(card, 0).count, makeTenFrame(card, 1).count],
       ...filled < MAKE_TEN_PLACES ? { next: { value: filled + 1, does: makeTenNext(a, b, filled), says: makeTenStepSentences(problem, filled, filled + 1, cardLanguage) } } : { ten_made: true },
-      practice_pair: [pa, pb]
+      after_class_practice: [pa, pb]
     } };
   },
   // The times-ten card in its own terms (OLL 0028), once it is drawn: the question (a count or a times pair), the
@@ -27909,7 +27961,7 @@ var MATH_SECTION_FACTS = {
       demonstration_to: { counted_in: timesTenDecimal(path.at(-1)) },
       chart_now: chart.columns.map((column) => ({ column: name(column.place), disks: column.disks, rows_of_ten: column.rows, squares: column.squares })),
       ...k < path.length - 1 ? { next: path.slice(k + 1).map((value2, i) => ({ value: timesTenDecimal(value2), does: does[k + i] })) } : { reached_target: true },
-      practice: [timesTenDecimal(practice.amount), timesTenDecimal(practice.target)]
+      after_class_practice: [timesTenDecimal(practice.amount), timesTenDecimal(practice.target)]
     } };
   },
   // The compare card in its own terms (OLL 0029), once it is drawn: the pair as written (0.70 keeps its zero), its
@@ -30672,10 +30724,20 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   const leaveOutEarlierPictureMoves = (error, section) => {
     const site = faultSite(error, section);
     const draft = drafts[section - 1];
-    if (!site || !draft || site.section >= section) return void 0;
+    const ownCard = error instanceof LessonPlanError && error.code === CARD_NUMBER_STAYS && site?.kind === "animate";
+    if (!site || !draft || site.section >= section && !(ownCard && site.section === section)) return void 0;
     const keyOf = (moment, action) => `${moment}:${action}`;
     const candidates = /* @__PURE__ */ new Set();
-    if (site.kind === "animate") {
+    const fixed = (number) => {
+      const position = site.numbers.indexOf(number);
+      const role = position < 0 ? void 0 : recipeNumberRole(site.capability, position);
+      return role === "problem" || role === "practice";
+    };
+    if (ownCard) {
+      draft.moments.forEach((moment, momentAt) => moment.actions.forEach((action, actionAt) => {
+        if (action.action === "animate" && fixed(action.number)) candidates.add(keyOf(momentAt, actionAt));
+      }));
+    } else if (site.kind === "animate") {
       const own = draft.moments[site.moment]?.actions[site.action];
       if (site.in === section && own?.action === "animate" && own.number === site.move?.number && own.end_value === site.move.end_value && site.numbers.includes(own.number)) candidates.add(keyOf(site.moment, site.action));
     } else {
@@ -30708,8 +30770,13 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       const [momentAt, actionAt] = key.split(":").map(Number);
       const action = draft.moments[momentAt].actions[actionAt];
       const narrationOnly = draft.moments[momentAt].actions.every((_each, offset) => removed.has(keyOf(momentAt, offset)));
+      const at2 = `$lessonPlan.sections[${section - 1}].moments[${momentAt}].actions[${actionAt}]`;
+      const entry = LESSON_PLAN_CAPABILITY_REGISTRY[site.capability];
+      const number = action.action === "animate" ? action.number : void 0;
+      const position = number === void 0 ? -1 : site.numbers.indexOf(number);
+      const fact = ownCard && number !== void 0 && position >= 0 ? `lesson number ${number} is the ${entry.card_name ?? site.capability}'s ${entry.number_names?.[position] ?? "number"} ${outline.numbers?.[number - 1]?.initial}, which stays as written` : `the ${site.capability} visual cannot show lesson number ${number ?? "?"} at ${action.action === "animate" ? action.end_value : "?"}`;
       return {
-        detail: `$lessonPlan.sections[${section - 1}].moments[${momentAt}].actions[${actionAt}]: the ${site.capability} visual cannot show lesson number ${action.action === "animate" ? action.number : "?"} at ${action.action === "animate" ? action.end_value : "?"}; left out`,
+        detail: `${at2}: ${fact}; left out`,
         ...narrationOnly ? { narration_only_moment: true } : {}
       };
     });
@@ -30938,6 +31005,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   };
   const acceptSection = async (section, initialCandidate) => {
     let candidate = initialCandidate;
+    if (outline) for (const hooks of PLUGIN_HOOKS) hooks.prepare_section?.(outline, section, { language: input.language });
     const missing = outline ? outlineNumbersMissing(outline, section) : void 0;
     if (missing && section === 1) throw missing;
     if (missing) await withdrawLaterSectionVisual(section, missing.capability, outlineNumbersReason(missing), missing.message);
@@ -30987,6 +31055,18 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         }
         const previousError = sectionErrors.get(section);
         if (unsupportedSectionResponse(error, previousError, input.language)) throw error;
+        if ((sectionAttempts.get(section) ?? 0) >= maxAttempts && error instanceof LessonPlanError && error.code === CARD_NUMBER_STAYS) {
+          const kept = leaveOutEarlierPictureMoves(error, section);
+          if (kept) {
+            await options.on_rejected_part?.({ label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error) });
+            sectionErrors.delete(section);
+            for (const left of leftOutMoves) await options.on_program_adjustment?.({ kind: "plot_view_adjusted", section, reason: "animation_left_out", ...left });
+            await reportDraftAdjustments(drafts[section - 1]);
+            noteCompiledDrops(kept, section);
+            await options.on_playable_prefix?.({ completed_sections: section, compiled: kept });
+            return;
+          }
+        }
         if ((sectionAttempts.get(section) ?? 0) >= maxAttempts) {
           const capability2 = faultingPicture(error, section);
           const site = faultSite(error, section);
@@ -31280,6 +31360,7 @@ function modelTextFromRawReply(line) {
   }
 }
 export {
+  CARD_NUMBER_STAYS,
   INSTALLED_PLUGINS,
   LESSON_PLAN_CAPABILITIES,
   LESSON_PLAN_CAPABILITY_NAMES,

@@ -44,7 +44,7 @@ test("make_ten is a trial, off by default: built, not offered; its guidance and 
   assert.deepEqual(offered.ranges, [[0, 10], [0, 0, 4]]);
   assert.deepEqual([offered.min, offered.many, offered.controls], [6, true, []]);
   // Short guidance (tracked, not capped): the pair, the practice pair, the target 10; no control named.
-  assert.equal(Buffer.byteLength(offered.guidance), 1103);
+  assert.equal(Buffer.byteLength(offered.guidance), 1291);
   // The card is the sum's picture; a later section may walk the same sum on a number line, never instead of the card
   // (lead, 2026-11-27: a second view is fine; the line draws on copies of the pair).
   assert.ok(offered.guidance.includes("这道加法的画面是这张卡片；后面的节可以再用数轴把同一道加法走一遍，数轴不代替这张卡片"));
@@ -263,7 +263,7 @@ test("refusals name their reason and the card, so only the picture can be lost; 
   for (const [id, each] of Object.entries(declared)) assert.deepEqual(each, { card: [8, 0], beats: [["write", "focus"], [10]] }, id);
 });
 
-test("a moment that animates the pair or the practice pair is left out and recorded; the count moved is refused with the card's tag, never at OLL", () => {
+test("a moment that animates the pair, the practice pair or the count moved is refused with the card's tag and a fact, never at OLL (pilot 1, MT-13)", () => {
   const result = withTrial(`
     const api = await import(${here("../lesson-plan.js")});
     const { makeTenPlan } = await import(${here("./sample-plans.mjs")});
@@ -276,11 +276,11 @@ test("a moment that animates the pair or the practice pair is left out and recor
     }
     console.log(JSON.stringify(out));
   `);
-  for (const number of ["1", "3"]) {
-    assert.equal(result[number].compiled, true, number);
-    assert.equal(result[number].left.length, 1, number);
-    assert.match(result[number].left[0], /stay as written/, number);
-  }
+  // MT-13 animated the first addend to 10 for "the bigger frame fills": refused with what the number is and which one
+  // moves (a move left out let the card sit still under the narration).
+  assert.deepEqual([result["1"].code, result["1"].capability], ["LESSON_PLAN_CARD_NUMBER_STAYS", "make_ten"]);
+  assert.match(result["1"].message, /lesson number 1 is the make-ten card's first addend 8, which stays as written; the demonstration moves lesson number 5, the count in the bigger frame$/u);
+  assert.match(result["3"].message, /lesson number 3 is the make-ten card's practice first addend 7, which stays as written/u);
   assert.equal(result["6"].capability, "make_ten");
   assert.notEqual(result["6"].code, "LESSON_PLAN_OLL_SEMANTIC");
   assert.match(result["6"].message, /only by the learner's taps/);
@@ -314,7 +314,7 @@ test("section facts: the card in its own terms, once it is drawn", () => {
     // Where the demonstration goes: the bigger frame full (owner, 2026-11-27; information only).
     demonstration_to: { in_bigger_frame: 10 },
     next: { value: 10, does: "the next value, 10, moves one of the 6 into the 8's frame", says: ["Move one of the 6 across.", "A full frame is ten, and 4 are left: 10 + 4."] },
-    practice_pair: [7, 5],
+    after_class_practice: [7, 5],
   });
   const zh = facts({ section: 3, mode: "reuse", established, numbers: [4, 9, 3, 8, 9, 0].map((initial) => ({ initial, min: 0, max: 10 })), state: new Map([[5, 10]]), language: "zh-CN" }).facts;
   assert.deepEqual([zh.fills, zh.gives, zh.frames_now, zh.ten_made, "next" in zh], [{ number: 9, frame: "second" }, 4, [3, 10], true, false]);
@@ -390,7 +390,7 @@ test("a stubbed generation run: the outline's four numbers, the program's two, t
     assert.deepEqual(result.verdict.checks.filter((check) => !check.pass), [], `${outlineNumbers}`);
     assert.deepEqual(result.verdict.notes.filter((note) => !note.pass), [], `${outlineNumbers}`);
     // Section 2 is told where the demonstration stands.
-    for (const fact of ['"ten_made":true', '"to_make_ten":2', '"practice_pair":[4,9]']) assert.ok(result.later.includes(fact), `${outlineNumbers}: ${fact}`);
+    for (const fact of ['"ten_made":true', '"to_make_ten":2', '"after_class_practice":[4,9]']) assert.ok(result.later.includes(fact), `${outlineNumbers}: ${fact}`);
   }
 });
 

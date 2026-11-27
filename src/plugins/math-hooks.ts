@@ -1,6 +1,6 @@
 // Recipe hooks of the math plugin.
 import { compileMathExpression } from "octos-lesson-language";
-import type { LessonPlan, LessonPlanMathToken, LessonPlanOutline, LessonPlanSectionDraft, LessonPlanVisualContent } from "../lesson-plan.js";
+import { LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, type LessonPlan, type LessonPlanMathToken, type LessonPlanOutline, type LessonPlanSectionDraft, type LessonPlanVisualContent } from "../lesson-plan.js";
 import { lessonText, lessonTextLanguage } from "../lesson-text.js";
 import { assertRange, fail, mathExpressionToOll, optionalNumber, parameters, safeFunctionExpression } from "../recipe-kit.js";
 import { implicitSurfaceDomain } from "../scene3d-surfaces.js";
@@ -610,6 +610,30 @@ function requestsTwoIndependentPoints(request: string): boolean {
   return /(?:两个|两)\s*(?:个)?(?:可以|可)?(?:分别|独立|各自).{0,8}(?:移动|调整).{0,4}点|(?:分别|独立|各自).{0,8}(?:移动|调整).{0,8}(?:两个点|两点)|two.{0,12}(?:independent|separate).{0,12}(?:point|sample)/i.test(request);
 }
 
+/**
+ * A number line in steps that walks a making-ten sum again, in a section after the make-ten card (pilot 1, MT-13: the
+ * line wrote one step and then took the card's count moved). The program writes the walk's three numbers from the card's
+ * pair, as lesson numbers of the line's own that the card never names: the start (the bigger addend), the step that
+ * makes ten and the step left (8 + 5: 8, +2, +3). Appended before that section is written, so no earlier part changes;
+ * once per outline. Only when the card leads the outline's numbers (its pair is numbers 1 and 2) and the pair makes ten.
+ */
+function prepareMakeTenSteps(outline: LessonPlanOutline, section: number, language?: string): void {
+  const visuals = outline.course_visuals ?? [];
+  const numbers = outline.numbers ?? [];
+  if (!visuals.some((visual) => visual.capability === "number_line_steps" && visual.create_section === section)) return;
+  const firstNumbered = visuals.find((visual) => (LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[visual.capability as keyof typeof LESSON_PLAN_CAPABILITY_NUMBER_LIMITS] ?? 0) > 0);
+  if (firstNumbered?.capability !== "make_ten" || firstNumbered.create_section >= section || numbers.length < 2) return;
+  const [a, b] = [numbers[0]!.initial, numbers[1]!.initial];
+  if (![a, b].every((value) => Number.isInteger(value) && value >= 1 && value <= 9) || a + b <= 10) return;
+  const big = Math.max(a, b), toTen = 10 - big, rest = Math.min(a, b) - toTen;
+  const labels = ["数轴的起点（大数）", "补成十的一步", "剩下的一步"].map((label) => lessonText(language, label));
+  if (numbers.some((number) => number.label === labels[0]) || numbers.length + 3 > 16) return;
+  outline.numbers = [...numbers,
+    { initial: big, min: 0, max: 20, label: labels[0]! },
+    { initial: toTen, min: 0, max: 10, label: labels[1]! },
+    { initial: rest, min: 0, max: 10, label: labels[2]! }];
+}
+
 function prepareTwoPointOutline(outline: LessonPlanOutline, request: string, language?: string): void {
   if (!requestsTwoIndependentPoints(request)) return;
   outline.numbers ??= [];
@@ -655,6 +679,7 @@ function specializeTwoPointDraft(
 
 export const MATH_PLUGIN_HOOKS: PluginHooks = {
   prepare_outline: (outline, { request, language }) => prepareTwoPointOutline(outline, request, language),
+  prepare_section: (outline, section, { language }) => prepareMakeTenSteps(outline, section, language),
   specialize_draft(draft, context) {
     specializeTwoPointDraft(draft, context.outline, context.request);
     normalizePlotDraftBindings(draft, context);
