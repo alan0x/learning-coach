@@ -194,12 +194,14 @@ test("section 1 with both outline restarts spent: the card is named and repaired
   `, "make_ten");
   // Two restarts: the line (shared numbers), then the array (its own limit).
   assert.equal(result.requests.filter((label) => label === "lesson-plan-outline").length, 2);
-  assert.deepEqual(result.adjustments, [["visual_removed", 1, "number_line_steps", "shares_tap_card_numbers"]]);
   // Then the third outline's section 1 shares the card's numbers again: no restart is left, so the card is named and
-  // section 1 is repaired three times, as on main, before the lesson ends (this stub never writes a repair).
-  assert.deepEqual(result.requests.slice(-3), ["lesson-plan-section1", "lesson-plan-section1", "lesson-plan-section1"]);
-  // (The last attempt's fault is the one thrown, not reported as a rejected part.)
-  assert.deepEqual(result.rejected.slice(-2), ["LESSON_PLAN_SHARED_NUMBER", "LESSON_PLAN_SHARED_NUMBER"]);
-  assert.equal(result.error.capability, "make_ten");
-  assert.match(result.error.message, /the make-ten card needs lesson numbers of its own: the function_plot visual/u);
+  // section 1 is repaired three times, as on main (this stub never writes a repair).
+  assert.deepEqual(result.requests.slice(-4, -1), ["lesson-plan-section1", "lesson-plan-section1", "lesson-plan-section1"]);
+  assert.deepEqual(result.rejected.slice(2, 5), ["LESSON_PLAN_SHARED_NUMBER", "LESSON_PLAN_SHARED_NUMBER", "LESSON_PLAN_SHARED_NUMBER"]);
+  // With the repairs spent on the card, section 1 is written once more without it (35P-04 objective run, PF-09: a
+  // lesson is never lost to a picture). This stub writes the card again, so the lesson still ends there.
+  assert.deepEqual(result.adjustments, [["visual_removed", 1, "number_line_steps", "shares_tap_card_numbers"], ["visual_removed", 1, "make_ten", "visual_limits_after_retries"]]);
+  assert.equal(result.requests.at(-1), "lesson-plan-section1");
+  assert.equal(result.requests.length, 8);
+  assert.match(result.error.message, /course visual is not declared for this section/u);
 });

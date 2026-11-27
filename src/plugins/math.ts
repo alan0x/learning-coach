@@ -199,6 +199,9 @@ export const MATH_RECIPES = {
     required_model_schema_parameters: ["given"],
     semantic_parameters: ["given"],
     output_kinds: ["place_value_chart"],
+    // The chart starts on one lesson number at least (the question's; the practice number is optional): an outline
+    // that declares none loses it at once, as no section can add one (35P-04 objective run, PF-17).
+    min_lesson_numbers: 1,
     // Two lesson variables a column: when a lesson holds too many, the chart is the picture that goes.
     binds_many_variables: true,
     // No control: the learner works the chart by its own taps (+, a disk, take out); the model never names one.
