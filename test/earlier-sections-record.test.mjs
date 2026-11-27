@@ -146,3 +146,33 @@ test("a picture taken out of section 2, which is written again without it, is no
   assert.equal(third.course_and_section.pictures_now, undefined);
   assert.doesNotMatch(JSON.stringify(third.course_and_section.previous_sections), /number_line_rounding|A rounding line/u);
 });
+
+test("a picture the program takes out as section 1's prefix compiles (no rewrite) is not in section 2's record", () => {
+  const log = run(`
+    const plan = sp.samplePlan("rectangle_unit_square_array");
+    plan.numbers = [{ initial: 26, min: 0, max: 59, label: "loose ones" }, { initial: 9, min: 0, max: 34, label: "tens" }];
+    const first = plan.sections[0].moments[0];
+    first.narration = "Here are 9 tens and 26 loose ones.";
+    first.actions = first.actions.filter((action) => action.action !== "animate");
+    first.actions[0].content = { capability: "base_ten_trade", parameters: {}, numbers: [1, 2] };
+    // A process diagram whose step is too long: the program removes it as the prefix compiles (review of #167).
+    first.actions.splice(1, 0, { action: "create", kind: "visual", role: "supporting_visual", content: { capability: "process_diagram", parameters: { title: "Trading", steps: ["x".repeat(400)] } }, placement: { relation: "new_region" }, reusable_item: 2 });
+    plan.sections[0].reusable_items.push({ kind: "board_item", board_kind: "visual", capability: "process_diagram" });
+    plan.sections[0].reusable_items[0].capability = "base_ten_trade";
+    delete plan.sections[0].student_activities;
+    delete plan.sections[1].student_activities;
+    const stage = staged(plan);
+    const log = await generate((request) => request.label === "lesson-plan-bootstrap" ? bootstrap(request, stage) : JSON.stringify(stage.drafts[request.section - 1]),
+      "I have 9 tens and 26 ones. What number is that?");
+    console.log(JSON.stringify(log));
+  `);
+  assert.equal(log.error, undefined, JSON.stringify(log.error));
+  assert.deepEqual(log.requests, ["lesson-plan-bootstrap", "lesson-plan-section2"]);
+  assert.ok(log.adjustments.some(([kind, section]) => kind === "visual_removed" && section === 1), JSON.stringify(log.adjustments));
+  const [second] = prompts(log, "lesson-plan-section2");
+  const mat = { capability: "base_ten_trade", numbers: [{ number: 1, value: 26 }, { number: 2, value: 9 }] };
+  assert.deepEqual(second.course_and_section.previous_sections[0].taught, [{ narration: "Here are 9 tens and 26 loose ones.", drew: [{ course_visual: 1, ...mat }] }]);
+  assert.deepEqual(second.course_and_section.pictures_now, [{ course_visual: 1, ...mat }]);
+  // The outline still lists the diagram's slot (reusable_items); what was drawn does not.
+  assert.doesNotMatch(JSON.stringify(second.course_and_section.previous_sections.map(({ taught }) => taught)), /process_diagram/u);
+});

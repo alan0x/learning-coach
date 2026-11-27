@@ -28050,11 +28050,12 @@ function earlierSectionsRecord(outline, drafts, dropped) {
   const courseVisual = (section, action) => {
     if (action.action !== "create" || action.kind !== "visual") return 0;
     const capability2 = action.content.capability;
-    return (outline.course_visuals ?? []).findIndex((visual) => visual.create_section === section && visual.reusable_item === action.reusable_item && visual.capability === capability2) + 1;
+    const visuals = (outline.course_visuals ?? []).map((visual, index) => ({ ...visual, position: index + 1 })).filter((visual) => visual.create_section === section && visual.capability === capability2);
+    return (visuals.find((visual) => visual.reusable_item === action.reusable_item) ?? (visuals.length === 1 ? visuals[0] : void 0))?.position ?? 0;
   };
   const values = (numbers, state) => (numbers ?? []).map((number) => ({ number, value: state.get(number) }));
   const sections = drafts.map(() => ({ taught: [] }));
-  const pictures = /* @__PURE__ */ new Map();
+  const pictures = [];
   const end = numberStateAfter(outline, drafts, (draftAt, momentAt, drawn, after) => {
     const moment = drafts[draftAt].moments[momentAt];
     const wrote = [];
@@ -28068,7 +28069,7 @@ function earlierSectionsRecord(outline, drafts, dropped) {
       }
       const content = action.content;
       const visual = courseVisual(draftAt + 1, action);
-      if (visual) pictures.set(visual, { capability: content.capability, ...content.numbers ? { numbers: content.numbers } : {} });
+      if (action.action === "create") pictures.push({ visual, capability: content.capability, ...content.numbers ? { numbers: content.numbers } : {} });
       drew.push({
         ...visual ? { course_visual: visual } : {},
         capability: content.capability,
@@ -28086,13 +28087,13 @@ function earlierSectionsRecord(outline, drafts, dropped) {
     });
   });
   drafts.forEach((draft, draftAt) => {
-    const kept = (draft.student_activities ?? []).filter((_activity, index) => !dropped(draft)?.has(index));
+    const kept = (draft.student_activities ?? []).filter((_activity, index) => !dropped(draftAt + 1)?.has(index));
     if (kept.length) sections[draftAt].learner_turn = kept.map((activity) => ({ kind: activity.kind, prompt: activity.prompt }));
   });
   return {
     sections,
-    pictures_now: [...pictures].sort(([left], [right]) => left - right).map(([visual, picture]) => ({
-      course_visual: visual,
+    pictures_now: pictures.map((picture) => ({
+      ...picture.visual ? { course_visual: picture.visual } : {},
       capability: picture.capability,
       ...picture.numbers?.length ? { numbers: values(picture.numbers, end) } : {}
     }))
@@ -28816,6 +28817,10 @@ function compilePrefix(outline, drafts, options) {
   return compileAndValidateLessonPlan(prefixPlan(outline, drafts, options), { ...options, construction_rules: "explicit-v1" });
 }
 function prefixPlan(outline, drafts, options) {
+  const normalized = prefixSections(outline, drafts, options);
+  return assembleLessonPlan(normalized.outline, normalized.drafts, options);
+}
+function prefixSections(outline, drafts, options) {
   const sectionCount = drafts.length;
   let focus;
   for (let section = sectionCount; section >= 1 && !focus; section -= 1) {
@@ -28838,8 +28843,7 @@ function prefixPlan(outline, drafts, options) {
     sections: structuredClone(outline.sections.slice(0, sectionCount)),
     close: { summary: lessonText(options?.language, "\u8BFE\u7A0B\u5185\u5BB9\u4ECD\u5728\u7EE7\u7EED\u751F\u6210\u3002"), focus: [focus] }
   };
-  const normalized = normalizeExecutableNumberInteractions(prefixOutline, drafts);
-  return assembleLessonPlan(normalized.outline, normalized.drafts, options);
+  return normalizeExecutableNumberInteractions(prefixOutline, drafts);
 }
 function withdrawSectionVisual(outline, section, capability2, expectedRequestParts, keepSectionItem = false) {
   const visuals = outline.course_visuals ?? [];
@@ -29621,7 +29625,11 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
             section,
             allowedNumberIndexes,
             currentNumbers,
-            section > 1 ? earlierSectionsRecord(outline, drafts.slice(0, section - 1), (draft) => compileDroppedActivities.get(draft)) : void 0
+            section > 1 ? earlierSectionsRecord(
+              outline,
+              prefixSections(outline, drafts.slice(0, section - 1), options.compile).drafts,
+              (earlier) => compileDroppedActivities.get(drafts[earlier - 1])
+            ) : void 0
           ),
           visuals_for_section: visualsForSection(section, currentNumbers),
           assigned_request_parts: assignedRequestParts(section),

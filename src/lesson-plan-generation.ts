@@ -1802,25 +1802,29 @@ interface EarlierSectionsRecord {
  * section retold the first, as its request carried only the outline's one-line purposes). Per moment: the narration,
  * the formulas and notes written, the pictures drawn with the lesson numbers they show, the numbers restarted and
  * where the moves took them; then the learner's after-lesson turn, and where each picture's numbers stand now. It is
- * read from the accepted drafts, after the program's adjustments: a move left out, a picture taken out (its section
- * was written again without it) or an activity dropped is not there. `dropped` names the activities the compiler
- * dropped from a section. The number walk is the one `current_value` comes from, so the two always agree.
+ * read from the sections as their playable prefix compiled them (`prefixSections`), after the program's adjustments: a
+ * move left out, a picture taken out (by the prefix's clean-up, or from the outline, its section written again without
+ * it) or an activity dropped is not there. `dropped` names, by section, the activities the compiler then dropped
+ * (their places in the compiled sections). The number walk is the one `current_value` comes from.
  */
 function earlierSectionsRecord(
   outline: LessonPlanOutline,
   drafts: readonly LessonPlanSectionDraft[],
-  dropped: (draft: LessonPlanSectionDraft) => ReadonlySet<number> | undefined,
+  dropped: (section: number) => ReadonlySet<number> | undefined,
 ): EarlierSectionsRecord {
+  // The outline's picture: by its slot, else the section's only picture of that kind (the prefix's clean-up
+  // renumbers the slots after a picture it takes out).
   const courseVisual = (section: number, action: LessonPlanAction) => {
     if (action.action !== "create" || action.kind !== "visual") return 0;
     const capability = (action.content as LessonPlanVisualContent).capability;
-    return (outline.course_visuals ?? []).findIndex((visual) => visual.create_section === section
-      && visual.reusable_item === action.reusable_item && visual.capability === capability) + 1;
+    const visuals = (outline.course_visuals ?? []).map((visual, index) => ({ ...visual, position: index + 1 }))
+      .filter((visual) => visual.create_section === section && visual.capability === capability);
+    return (visuals.find((visual) => visual.reusable_item === action.reusable_item) ?? (visuals.length === 1 ? visuals[0] : undefined))?.position ?? 0;
   };
   const values = (numbers: readonly number[] | undefined, state: ReadonlyMap<number, number>) =>
     (numbers ?? []).map((number) => ({ number, value: state.get(number) }));
   const sections: EarlierSectionsRecord["sections"] = drafts.map(() => ({ taught: [] }));
-  const pictures = new Map<number, { capability: string; numbers?: number[] }>();
+  const pictures: Array<{ visual: number; capability: string; numbers?: number[] }> = [];
   const end = numberStateAfter(outline, drafts, (draftAt, momentAt, drawn, after) => {
     const moment = drafts[draftAt]!.moments[momentAt]!;
     const wrote: string[] = [];
@@ -1834,7 +1838,7 @@ function earlierSectionsRecord(
       }
       const content = action.content as LessonPlanVisualContent;
       const visual = courseVisual(draftAt + 1, action);
-      if (visual) pictures.set(visual, { capability: content.capability, ...(content.numbers ? { numbers: content.numbers } : {}) });
+      if (action.action === "create") pictures.push({ visual, capability: content.capability, ...(content.numbers ? { numbers: content.numbers } : {}) });
       drew.push({
         ...(visual ? { course_visual: visual } : {}),
         capability: content.capability,
@@ -1852,13 +1856,13 @@ function earlierSectionsRecord(
     });
   });
   drafts.forEach((draft, draftAt) => {
-    const kept = (draft.student_activities ?? []).filter((_activity, index) => !dropped(draft)?.has(index));
+    const kept = (draft.student_activities ?? []).filter((_activity, index) => !dropped(draftAt + 1)?.has(index));
     if (kept.length) sections[draftAt]!.learner_turn = kept.map((activity) => ({ kind: activity.kind, prompt: activity.prompt }));
   });
   return {
     sections,
-    pictures_now: [...pictures].sort(([left], [right]) => left - right).map(([visual, picture]) => ({
-      course_visual: visual,
+    pictures_now: pictures.map((picture) => ({
+      ...(picture.visual ? { course_visual: picture.visual } : {}),
       capability: picture.capability,
       ...(picture.numbers?.length ? { numbers: values(picture.numbers, end) } : {}),
     })),
@@ -2727,6 +2731,19 @@ function prefixPlan(
   drafts: LessonPlanSectionDraft[],
   options: CompileLessonPlanOptions | undefined,
 ): LessonPlan {
+  const normalized = prefixSections(outline, drafts, options);
+  return assembleLessonPlan(normalized.outline, normalized.drafts, options);
+}
+
+/**
+ * A playable prefix's outline and sections as it compiles them: after the program's clean-up of pictures, duplicate
+ * cards and number interactions that cannot run (`normalizeExecutableNumberInteractions`).
+ */
+function prefixSections(
+  outline: LessonPlanOutline,
+  drafts: LessonPlanSectionDraft[],
+  options: CompileLessonPlanOptions | undefined,
+): ReturnType<typeof normalizeExecutableNumberInteractions> {
   const sectionCount = drafts.length;
   let focus: { source: "reusable"; section: number; item: number } | undefined;
   for (let section = sectionCount; section >= 1 && !focus; section -= 1) {
@@ -2756,8 +2773,7 @@ function prefixPlan(
     sections: structuredClone(outline.sections.slice(0, sectionCount)),
     close: { summary: lessonText(options?.language, "课程内容仍在继续生成。"), focus: [focus] },
   };
-  const normalized = normalizeExecutableNumberInteractions(prefixOutline, drafts);
-  return assembleLessonPlan(normalized.outline, normalized.drafts, options);
+  return normalizeExecutableNumberInteractions(prefixOutline, drafts);
 }
 
 /**
@@ -3471,7 +3487,8 @@ export async function generateLessonPlanWithModel(
   };
   const drafts: LessonPlanSectionDraft[] = [];
   // Activities the compiler dropped from each accepted section (a card's task with nothing left to do), by their
-  // place in the draft: the latest playable prefix decides, as a later section can end a card's task.
+  // place in the section as the prefix compiled it: the latest playable prefix decides, as a later section can end
+  // a card's task.
   const compileDroppedActivities = new WeakMap<LessonPlanSectionDraft, Set<number>>();
   const noteCompiledDrops = (compiled: CompiledLessonPlan, sections: number) => {
     for (const draft of drafts.slice(0, sections)) compileDroppedActivities.delete(draft);
@@ -3739,7 +3756,8 @@ export async function generateLessonPlanWithModel(
         prompt: JSON.stringify({
           course_context: compactModelContext(section === 1 ? context : laterSectionContext),
           course_and_section: sectionPromptContext(outline, section, allowedNumberIndexes, currentNumbers,
-            section > 1 ? earlierSectionsRecord(outline, drafts.slice(0, section - 1), (draft) => compileDroppedActivities.get(draft)) : undefined),
+            section > 1 ? earlierSectionsRecord(outline, prefixSections(outline, drafts.slice(0, section - 1), options.compile).drafts,
+              (earlier) => compileDroppedActivities.get(drafts[earlier - 1]!)) : undefined),
           visuals_for_section: visualsForSection(section, currentNumbers),
           assigned_request_parts: assignedRequestParts(section),
           // The note stays for later sections too: their purposes may also name the picture (review of this change).
