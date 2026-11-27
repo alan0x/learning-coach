@@ -16,6 +16,8 @@ import {
   placeValueTimesTenDemoState, placeValueTimesTenFacts, placeValueTimesTenPath, placeValueTimesTenPosition, placeValueTimesTenStepSentences,
 } from "octos-lesson-language/plugin-math";
 import { TIMES_TEN_NUMBER, timesTenDecimal, timesTenStartProblem } from "./place-value-times-ten-moves.js";
+import { placeValueCompareColumn, placeValueCompareDemoEnd, placeValueCompareDemoState, placeValueCompareStepSentences } from "octos-lesson-language/plugin-math";
+import { COMPARE_NUMBER, compareNumeral, compareStartProblem } from "./place-value-compare-moves.js";
 
 export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
   // The trading mat in its own terms (owner, 2026-11-24): where practice starts, the amount no trade changes,
@@ -182,6 +184,44 @@ export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
         ? { next: path.slice(k + 1).map((value, i) => ({ value: timesTenDecimal(value), does: does[k + i]! })) }
         : { reached_target: true }),
       practice: [timesTenDecimal(practice.amount), timesTenDecimal(practice.target)],
+    } };
+  },
+  // The compare card in its own terms (OLL 0029), once it is drawn: the pair as written (0.70 keeps its zero), its
+  // columns, the deciding place and the true sign (the lesson's own pair: the demonstration shows it), where the
+  // demonstration stands (compared now, and each column as judged so far), what the next value does in the card's own
+  // sentences, where the demonstration goes (compared to the sign: owner, 2026-11-27; information only, no check
+  // enforces it), and the practice pair as written (never its answer: the learner finds it on the card).
+  place_value_compare: ({ established, numbers, state, language }) => {
+    if (!numbers || !established?.numbers?.length) return {};
+    const lessonNumbers = established.numbers;
+    const definitions = lessonNumbers.map((number) => numbers[number - 1]);
+    const found = compareStartProblem(definitions.map((definition) => Number(definition?.initial ?? 0)), definitions.map((definition) => definition?.written_decimals));
+    if ("fault" in found) return {};
+    const { pair, numbers: [a, b, pa, pb] } = found;
+    const cardLanguage = /^en(?:-|$)/iu.test(language ?? "") ? "en-US" : "zh-CN";
+    const end = placeValueCompareDemoEnd(pair);
+    // Compared starts at 0; a value past the end is the end; it is read as the card reads its own field.
+    const now = Number(state.get(lessonNumbers[COMPARE_NUMBER.compared]!) ?? 0);
+    const k = Number.isFinite(now) ? Math.min(end, Math.max(0, Math.floor(now + 1e-9))) : 0;
+    const shown = placeValueCompareDemoState(pair, k);
+    const name = (place: number) => placeValueColumnName(place, cardLanguage);
+    const says = placeValueCompareStepSentences(pair, 0, end, cardLanguage);
+    return { facts: {
+      numbers: lessonNumbers,
+      pair: [compareNumeral(a!), compareNumeral(b!)],
+      columns: pair.columns.map(name),
+      deciding_place: pair.equal ? null : name(pair.place),
+      relation: pair.relation,
+      compared_now: k,
+      chart_now: pair.columns.map((place, index) => {
+        const column = placeValueCompareColumn(shown, index);
+        return { column: name(place), first: column.a, second: column.b, ...(column.status === "open" ? {} : { marked: column.status === "same" ? "=" : column.status === "decides" ? "≠" : "doesn't matter" }) };
+      }),
+      ...(k < end
+        ? { next: Array.from({ length: end - k }, (_, i) => ({ value: k + i + 1, does: says[k + i]! })) }
+        : { sign_chosen: pair.relation }),
+      demonstration_to: { compared: end },
+      practice_pair: [compareNumeral(pa!), compareNumeral(pb!)],
     } };
   },
   function_plot: ({ established }) => (established && fixedLineSamples(established) ? { lead: { sample_slope: "constant" } } : {}),

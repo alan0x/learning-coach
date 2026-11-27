@@ -6,6 +6,7 @@ import { MATH_PLUGIN_MANIFEST, MATH_SUBJECT_DESCRIPTION, MAKE_TEN_MAX_MOVED, MAK
 import type { CoachSubjectPlugin } from "./types.js";
 import { PLOT_MARKS } from "./plot-mark-names.js";
 import { timesTenStartOf } from "./place-value-times-ten-moves.js";
+import { COMPARE_MOST } from "./place-value-compare-moves.js";
 
 // Counts a recipe draws, as whole numbers from min to max. The compiler fits slider ranges to them and
 // refuses a stated count outside them (Coach #78); the card text quotes the same numbers.
@@ -311,6 +312,36 @@ export const MATH_RECIPES = {
     required_features: ["count_in_another_unit"],
     model_guidance: "换一个单位来数（数位表：往右一位一个拆成十个，往左一位十个合成一个）：数单位（3个十分之一=?个千分之一；6个千=?个百；一千里有几个十）或倍数（700是70的几倍；0.3是3的十分之一）。这些题用这张卡，不用 trade_ten_for_one（它只把十个合成一个）。数只有一位不是零（5550里的两个5写500和50），单位最多隔两位，倍数是相邻两位。不用于一个数字表示多少、比较、加减、乘除以10或100、除以小数。outline 的 numbers 依次是五个角色，每个数的 label 用课的语言写它的角色（如 unit asked、问的单位）：amount 要数的数（写值，3个十分之一写0.3）；unit_asked 问的单位（问“是几个百分之一”写0.01；倍数写小的数70）；practice_amount、practice_unit_asked 练习的两个数（同一种问法，隔同样几位、同一方向，不是题目的）；start_unit 要数的数现在用什么单位在数（题目说它时用的单位）。拆开的题（往小的单位数）和倍数不写 start_unit，程序补成要数的数自己那一位：7个十分之一=?个百分之一 写0.7、0.01、练习两个数；一千里有几个十 写1000、10、练习两个数。合起来的题（往大的单位数）要写：70个百分之一=?个十分之一 写0.7、0.1、练习两个数、0.01。start_unit 和 unit_asked 是两个不同的单位。演示只动画 start_unit（第五个数）：从它一步一步动画到 unit_asked 的值（0.1、0.01、0.001；倍数到70），只往前走，一直到问的单位；别的数不动画。练习：对第五个数写数值目标题，程序再出答案那一行；题目和提示不写练习的答案。不说怎么点卡片",
   },
+  // OLL decision 0029 (a trial): comparing two numbers by place, from the largest place down: two rows of one chart,
+  // lined up by place; the learner judges each place from the left ("Same" or "Different", the card's own buttons),
+  // then chooses >, = or <. The model writes the question's pair as written (0.70 keeps its zero) and a practice pair;
+  // the program supplies "compared" (0: no column judged), which the demonstration animates while the card judges one
+  // column at a time and then chooses the sign (owner, 2026-11-27: the demonstration reaches the sign; no check
+  // enforces it). The program makes the learner's task on the practice pair.
+  place_value_compare: {
+    parts: ["whole"],
+    number_inputs: ["first", "second", "practice_first", "practice_second", "compared"],
+    number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
+    // Compared starts at 0 whatever the outline holds (the card opens with no column judged), so the program
+    // supplies it: an outline that declares only the four numbers before it gets it, from 0 to the most any pair can
+    // reach (seven columns, then the sign).
+    program_number_inputs: [{ initial: 0, min: 0, max: COMPARE_MOST, label: "从左边起比了几位" }],
+    // The card starts on no fewer: an outline that declares fewer loses it at once (a section cannot add one).
+    min_lesson_numbers: 5,
+    parameter_names: [],
+    model_parameter_names: [],
+    required_model_schema_parameters: [],
+    semantic_parameters: [],
+    output_kinds: ["place_value_compare"],
+    // Up to seven lesson variables (the pair, their written decimals, compared, the learner's two): when a lesson
+    // holds too many, the card is the picture that goes.
+    binds_many_variables: true,
+    // No control: the learner works the card by its own taps; the model never names one, and the card's own fixed
+    // text says how it is used.
+    student_controls: [],
+    required_features: ["compare_by_place"],
+    model_guidance: "按数位比大小（数位表上两个数各占一行，按数位对齐，从最高位一位一位比，第一个不一样的数位决定，后面的数位不影响）：多位数比较（到百万位）和小数比较（到千分位），问哪个大、为什么、怎么比、相等吗（0.7和0.70）。不用于数轴上的位置、凑整、加减、展开式、分数比较、二年级用方块比。outline 的 numbers 依次是五个角色，每个数的 label 用课的语言写它的角色（如 first number、第一个数）：first、second 题目的两个数，照题目写，小数末尾写出来的0要保留（0.70 写 mantissa 70、scale 2；0.7 写 7、1，不要补0）；practice_first、practice_second 练习的两个数（另一对，不是题目的，换顺序也不算，也不是同样的值换个写法）；compared 写0：表一开始一位也没比。演示时把 compared 动画到 1、2……：每到一个值，程序从左边起判断一位（一样的标=，第一个不一样的标≠，后面的位不影响），最后一个值选好符号；演示一直比到选好符号（visuals_for_section 给出 demonstration_to）。别的数不动画。练习：对第五个数写一个数值目标题，孩子自己从左边起一位一位比，再选符号；题目和提示不写练习的答案（不写哪个大，不写 >、<、=）。说数位用名字（十位、十分位、tens），不说怎么点卡片",
+  },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
     number_inputs: ["columns_or_length", "rows_or_width"],
@@ -386,6 +417,9 @@ export const MATH_RECIPES = {
     student_controls: ["slider"],
     required_features: ["number_line", "number_comparison"],
     model_guidance: "数轴比较两个数：两个数值各画一点（2/3 和 3/5 也能画）",
+    // Beside the compare card (a trial, OLL 0029), the number line does not take "which is greater and why, by place":
+    // the card compares place by place. Without the trial its text is unchanged.
+    model_guidance_with: { place_value_compare: "数轴比较两个数：两个数值各画一点（2/3 和 3/5 也能画）；按数位比大小（哪个大、为什么、从最高位比、0.7和0.70相等吗）不用数轴" },
   },
   // Decision 0016: a solution set. The model names the relation and gives the boundaries (solved first);
   // the program draws open or filled ends and the rays or interval.

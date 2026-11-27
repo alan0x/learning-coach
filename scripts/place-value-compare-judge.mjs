@@ -22,15 +22,18 @@
 //   sign (a lesson may stop partway: no hard rule, owner 2026-11-25); the learner has a task on the card; the task's
 //   words name no control.
 //
-// The card is read from the lesson as written, its bound fields at the variables' values, by 0029's rules (the
-// accepted sketch's), so each fault is named; the rules are written here until Coach pins an OLL with the card, as
-// #183 and #185 did. Narration is not judged.
+// The lesson plays through OLL itself (normalized and reduced, as the player plays it: "the lesson plays"), so every
+// rule of the card OLL keeps is checked by OLL. The card is read from the lesson as written, its bound fields at the
+// variables' values, by the card's own rules (OLL's placeValueCompareFault, placeValueComparePairOf,
+// placeValueCompareDemoEnd and placeValueComparePracticeFault), so each fault is also named. Narration is not judged.
+
+import { normalizeAuthoringLesson, reduceCanonicalEvents } from "octos-lesson-language";
+import { placeValueCompareDemoEnd, placeValueCompareFault, placeValueComparePairOf, placeValueComparePracticeFault } from "octos-lesson-language/plugin-math";
 
 const KIND = "place_value_compare";
 /** Cards a served case may draw instead, named in its failure. */
 const INSTEAD = { place_value_chart: "the place-value chart", place_value_trade: "the trade card", base_ten_trade: "the trading mat", number_line: "a number line" };
-const MIN_PLACE = -3, MAX_PLACE = 6, MAX_COLUMNS = 7, MAX_DECIMALS = 3, MAX_VALUE = 9_999_999_999;
-const unit = (place) => 10 ** (place + 3);
+const MAX_DECIMALS = 3;
 const PLACE_NAMES = { 6: "millions", 5: "hundred_thousands", 4: "ten_thousands", 3: "thousands", 2: "hundreds", 1: "tens", 0: "ones", [-1]: "tenths", [-2]: "hundredths", [-3]: "thousandths" };
 
 /** "4,530", "0.70", "０.７" -> { value (thousandths), dec (decimals as written) }; undefined when the card cannot hold it. */
@@ -44,38 +47,18 @@ export function writtenNumber(text) {
 }
 /** How many decimals a value needs: 0.7 one, 0.625 three. */
 export const ownDecimals = (value) => { const frac = value % 1000; return !frac ? 0 : frac % 100 === 0 ? 1 : frac % 10 === 0 ? 2 : 3; };
-const digitAt = (value, place) => Math.floor(value / unit(place)) % 10;
-const topPlace = (value) => { for (let place = MAX_PLACE; place >= MIN_PLACE; place -= 1) if (digitAt(value, place)) return place; return 0; };
 /** The numeral as written (plain digits). */
 export const numeral = (n) => (n && Number.isFinite(n.value) ? `${Math.floor(n.value / 1000)}${n.dec ? `.${String(n.value % 1000).padStart(3, "0").slice(0, n.dec)}` : ""}` : String(n?.value));
 
-/** Why the card refuses a pair (0029 §5, as OLL's placeValueCompareFault), or undefined. */
-export function compareFault(a, b) {
-  for (const n of [a, b]) {
-    if (!Number.isSafeInteger(n.value) || n.value < 0 || n.value > MAX_VALUE) return "unreadable";
-    if (!Number.isInteger(n.dec) || n.dec < ownDecimals(n.value) || n.dec > MAX_DECIMALS) return "decimals";
-  }
-  const high = Math.max(topPlace(a.value), topPlace(b.value), 0);
-  if (high + Math.max(a.dec, b.dec) + 1 > MAX_COLUMNS) return "too_wide";
-  if (a.value === b.value && a.dec === b.dec) return "same_numeral";
-  return undefined;
-}
-/** The pair's deciding place (null when every place matches) and relation, read first to second. */
+/** Why the card refuses a pair (OLL's placeValueCompareFault), or undefined. */
+export const compareFault = (a, b) => placeValueCompareFault(a, b);
+/** The pair's deciding place (null when every place matches), relation read first to second, and the demonstration's last value. */
 export function comparePair(a, b) {
-  const high = Math.max(topPlace(a.value), topPlace(b.value), 0), low = -Math.max(a.dec, b.dec);
-  for (let place = high; place >= low; place -= 1) {
-    const x = digitAt(a.value, place), y = digitAt(b.value, place);
-    if (x !== y) return { deciding: place, relation: x > y ? ">" : "<", end: high - place + 2 };
-  }
-  return { deciding: null, relation: "=", end: high - low + 2 };
+  const pair = placeValueComparePairOf(a, b);
+  return { deciding: pair.equal ? null : pair.place, relation: pair.relation, end: placeValueCompareDemoEnd(pair) };
 }
 /** A practice pair fits when the card takes it and it is not the shown pair in either order (OLL's placeValueComparePracticeFault). */
-export function practiceFault(shown, a, b) {
-  const fault = compareFault(a, b);
-  if (fault) return fault;
-  const same = (p, q) => p.value === q.value && p.dec === q.dec;
-  return (same(shown[0], a) && same(shown[1], b)) || (same(shown[0], b) && same(shown[1], a)) ? "same_pair" : undefined;
-}
+export const practiceFault = (shown, a, b) => placeValueComparePracticeFault(placeValueComparePairOf(shown[0], shown[1]), a, b);
 
 /**
  * The card's content with its bound fields at these variable values (every field is bound by its bare name). `set` is
@@ -103,7 +86,14 @@ export function compareIn(lesson) {
   const writes = written.filter((action) => action.kind === KIND);
   const instead = [...new Set(written.map((action) => INSTEAD[action.kind]).filter(Boolean))];
   const tasks = lesson?.lesson?.tasks ?? [];
-  if (!writes.length) return { cards: 0, instead, tasks };
+  // The lesson plays as the player plays it. A lesson OLL refuses is still read, so each fault is named too.
+  let error;
+  try {
+    reduceCanonicalEvents(normalizeAuthoringLesson(lesson, { lessonId: "judge", boardId: "judge", baseRevision: 0, regionIntent: "new_topic" }));
+  } catch (caught) {
+    error = `${caught.code ?? "error"}: ${String(caught.message).slice(0, 160)}`;
+  }
+  if (!writes.length) return { cards: 0, instead, tasks, ...(error ? { error } : {}) };
   const write = writes[0];
   const declared = Object.fromEntries((lesson.lesson?.variables ?? []).map((variable) => [variable.as, variable.initial]));
   const start = cardAt(write.content, declared);
@@ -111,7 +101,7 @@ export function compareIn(lesson) {
   if (start.comparedVariable !== undefined) {
     for (const action of actions) if (action.do === "animate" && action.variable === start.comparedVariable && typeof action.value === "number") shown.push(action.value);
   }
-  return { cards: writes.length, instead, as: write.as, content: write.content, declared, start, shown, tasks };
+  return { cards: writes.length, instead, as: write.as, content: write.content, declared, start, shown, tasks, ...(error ? { error } : {}) };
 }
 
 /** Judges one case's lesson. Returns { pass, checks: [{ check, pass, detail? }], notes: [...] }. */
@@ -122,6 +112,7 @@ export function judgePlaceValueCompare(item, lesson) {
   const note = (name, holds, detail) => notes.push({ check: name, pass: Boolean(holds), ...(holds ? {} : { detail }) });
   const done = () => ({ pass: checks.every((each) => each.pass), checks, notes });
   const card = compareIn(lesson);
+  check("the lesson plays", !card.error, card.error);
   if (item.expect?.forbid) {
     if (item.expect.forbid.includes(KIND)) check("no compare card for this question", card.cards === 0, `${card.cards} compare card(s) drawn`);
     return done();

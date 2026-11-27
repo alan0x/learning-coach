@@ -1,5 +1,5 @@
 // The place-value compare judge (OLL decision 0029, need 35P-06): the development cases are well formed, and the
-// judge is tried on compare lessons written by hand in the card's shape (OLL #130's SPEC example: the pair, the
+// judge is tried on compare lessons written by hand in the card's shape, played through OLL (OLL #130's SPEC example: the pair, the
 // written decimals when a number ends in a written zero, "compared", "marked" and "signed" bound bare, a `complete`
 // task by taps on a practice pair of its own). A served lesson passes, also one whose demonstration stops partway; a
 // near miss with a compare card fails; a served question drawn on the place-value chart fails; and a card or a task
@@ -57,7 +57,10 @@ function compareLesson({ a, b, language = "en-US", cardLanguage = language, prac
   };
 }
 
-const failed = (verdict) => verdict.checks.filter((check) => !check.pass).map((check) => check.check);
+// The judge names each fault itself; OLL refuses most of these lessons too ("the lesson plays"), left out here and
+// tested on its own.
+const failedAll = (verdict) => verdict.checks.filter((check) => !check.pass).map((check) => check.check);
+const failed = (verdict) => failedAll(verdict).filter((check) => check !== "the lesson plays");
 const noted = (verdict) => verdict.notes.filter((check) => !check.pass).map((check) => check.check);
 const cases = JSON.parse(await readFile(new URL("../testsuite/place-value-compare-dev-cases.json", import.meta.url), "utf8")).cases;
 const blueprint = JSON.parse(await readFile(new URL("../testsuite/place-value-compare-blueprint.json", import.meta.url), "utf8"));
@@ -125,7 +128,7 @@ test("a near miss drawn on the compare card fails; a served question drawn on th
   chart.steps[0].beats[0].actions[0] = { do: "write", as: "chart", kind: "place_value_chart", role: "main_visual", content: {}, place: { relation: "new_region" } };
   const verdict = judgePlaceValueCompare(byId["PC-01"], chart);
   assert.deepEqual(failed(verdict), ["a compare card is drawn"]);
-  assert.match(verdict.checks[0].detail, /drawn instead: the place-value chart/);
+  assert.match(verdict.checks.find((check) => check.check === "a compare card is drawn").detail, /drawn instead: the place-value chart/);
   assert.deepEqual(failed(judgePlaceValueCompare(byId["PC-01"], { lesson: {}, steps: [] })), ["a compare card is drawn"]);
 });
 
@@ -176,4 +179,13 @@ test("a task on the card has a goal the learner can reach: complete by taps alon
   assert.deepEqual(noted(judgePlaceValueCompare(byId["PC-01"], compareLesson({ ...base, task: { prompt: "Tap Same or Different under each column." } }))), ["practice-1: the task's words name no control"]);
   const none = compareLesson({ a: "7284", b: "7248", compared: [4] });
   assert.deepEqual(noted(judgePlaceValueCompare(byId["PC-01"], none)), ["the learner has a task on the card"]);
+});
+
+test("the lesson plays through OLL: an ideal lesson plays; one OLL refuses fails, and the judge still names the fault", () => {
+  const good = judgePlaceValueCompare(byId["PC-14"], compareLesson({ a: "0.7", b: "0.70", decimals: true, practice: [["2.50", "2.5"]], compared: [4] }));
+  assert.deepEqual(failedAll(good), []);
+  const reversed = judgePlaceValueCompare(byId["PC-01"], compareLesson({ a: "7284", b: "7248", practice: [["7284", "7248"]], compared: [4] }));
+  assert.ok(failedAll(reversed).includes("the lesson plays"), JSON.stringify(reversed.checks));
+  const opened = judgePlaceValueCompare(byId["PC-01"], compareLesson({ a: "7284", b: "7248", cardStart: { marked: 1 } }));
+  assert.deepEqual(failedAll(opened).sort(), ["the card opens fresh", "the lesson plays"]);
 });
