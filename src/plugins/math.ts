@@ -216,7 +216,7 @@ export const MATH_RECIPES = {
     // Columns finished starts at 0 whatever the outline holds (the card is drawn with no column done), so the
     // program supplies it: an outline that declares only the four numbers before it gets it (0, from 0 to the
     // card's most columns, OLL's own limit), and a create naming only those four is bound to it. A model's own
-    // fifth is kept, and a create naming four is not bound to it (it may be another picture's number).
+    // fifth is kept, and bound the same way when the outline holds only the card's five numbers.
     program_number_inputs: [{ initial: 0, min: 0, max: PLACE_VALUE_TRADE_MAX_COLUMNS, label: "做完了几列" }],
     // The card starts on no fewer: an outline that declares fewer loses it at once (a section cannot add one).
     min_lesson_numbers: 5,

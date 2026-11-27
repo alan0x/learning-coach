@@ -697,13 +697,19 @@ function lowerModelBoardContent(
   if (forceNoNumbers) validNumbers = [];
   const parameterNumbers = hooks?.numbers_from_parameters?.(parameters, { numberCount, limit: numberLimit }) ?? [];
   if (parameterNumbers.length > 0) validNumbers = parameterNumbers;
-  // A card whose trailing numbers the program supplied to this outline (recipe `program_number_inputs`): a create
-  // naming only the numbers before them is bound to them. Only to numbers the program supplied: an outline's own
-  // number after the card's may be another picture's, and is never bound by this.
-  if (programNumbers && programNumbers.capability === capability && !forceNoNumbers
-    && programNumbers.first + programNumbers.count - 1 === numberCount
-    && validNumbers.length === programNumbers.first - 1 && validNumbers.every((number) => Number(number) < programNumbers.first)) {
-    for (let number = programNumbers.first; number <= numberCount; number += 1) validNumbers.push(number);
+  // A card with trailing numbers the program can supply (recipe `program_number_inputs`): a create naming only the
+  // numbers before them (1 to k, in any order) is bound to the rest. Bound when every outline number is the card's
+  // (the outline holds exactly the card's count, as the program leaves it after supplying, or as the model wrote
+  // them all); otherwise only to numbers the program itself supplied: an outline's number beyond the card's may be
+  // another picture's, and is never bound by this.
+  const programInputs = typeof capability === "string" ? recipeProgramNumbers(capability).length : 0;
+  const bindFrom = validNumbers.length + 1;
+  const bindable = numberCount === numberLimit && programInputs > 0
+    ? bindFrom > numberLimit - programInputs && bindFrom <= numberLimit
+    : programNumbers?.capability === capability && bindFrom === programNumbers.first
+      && programNumbers.first + programNumbers.count - 1 === numberCount;
+  if (bindable && !forceNoNumbers && validNumbers.every((number) => Number(number) < bindFrom)) {
+    for (let number = bindFrom; number <= numberCount; number += 1) validNumbers.push(number);
   }
   if (!forceNoNumbers
     && validNumbers.length === 0
@@ -2709,9 +2715,9 @@ const registryProgramNumbers = (capability: string) => ({
 /**
  * Appends the numbers a chosen card's recipe supplies itself (`program_number_inputs`: the trade card's columns
  * finished, which always starts at 0) when the outline declares exactly the card's other numbers, or those and
- * the first of the supplied ones (then only the rest are appended), and returns which they are (only a create of
- * that card naming the others is bound to them). An outline that declares them all keeps its own, which no create
- * is bound to; one that declares any other count is left alone. Supplying
+ * the first of the supplied ones (then only the rest are appended), and returns which they are. An outline that
+ * declares them all keeps its own; one that declares any other count is left alone. Either way the outline then
+ * holds only the card's numbers, so a create of the card naming the first ones is bound to the rest. Supplying
  * again to an outline already prepared changes nothing and reports the same numbers. `recipe` reads a recipe's
  * inputs and number count (the registry's; a test passes its own).
  */

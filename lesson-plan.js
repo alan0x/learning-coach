@@ -16475,7 +16475,7 @@ var MATH_RECIPES = {
     // Columns finished starts at 0 whatever the outline holds (the card is drawn with no column done), so the
     // program supplies it: an outline that declares only the four numbers before it gets it (0, from 0 to the
     // card's most columns, OLL's own limit), and a create naming only those four is bound to it. A model's own
-    // fifth is kept, and a create naming four is not bound to it (it may be another picture's number).
+    // fifth is kept, and bound the same way when the outline holds only the card's five numbers.
     program_number_inputs: [{ initial: 0, min: 0, max: PLACE_VALUE_TRADE_MAX_COLUMNS, label: "\u505A\u5B8C\u4E86\u51E0\u5217" }],
     // The card starts on no fewer: an outline that declares fewer loses it at once (a section cannot add one).
     min_lesson_numbers: 5,
@@ -25327,8 +25327,11 @@ function lowerModelBoardContent(kind, value2, numberCount, numberLabels = [], pr
   if (forceNoNumbers) validNumbers = [];
   const parameterNumbers = hooks?.numbers_from_parameters?.(parameters3, { numberCount, limit: numberLimit }) ?? [];
   if (parameterNumbers.length > 0) validNumbers = parameterNumbers;
-  if (programNumbers && programNumbers.capability === capability2 && !forceNoNumbers && programNumbers.first + programNumbers.count - 1 === numberCount && validNumbers.length === programNumbers.first - 1 && validNumbers.every((number) => Number(number) < programNumbers.first)) {
-    for (let number = programNumbers.first; number <= numberCount; number += 1) validNumbers.push(number);
+  const programInputs = typeof capability2 === "string" ? recipeProgramNumbers(capability2).length : 0;
+  const bindFrom = validNumbers.length + 1;
+  const bindable = numberCount === numberLimit && programInputs > 0 ? bindFrom > numberLimit - programInputs && bindFrom <= numberLimit : programNumbers?.capability === capability2 && bindFrom === programNumbers.first && programNumbers.first + programNumbers.count - 1 === numberCount;
+  if (bindable && !forceNoNumbers && validNumbers.every((number) => Number(number) < bindFrom)) {
+    for (let number = bindFrom; number <= numberCount; number += 1) validNumbers.push(number);
   }
   if (!forceNoNumbers && validNumbers.length === 0 && numberCount === 1 && typeof capability2 === "string" && !recipeDeclares(capability2, "numbers_in_parameters") && capability2 in LESSON_PLAN_CAPABILITIES && LESSON_PLAN_CAPABILITIES[capability2].includes("primary_control")) {
     validNumbers = [1];
