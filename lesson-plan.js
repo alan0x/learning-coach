@@ -18748,8 +18748,7 @@ function isSecondCard(capability2, content, sections) {
   for (const section of sections) for (const moment of section.moments) for (const raw of moment.actions) {
     const action = raw;
     if (action.action !== "create" || action.kind !== "visual" || action.content?.capability !== capability2) continue;
-    if (action.content === content) return false;
-    if (!exampleOf(capability2, action.content.parameters)) return true;
+    return action.content !== content;
   }
   return false;
 }
@@ -18768,8 +18767,14 @@ function exampleStart(capability2, example, first, firstParameters) {
   if (capability2 === "place_value_trade") {
     const operation = firstParameters?.operation;
     const [a, b, pa, pb] = first;
-    const fault = placeValueTradeStartFault2([x, y, pa, pb, 0], operation);
-    if (fault) return { fault: `the second place-value trade card's example ${x}, ${y}: ${fault}` };
+    if (operation !== "add" && operation !== "subtract") return { fault: "the second place-value trade card adds or subtracts as the first does" };
+    const [X2, Y2, A, B] = [x, y, a, b].map((value2) => placeValueTradeThousandths(value2));
+    if ([X2, Y2].some((value2) => value2 === void 0)) return { fault: `the second place-value trade card's example ${x}, ${y}: two numbers from 0 to 999,999.99 with at most two decimal places` };
+    const own = placeValueTradeFault(operation, X2, Y2);
+    if (own) return { fault: `the second place-value trade card's example ${x} ${operation === "add" ? "+" : "\u2212"} ${y}: ${placeValueTradeFaultText(own, operation, X2, Y2)}` };
+    if (A !== void 0 && B !== void 0 && placeValueTradeColumnsOf(operation, X2, Y2).join() !== placeValueTradeColumnsOf(operation, A, B).join()) {
+      return { fault: `the second place-value trade card's example ${x}, ${y} has other places than the question's pair ${a}, ${b}: the second card keeps the question's places (as many whole digits and decimal places, and an answer that gains a column only when the question's does)` };
+    }
     const ordered = operation === "subtract";
     if (same(x, y, a, b, ordered)) return { fault: `the second place-value trade card's example ${x}, ${y} is the question's pair` };
     if (same(x, y, pa, pb, ordered)) return { fault: `the second place-value trade card's example ${x}, ${y} is the practice pair, which the learner works after class` };
@@ -18799,16 +18804,13 @@ function compareNumberOf(value2, written) {
   return placeValueCompareFromDecimal(thousandths, 3) ? { value: thousandths, dec } : void 0;
 }
 var compareNumeral = (n) => `${Math.floor(n.value / 1e3)}${n.dec ? `.${String(n.value % 1e3).padStart(3, "0").slice(0, n.dec)}` : ""}`;
-function compareStartProblem(values, written = [], { decimalsUnknown = false } = {}) {
+function compareStartProblem(values, written = []) {
   if (values.length !== 5) {
-    return { fault: "the card takes five lesson numbers, in order: the two numbers to compare (as the question writes them: 0.70 keeps its zero), the practice pair (another pair, for the learner) and compared (0)" };
+    return { fault: "the card takes five lesson numbers, in order: the two numbers to compare (as the question writes them: 0.70 keeps its zero), the practice pair (another pair, for the learner) and compared (the program's: the card opens at 0)" };
   }
   const numbers = values.slice(0, 4).map((value2, i) => compareNumberOf(value2, written[i]));
   if (numbers.some((n) => n === void 0)) return { fault: "the two numbers and the practice pair are numbers from 0 to 9,999,999 with at most three decimal places (thousandths)" };
   const [a, b, pa, pb] = numbers;
-  const sameNumeral = (x, y) => decimalsUnknown && x.value === y.value;
-  if (sameNumeral(a, b)) b.dec = Math.min(3, Math.max(a.dec, b.dec) + 1);
-  if (sameNumeral(pa, pb)) pb.dec = Math.min(3, Math.max(pa.dec, pb.dec) + 1);
   const fault = placeValueCompareFault(a, b);
   if (fault) {
     return { fault: fault === "same_numeral" ? `the two numbers are the same numeral, ${compareNumeral(a)}: there is nothing to compare (0.7 and 0.70 are a pair: 0.70 is mantissa 70, scale 2)` : `the question's pair: ${placeValueCompareFaultText(fault, a, b)}` };
@@ -18821,18 +18823,21 @@ function compareStartProblem(values, written = [], { decimalsUnknown = false } =
   if ([[pa, pb], [pb, pa]].some(([x, y]) => x.value === a.value && y.value === b.value)) {
     return { fault: "the practice pair is the learner's own: other numbers than the question's, not the same values written another way" };
   }
-  if (values[COMPARE_NUMBER.compared] !== 0) return { fault: `compared starts at 0, not ${values[COMPARE_NUMBER.compared]}: the card opens with no column judged` };
   return { pair, practice: placeValueComparePairOf(pa, pb), numbers: [a, b, pa, pb] };
 }
-var compareOutlineFault = (values) => {
-  const found = compareStartProblem(values.length === 4 ? [...values, 0] : values, [], { decimalsUnknown: true });
+var compareOutlineFault = (values, definitions = []) => {
+  const found = compareStartProblem(values.length === 4 ? [...values, 0] : values, definitions.map((definition) => definition?.written_decimals));
   return "fault" in found ? found.fault : void 0;
 };
-function compareEndOf(values, written = []) {
-  const a = compareNumberOf(values[0] ?? Number.NaN, written[0]), b = compareNumberOf(values[1] ?? Number.NaN, written[1]);
-  if (!a || !b) return COMPARE_MOST;
-  if (a.value === b.value && written[0] === void 0 && written[1] === void 0) return COMPARE_MOST;
-  return placeValueCompareDemoEnd(placeValueComparePairOf(a, b));
+function compareEndOf(values) {
+  const a = compareNumberOf(values[0] ?? Number.NaN), b = compareNumberOf(values[1] ?? Number.NaN);
+  if (!a || !b) return { first: COMPARE_MOST, last: COMPARE_MOST };
+  if (a.value !== b.value) {
+    const end = placeValueCompareDemoEnd(placeValueComparePairOf(a, b));
+    return { first: end, last: end };
+  }
+  const wider = (dec) => placeValueCompareDemoEnd(placeValueComparePairOf(a, { value: b.value, dec }));
+  return { first: wider(Math.min(3, Math.max(a.dec, b.dec) + 1)), last: wider(3) };
 }
 function compareState(start) {
   return [...start.slice(0, 4), 0];
@@ -18842,8 +18847,8 @@ function compareMove(state, position, to) {
   const from = state[COMPARE_NUMBER.compared];
   if (!Number.isInteger(to) || to < 0) return `compared counts the columns judged from the left, then the sign: a whole number from 0, not ${to}; from ${from}, the next value is ${from + 1}`;
   const end = compareEndOf(state);
-  const value2 = Math.min(to, end);
-  if (value2 < from) return `compared goes forward, never back: from ${from} it can be ${from} to ${end}`;
+  const value2 = Math.min(to, end.last);
+  if (Math.min(value2, end.first) < Math.min(from, end.first)) return `compared goes forward, never back: from ${from} it can be ${Math.min(from, end.first)} to ${end.last}`;
   const moved = [...state];
   moved[COMPARE_NUMBER.compared] = value2;
   return moved;
@@ -18874,8 +18879,14 @@ function compareWordsGiveAnswer(words, practice) {
   const text5 = halfWidth5(String(words)).replace(/(\d),(?=\d{3})/gu, "$1");
   const x = compareNumeral({ value: practice.a, dec: practice.aDec }), y = compareNumeral({ value: practice.b, dec: practice.bDec });
   const flip = { ">": "<", "<": ">", "=": "=" };
+  const between = {
+    ">": [">", "is (?:greater|bigger|larger|more) than", "greater than", "\u5927\u4E8E", "\u6BD4\\s*Q\\s*(?:\u5927|\u591A)"],
+    "<": ["<", "is (?:less|smaller|fewer) than", "less than", "\u5C0F\u4E8E", "\u6BD4\\s*Q\\s*(?:\u5C0F|\u5C11)"],
+    "=": ["=", "equals", "is equal to", "is the same as", "\u7B49\u4E8E", "\u548C\\s*Q\\s*(?:\u4E00\u6837\u5927|\u76F8\u7B49)"]
+  };
   const esc = (s) => s.replace(/\./gu, "\\.");
-  const said = (p, sign, q) => new RegExp(`(?<!\\d)(?<!\\d\\.)${esc(p)}\\s*${sign}\\s*${esc(q)}(?!\\d)(?!\\.\\d)`, "u").test(text5);
+  const num = (s) => `(?<!\\d)(?<!\\d\\.)${esc(s)}(?!\\d)(?!\\.\\d)`;
+  const said = (p, sign, q) => between[sign].some((part) => (part.includes("Q") ? new RegExp(`${num(p)}\\s*${part.replace("Q", num(q))}`, "iu") : new RegExp(`${num(p)}\\s*(?:${part})\\s*${num(q)}`, "iu")).test(text5));
   return said(x, practice.relation, y) || said(y, flip[practice.relation], x);
 }
 
@@ -19216,6 +19227,11 @@ var MATH_RECIPES = {
     parts: ["whole"],
     number_inputs: ["first", "second", "practice_first", "practice_second", "compared"],
     number_roles: ["problem", "problem", "practice", "practice", "demonstration"],
+    // A move of the pair or the practice pair is refused with what the number is to the card (as #197's cards): the
+    // card would sit still while the narration moved it.
+    wrong_number_moves: "refused",
+    card_name: "compare card",
+    number_names: ["first number", "second number", "practice first number", "practice second number", "places compared"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
     // Compared starts at 0 whatever the outline holds (the card opens with no column judged), so the program
     // supplies it: an outline that declares only the four numbers before it gets it, from 0 to the most any pair can
@@ -20000,6 +20016,9 @@ var EN = {
   "\u4ECE\u5DE6\u5230\u53F3\u8BFB\u6A2A\u7EBF\u4E0B\u9762\u6BCF\u4E00\u5217\u7684\u5706\u7247\u4E2A\u6570\u3002": "Read how many disks each column has below the line, from left to right.",
   "\u5927\u6570\u90A3\u4E00\u6846\u91CC\u6709\u51E0\u4E2A": "in the bigger number's frame",
   "\u79FB\u8FC7\u53BB\u51E0\u4E2A": "moved across",
+  "\u7B2C\u4E8C\u4E2A\u4F8B\u5B50\uFF1A\u5927\u6570\u90A3\u4E00\u6846\u91CC\u6709\u51E0\u4E2A": "second example: in the bigger number's frame",
+  "\u7B2C\u4E8C\u4E2A\u4F8B\u5B50\uFF1A\u505A\u5B8C\u4E86\u51E0\u5217": "second example: columns finished",
+  "\u7B2C\u4E8C\u4E2A\u4F8B\u5B50\uFF1A\u73B0\u5728\u7528\u4EC0\u4E48\u5355\u4F4D\u5728\u6570": "second example: counted in",
   "\u6570\u8F74\u7684\u8D77\u70B9\uFF08\u5927\u6570\uFF09": "the line's start (the bigger number)",
   "\u8865\u6210\u5341\u7684\u4E00\u6B65": "the step that makes ten",
   "\u5269\u4E0B\u7684\u4E00\u6B65": "the step left",
@@ -21907,7 +21926,7 @@ function requestsTwoIndependentPoints(request) {
 }
 function secondCardState(capability2, content, sections, numbers) {
   if (!isSecondCardKind(capability2) || !isSecondCard(capability2, content, sections)) return void 0;
-  const first = sections.flatMap((section) => section.moments.flatMap((moment) => moment.actions)).map((raw) => raw).find((action) => action.action === "create" && action.kind === "visual" && action.content?.capability === capability2 && !exampleOf(capability2, action.content.parameters))?.content;
+  const first = sections.flatMap((section) => section.moments.flatMap((moment) => moment.actions)).map((raw) => raw).find((action) => action.action === "create" && action.kind === "visual" && action.content?.capability === capability2)?.content;
   if (!first) return void 0;
   const found = exampleStart(capability2, exampleOf(capability2, content.parameters), (first.numbers ?? []).map((number) => numbers[number - 1]?.initial ?? Number.NaN), first.parameters);
   if ("fault" in found) return void 0;
@@ -25468,7 +25487,7 @@ function compilePlaceValueTrade(base, content, role, placement, plan, path) {
   }
   const fault = placeValueTradeStartFault2(values, operation);
   if (fault) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault, "place_value_trade");
-  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "place_value_trade" && !exampleOf("place_value_trade", action.content.parameters));
+  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "place_value_trade" && !isSecondCard("place_value_trade", action.content, plan.sections));
   if (first && (JSON.stringify(first.content.numbers ?? []) !== JSON.stringify(numbers) || first.content.parameters?.operation !== operation)) {
     fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `a lesson has one place-value trade card: this lesson's is on lesson numbers ${(first.content.numbers ?? []).join(", ")}`, "place_value_trade");
   }
@@ -25566,7 +25585,7 @@ function compileMakeTen(base, content, role, placement, plan, path) {
   }
   const fault = makeTenStartFault2(values);
   if (fault) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault, "make_ten");
-  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "make_ten" && !exampleOf("make_ten", action.content.parameters));
+  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "make_ten" && !isSecondCard("make_ten", action.content, plan.sections));
   if (first && JSON.stringify(first.content.numbers ?? []) !== JSON.stringify(numbers)) {
     fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `a lesson has one make-ten card: this lesson's is on lesson numbers ${(first.content.numbers ?? []).join(", ")}`, "make_ten");
   }
@@ -25660,7 +25679,7 @@ function compilePlaceValueTimesTen(base, content, role, placement, plan, path) {
   const found = timesTenStartProblem(values);
   if ("fault" in found) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, found.fault, "place_value_times_ten");
   const { problem, practice } = found;
-  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "place_value_times_ten" && !exampleOf("place_value_times_ten", action.content.parameters));
+  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "place_value_times_ten" && !isSecondCard("place_value_times_ten", action.content, plan.sections));
   if (first && JSON.stringify(first.content.numbers ?? []) !== JSON.stringify(numbers)) {
     fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `a lesson has one times-ten card: this lesson's is on lesson numbers ${(first.content.numbers ?? []).join(", ")}`, "place_value_times_ten");
   }
@@ -25841,7 +25860,7 @@ function compilePlaceValueCompare(base, content, role, placement, plan, path) {
 function secondCard(capability2, base, content, role, placement, plan, path) {
   const example = exampleOf(capability2, content.parameters);
   const creates = plan.sections.flatMap((section, sectionAt) => section.moments.flatMap((moment) => moment.actions).flatMap((action) => action.action === "create" && action.kind === "visual" && action.content.capability === capability2 ? [{ sectionAt, content: action.content }] : []));
-  const first = creates.find((each) => !exampleOf(capability2, each.content.parameters));
+  const first = creates[0];
   if (!example && first && first.content !== content && content.numbers?.length === 1 && (first.content.numbers?.length ?? 0) > 1 && plan.numbers?.[content.numbers[0] - 1]?.label === lessonText(lessonTextLanguage(plan), SECOND_CARDS[capability2].label)) {
     fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${SECOND_CARDS[capability2].parameters[0]}`, `the second ${cardName(capability2)} shows an example of its own, and this create writes none (${SECOND_CARDS[capability2].parameters.join(", ")})`, capability2);
   }
@@ -25849,7 +25868,7 @@ function secondCard(capability2, base, content, role, placement, plan, path) {
     if (content.parameters) for (const name of SECOND_CARDS[capability2].parameters) delete content.parameters[name];
     return void 0;
   }
-  const examples = creates.filter((each) => exampleOf(capability2, each.content.parameters));
+  const examples = creates.filter((each) => isSecondCard(capability2, each.content, plan.sections));
   if (examples[0].content !== content && JSON.stringify(examples[0].content.parameters) !== JSON.stringify(content.parameters)) {
     fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${SECOND_CARDS[capability2].parameters[0]}`, `a lesson has one second ${cardName(capability2)}: this lesson's is on ${exampleOf(capability2, examples[0].content.parameters).join(" and ")}`, capability2);
   }
@@ -25860,6 +25879,13 @@ function secondCard(capability2, base, content, role, placement, plan, path) {
   const demonstration = content.numbers?.[0];
   if (demonstration === void 0 || !plan.numbers?.[demonstration - 1]) {
     fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `the second ${cardName(capability2)} is drawn on the number the program gives its demonstration`, capability2);
+  }
+  const sharingAt = plan.sections.findIndex((section) => section.moments.some((moment) => moment.actions.some((action) => action.action === "create" && action.kind === "visual" && action.content.capability !== capability2 && (action.content.numbers ?? []).includes(demonstration))));
+  if (sharingAt >= 0) {
+    const sharing = plan.sections[sharingAt].moments.flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability !== capability2 && (action.content.numbers ?? []).includes(demonstration));
+    const other = sharing.content.capability;
+    const cardAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
+    failSharedTapCardNumbers(`${path}.numbers`, `lesson number ${demonstration} is the number the second ${cardName(capability2)}'s demonstration moves; the ${other} visual shows it too`, capability2, other, sharingAt, cardAt);
   }
   const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
   const stem = base.replace(/[^A-Za-z0-9]+/gu, "_").toLowerCase();
@@ -26711,7 +26737,9 @@ function separateCardProblemNumbers(plan, adjustments = []) {
       return;
     }
     const map = /* @__PURE__ */ new Map();
-    content.numbers.forEach((number, position) => {
+    const places = RECIPE_HOOKS[content.capability]?.second_card?.(content, plan.sections, numbers.slice(0, outlineDefinitions.length))?.positions;
+    content.numbers.forEach((number, index) => {
+      const position = places?.[index] ?? index;
       const role = recipeNumberRole(content.capability, position);
       const held = first.get(number);
       if (!held) {
@@ -28461,6 +28489,7 @@ function lowerModelOutlineNumber(entry, index) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
   const number = { ...entry };
   delete number.student_control;
+  delete number.written_decimals;
   if (typeof number.unit === "string" && !number.unit.trim()) delete number.unit;
   if (typeof number.label === "string" && !number.label.trim()) delete number.label;
   const written = { initial: number.initial, min: number.min, max: number.max };
@@ -30479,7 +30508,7 @@ function outlineNumbersMissing(outline, section) {
     const check = RECIPE_HOOKS[visual.capability]?.outline_fault;
     const limit = LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[visual.capability] ?? 0;
     if (!check || visual !== firstNumbered || declared !== limit) continue;
-    const fault = check(outline.numbers.slice(0, limit).map((number) => number.initial));
+    const fault = check(outline.numbers.slice(0, limit).map((number) => number.initial), outline.numbers.slice(0, limit));
     if (fault) {
       return new LessonPlanError(
         OUTLINE_NUMBERS_REFUSED,
@@ -30523,6 +30552,28 @@ function plannedCardOverflow(outline, sectionOne, declared) {
     card: owner.capability,
     detail: `the lesson holds at most 16 numbers (OLL): section 1 uses ${declared} and the ${owner.capability} card planned for section ${owner.create_section} needs up to ${planned}`
   };
+}
+function secondCardVisuals(outline) {
+  const visuals = outline.course_visuals ?? [];
+  return visuals.flatMap((visual, index) => {
+    const label = LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability].second_card_label;
+    return label !== void 0 && visuals.slice(0, index).some((each) => each.capability === visual.capability) ? [{ capability: visual.capability, create_section: visual.create_section, label }] : [];
+  });
+}
+function plannedSecondCardOverflow(outline, declared) {
+  const visuals = outline.course_visuals ?? [];
+  const owner = visuals.filter((visual) => RECIPE_HOOKS[visual.capability]?.planned_variables).reduce((best, visual) => !best || recipeMinLessonNumbers(visual.capability) > recipeMinLessonNumbers(best.capability) ? visual : best, void 0);
+  const limit = owner ? LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[owner.capability] ?? 0 : 0;
+  const planned = owner && owner.create_section > 1 && (outline.numbers?.length ?? 0) >= limit ? RECIPE_HOOKS[owner.capability].planned_variables(outline.numbers.slice(0, limit).map((number) => number.initial)) ?? 0 : 0;
+  let total = declared + planned;
+  return secondCardVisuals(outline).flatMap((second) => {
+    total += 1;
+    return total > 16 ? [{
+      capability: second.capability,
+      section: second.create_section,
+      detail: `the lesson holds at most 16 numbers (OLL): section 1 uses ${declared}${planned ? ` and the ${owner.capability} card planned for section ${owner.create_section} up to ${planned}` : ""}; the second ${second.capability} card needs one more`
+    }] : [];
+  });
 }
 var OUTLINE_OWNED_FAULT = "LESSON_PLAN_OUTLINE_VISUAL";
 var isOutlineOwnedFault = (error) => error instanceof LessonPlanError && error.code === OUTLINE_OWNED_FAULT;
@@ -30711,10 +30762,10 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     }
     const bootstrap = course;
     outline = validateLessonPlanOutline(
-      lowerModelOutline(
-        withWrittenDecimals(bootstrap.outline, coerceLessonPlanOutlineModelNumbers(bootstrap.outline, fixedRequestParts.length)),
+      withWrittenDecimals(bootstrap.outline, lowerModelOutline(
+        coerceLessonPlanOutlineModelNumbers(bootstrap.outline, fixedRequestParts.length),
         fixedRequestParts.length
-      ),
+      )),
       fixedRequestParts.length
     );
     programNumberCard = supplyProgramNumbers(outline, input.language)?.capability ?? soleProgramNumberCard(outline);
@@ -30782,10 +30833,10 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       if (partialOutline !== void 0) {
         try {
           outline = validateLessonPlanOutline(
-            lowerModelOutline(
-              withWrittenDecimals(partialOutline, coerceLessonPlanOutlineModelNumbers(partialOutline, fixedRequestParts.length)),
+            withWrittenDecimals(partialOutline, lowerModelOutline(
+              coerceLessonPlanOutlineModelNumbers(partialOutline, fixedRequestParts.length),
               fixedRequestParts.length
-            ),
+            )),
             fixedRequestParts.length
           );
           sectionErrors.set(1, error);
@@ -30839,10 +30890,10 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         const admitted = admissionCourse(parsed, observeCamera);
         if (admitted.result) return admitted.result;
         const candidateOutline = validateLessonPlanOutline(
-          lowerModelOutline(
-            withWrittenDecimals(admitted.course, coerceLessonPlanOutlineModelNumbers(admitted.course, fixedRequestParts.length)),
+          withWrittenDecimals(admitted.course, lowerModelOutline(
+            coerceLessonPlanOutlineModelNumbers(admitted.course, fixedRequestParts.length),
             fixedRequestParts.length
-          ),
+          )),
           fixedRequestParts.length
         );
         try {
@@ -31214,6 +31265,16 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   const acceptSection = async (section, initialCandidate) => {
     let candidate = initialCandidate;
     if (outline) for (const hooks of PLUGIN_HOOKS) hooks.prepare_section?.(outline, section, { language: input.language });
+    if (outline) for (const second of secondCardVisuals(outline).filter((each) => each.create_section === section)) {
+      if (!(outline.numbers ?? []).some((number) => number.label === lessonText(input.language, second.label))) {
+        await withdrawLaterSectionVisual(
+          section,
+          second.capability,
+          "planned_card_budget",
+          `the lesson holds at most 16 numbers and this outline declares ${outline.numbers?.length ?? 0}: the second ${second.capability} card's demonstration has no number of its own`
+        );
+      }
+    }
     const missing = outline ? outlineNumbersMissing(outline, section) : void 0;
     if (missing && section === 1) throw missing;
     if (missing) await withdrawLaterSectionVisual(section, missing.capability, outlineNumbersReason(missing), missing.message);
@@ -31346,6 +31407,21 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         await withdrawBeforePublishing(1, overflow.capability, withdrawn, "planned_card_budget", overflow.detail);
         candidate = void 0;
         continue;
+      }
+      if (section === 1 && outline) {
+        for (const over of plannedSecondCardOverflow(outline, prefix.lesson.lesson.variables?.length ?? 0)) {
+          await withdrawLaterSectionVisual(over.section, over.capability, "planned_card_budget", over.detail);
+        }
+      }
+      if (outline) for (const second of secondCardVisuals(outline).filter((each) => each.create_section === section)) {
+        const index = (outline.numbers ?? []).findIndex((number) => number.label === lessonText(input.language, second.label));
+        const create = candidate.moments.flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === second.capability && (action.content.numbers ?? []).includes(index + 1));
+        const walked = create && RECIPE_HOOKS[second.capability]?.second_card?.(create.content, drafts.slice(0, section), outline.numbers ?? []);
+        if (index >= 0 && walked) {
+          const start = walked.started[walked.positions[0]];
+          const number = outline.numbers[index];
+          if (start >= number.min && start <= number.max) number.initial = start;
+        }
       }
       await reportDraftAdjustments(candidate);
       noteCompiledDrops(prefix, section);
@@ -31625,6 +31701,7 @@ export {
   placeValueThousandths,
   placeValueWordsWrite,
   plannedCardOverflow,
+  plannedSecondCardOverflow,
   praiseArithmetic,
   programNumberDefinitions,
   promptSlot,

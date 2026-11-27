@@ -13,7 +13,7 @@
 import {
   PLACE_VALUE_COMPARE_MAX_COLUMNS, placeValueCompareDemoEnd, placeValueCompareFault, placeValueCompareFaultText, placeValueCompareFromDecimal,
   placeValueCompareOwnDecimals, placeValueComparePairOf, placeValueComparePracticeFault,
-  type PlaceValueCompareNumber, type PlaceValueComparePair,
+  type PlaceValueCompareNumber, type PlaceValueComparePair, type PlaceValueCompareSign,
 } from "octos-lesson-language/plugin-math";
 
 /** The card's five lesson numbers, by position. */
@@ -43,19 +43,14 @@ export const compareNumeral = (n: PlaceValueCompareNumber): string =>
  * the card cannot start on them (a sentence for the model). Every fault OLL would refuse at the card is found here,
  * so the compiler names the card and a section whose repairs are spent on it loses the picture, not the lesson.
  */
-export function compareStartProblem(values: readonly number[], written: ReadonlyArray<number | undefined> = [], { decimalsUnknown = false }: { decimalsUnknown?: boolean } = {}):
+export function compareStartProblem(values: readonly number[], written: ReadonlyArray<number | undefined> = []):
   { pair: PlaceValueComparePair; practice: PlaceValueComparePair; numbers: PlaceValueCompareNumber[] } | { fault: string } {
   if (values.length !== 5) {
-    return { fault: "the card takes five lesson numbers, in order: the two numbers to compare (as the question writes them: 0.70 keeps its zero), the practice pair (another pair, for the learner) and compared (0)" };
+    return { fault: "the card takes five lesson numbers, in order: the two numbers to compare (as the question writes them: 0.70 keeps its zero), the practice pair (another pair, for the learner) and compared (the program's: the card opens at 0)" };
   }
   const numbers = values.slice(0, 4).map((value, i) => compareNumberOf(value, written[i]));
   if (numbers.some((n) => n === undefined)) return { fault: "the two numbers and the practice pair are numbers from 0 to 9,999,999 with at most three decimal places (thousandths)" };
   const [a, b, pa, pb] = numbers as [PlaceValueCompareNumber, PlaceValueCompareNumber, PlaceValueCompareNumber, PlaceValueCompareNumber];
-  // Values alone (the outline's check) cannot tell 0.7 from 0.70: an equal-valued pair may be written differently, so
-  // only the compiler, which has the written decimals, refuses the same numeral twice.
-  const sameNumeral = (x: PlaceValueCompareNumber, y: PlaceValueCompareNumber) => decimalsUnknown && x.value === y.value;
-  if (sameNumeral(a, b)) b.dec = Math.min(3, Math.max(a.dec, b.dec) + 1);
-  if (sameNumeral(pa, pb)) pb.dec = Math.min(3, Math.max(pa.dec, pb.dec) + 1);
   const fault = placeValueCompareFault(a, b);
   if (fault) {
     return { fault: fault === "same_numeral"
@@ -74,26 +69,34 @@ export function compareStartProblem(values: readonly number[], written: Readonly
   if ([[pa, pb], [pb, pa]].some(([x, y]) => x!.value === a.value && y!.value === b.value)) {
     return { fault: "the practice pair is the learner's own: other numbers than the question's, not the same values written another way" };
   }
-  if (values[COMPARE_NUMBER.compared] !== 0) return { fault: `compared starts at 0, not ${values[COMPARE_NUMBER.compared]}: the card opens with no column judged` };
+  // Compared is the program's: the card opens at 0 whatever the outline holds (as the trade card's columns finished;
+  // review of #198: an outline writing 8 there, the guidance's last value, lost the card).
   return { pair, practice: placeValueComparePairOf(pa, pb), numbers: [a, b, pa, pb] };
 }
 
-/** Why the card cannot start on the outline's numbers (the program's compared included), or undefined. */
-export const compareOutlineFault = (values: readonly number[]): string | undefined => {
-  const found = compareStartProblem(values.length === 4 ? [...values, 0] : values, [], { decimalsUnknown: true });
+/**
+ * Why the card cannot start on the outline's numbers (the program's compared included), or undefined. The outline's
+ * numbers carry the decimals the model wrote them with (`written_decimals`), so 0.7 written twice is refused here, as
+ * the outline is read, never after a section's attempts (review of #198).
+ */
+export const compareOutlineFault = (values: readonly number[], definitions: ReadonlyArray<{ written_decimals?: number }> = []): string | undefined => {
+  const found = compareStartProblem(values.length === 4 ? [...values, 0] : values, definitions.map((definition) => definition?.written_decimals));
   return "fault" in found ? found.fault : undefined;
 };
 
 /**
  * The last value of "compared" on the pair these values make: the deciding column plus two (each column judged, then
- * the sign). An equal pair's end depends on the written decimals, which values alone do not carry: there it is the
- * most it can be (the compiler, which has them, plays to the true end).
+ * the sign), as `{ first, last }`, the fewest and the most it can be. Unequal values decide where they first differ,
+ * whatever decimals they are written with: one end. An equal pair's end depends on the written decimals, which a
+ * card's moves do not carry (the compiler and the facts, which have them, play and tell the true end): it is at least
+ * its columns when one of the two has one more decimal than either needs, at most its columns to the thousandths.
  */
-export function compareEndOf(values: readonly number[], written: ReadonlyArray<number | undefined> = []): number {
-  const a = compareNumberOf(values[0] ?? Number.NaN, written[0]), b = compareNumberOf(values[1] ?? Number.NaN, written[1]);
-  if (!a || !b) return COMPARE_MOST;
-  if (a.value === b.value && written[0] === undefined && written[1] === undefined) return COMPARE_MOST;
-  return placeValueCompareDemoEnd(placeValueComparePairOf(a, b));
+export function compareEndOf(values: readonly number[]): { first: number; last: number } {
+  const a = compareNumberOf(values[0] ?? Number.NaN), b = compareNumberOf(values[1] ?? Number.NaN);
+  if (!a || !b) return { first: COMPARE_MOST, last: COMPARE_MOST };
+  if (a.value !== b.value) { const end = placeValueCompareDemoEnd(placeValueComparePairOf(a, b)); return { first: end, last: end }; }
+  const wider = (dec: number) => placeValueCompareDemoEnd(placeValueComparePairOf(a, { value: b.value, dec }));
+  return { first: wider(Math.min(3, Math.max(a.dec, b.dec) + 1)), last: wider(3) };
 }
 
 /** The card's state when it is drawn: its five lesson numbers, compared at 0. */
@@ -106,9 +109,11 @@ export function compareMove(state: readonly number[], position: number, to: numb
   if (position !== COMPARE_NUMBER.compared) return "the card has five lesson numbers; the demonstration moves only compared";
   const from = state[COMPARE_NUMBER.compared]!;
   if (!Number.isInteger(to) || to < 0) return `compared counts the columns judged from the left, then the sign: a whole number from 0, not ${to}; from ${from}, the next value is ${from + 1}`;
+  // A value past the end is the end: compared as clamped to the fewest the end can be, and kept up to the most (the
+  // compiler plays each to the true end; review of #198: 0.7 and 0.70 moved 8 then 4, both the sign, was refused).
   const end = compareEndOf(state);
-  const value = Math.min(to, end);
-  if (value < from) return `compared goes forward, never back: from ${from} it can be ${from} to ${end}`;
+  const value = Math.min(to, end.last);
+  if (Math.min(value, end.first) < Math.min(from, end.first)) return `compared goes forward, never back: from ${from} it can be ${Math.min(from, end.first)} to ${end.last}`;
   const moved = [...state];
   moved[COMPARE_NUMBER.compared] = value;
   return moved;
@@ -141,14 +146,23 @@ const halfWidth = (text: string) => text.replace(FULL_WIDTH, (char) => String.fr
 
 /**
  * Whether a task's words give away the practice's answer: the practice's two numbers with the true sign between
- * them ("5602 < 5620", or the other way round "5620 > 5602"), or a word that says which one is greater or smaller
- * next to them. The two numbers alone are fine to write (the card shows them).
+ * them ("5602 < 5620", or the other way round "5620 > 5602"), or the words for it ("5602 is less than 5620", 「5620
+ * 大于 5602」, 「5620 比 5602 大」). The two numbers alone are fine to write (the card shows them).
  */
 export function compareWordsGiveAnswer(words: string, practice: PlaceValueComparePair): boolean {
   const text = halfWidth(String(words)).replace(/(\d),(?=\d{3})/gu, "$1");
   const x = compareNumeral({ value: practice.a, dec: practice.aDec }), y = compareNumeral({ value: practice.b, dec: practice.bDec });
   const flip = { ">": "<", "<": ">", "=": "=" } as const;
+  // The sign, or the words for it between the two numbers (English and Chinese), or 「x 比 y 大」.
+  const between: Record<PlaceValueCompareSign, string[]> = {
+    ">": [">", "is (?:greater|bigger|larger|more) than", "greater than", "大于", "比\\s*Q\\s*(?:大|多)"],
+    "<": ["<", "is (?:less|smaller|fewer) than", "less than", "小于", "比\\s*Q\\s*(?:小|少)"],
+    "=": ["=", "equals", "is equal to", "is the same as", "等于", "和\\s*Q\\s*(?:一样大|相等)"],
+  };
   const esc = (s: string) => s.replace(/\./gu, "\\.");
-  const said = (p: string, sign: string, q: string) => new RegExp(`(?<!\\d)(?<!\\d\\.)${esc(p)}\\s*${sign}\\s*${esc(q)}(?!\\d)(?!\\.\\d)`, "u").test(text);
+  const num = (s: string) => `(?<!\\d)(?<!\\d\\.)${esc(s)}(?!\\d)(?!\\.\\d)`;
+  const said = (p: string, sign: PlaceValueCompareSign, q: string) => between[sign].some((part) => (part.includes("Q")
+    ? new RegExp(`${num(p)}\\s*${part.replace("Q", num(q))}`, "iu")
+    : new RegExp(`${num(p)}\\s*(?:${part})\\s*${num(q)}`, "iu")).test(text));
   return said(x, practice.relation, y) || said(y, flip[practice.relation], x);
 }

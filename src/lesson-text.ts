@@ -28,6 +28,8 @@ const EN: Readonly<Record<string, string>> = {
   "每一部分是这一位上的圆片个数乘这一位的值。": "Each part is the number of disks in that place times the value of the place.",
   "从左到右读横线下面每一列的圆片个数。": "Read how many disks each column has below the line, from left to right.",
   "大数那一框里有几个": "in the bigger number's frame", "移过去几个": "moved across",
+  "第二个例子：大数那一框里有几个": "second example: in the bigger number's frame", "第二个例子：做完了几列": "second example: columns finished",
+  "第二个例子：现在用什么单位在数": "second example: counted in",
   "数轴的起点（大数）": "the line's start (the bigger number)", "补成十的一步": "the step that makes ten", "剩下的一步": "the step left",
   "写成算式。": "Write it as a number sentence.", "写出有多少个。": "Write how many.", "写出答案。": "Write the answers.",
   "数一数目标那一列。": "Count the target column.", "先数一个小的数里有几个，再数有几个小的数。": "Count what one copy of the smaller number holds, then how many copies there are.",

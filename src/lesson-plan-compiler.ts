@@ -573,7 +573,11 @@ export function separateCardProblemNumbers(plan: Pick<LessonPlan, "numbers" | "s
       return;
     }
     const map = new Map<number, number>();
-    content.numbers.forEach((number, position) => {
+    // A card drawn on fewer numbers than its kind takes (a second card: the one its demonstration moves) reads each
+    // number's role at its place in the kind's order (review of #199, B2: its number is the demonstration's).
+    const places = RECIPE_HOOKS[content.capability]?.second_card?.(content, plan.sections, numbers.slice(0, outlineDefinitions.length))?.positions;
+    content.numbers.forEach((number, index) => {
+      const position = places?.[index] ?? index;
       const role = recipeNumberRole(content.capability, position);
       const held = first.get(number);
       if (!held) { first.set(number, { picture, role }); return; }
