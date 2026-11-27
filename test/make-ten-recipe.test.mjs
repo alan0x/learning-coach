@@ -44,8 +44,10 @@ test("make_ten is a trial, off by default: built, not offered; its guidance and 
   assert.deepEqual(offered.ranges, [[0, 10], [0, 0, 4]]);
   assert.deepEqual([offered.min, offered.many, offered.controls], [6, true, []]);
   // Short guidance (tracked, not capped): the pair, the practice pair, the target 10; no control named.
-  assert.equal(Buffer.byteLength(offered.guidance), 1025);
-  assert.ok(offered.guidance.includes("只画这张卡片，不再画数轴"), "used alone for its sum (make-ten objective check 1)");
+  assert.equal(Buffer.byteLength(offered.guidance), 1103);
+  // The card is the sum's picture; a later section may walk the same sum on a number line, never instead of the card
+  // (lead, 2026-11-27: a second view is fine; the line draws on copies of the pair).
+  assert.ok(offered.guidance.includes("这道加法的画面是这张卡片；后面的节可以再用数轴把同一道加法走一遍，数轴不代替这张卡片"));
   // It answers "which number should I split" with the quick way only (owner, 2026-11-27; MT-07 drew the number line),
   // and the demonstration reaches ten (owner, 2026-11-27: "可以只到9" is gone; a lesson that stops at 9 still plays).
   assert.ok(offered.guidance.includes("应该拆哪个数") && offered.guidance.includes("慢的拆法只用话说，不画"));
@@ -66,7 +68,8 @@ test("the count in the bigger frame moves forward from the bigger number to 10; 
   assert.match(to(start, 11).refused.reason, /a whole number from 8 to 10, not 11; from 8, the next value, 9, moves one of the 6 into the 8's frame/);
   assert.match(to(start, 9.5).refused.reason, /not 9.5/);
   assert.match(to(start, 7).refused.reason, /from 8 to 10, not 7/);
-  assert.match(moves.moves(start, [{ position: 0, to: 9 }]).refused.reason, /stay as written: the demonstration moves only the count in the bigger number's frame/);
+  // The pair and the practice pair are left out, not refused (as the times-ten card's are, #188).
+  assert.match(moves.moves(start, [{ position: 0, to: 9 }]).ignored[0].reason, /stay as written: the demonstration moves only the count in the bigger number's frame/);
   assert.match(moves.moves(start, [{ position: 5, to: 2 }]).refused.reason, /the count moved changes only by the learner's taps/);
   assert.deepEqual(moves.moves(start, [{ position: 1, to: 6 }]).steps.at(-1).to, start, "a number animated to its own value is no change");
 });
@@ -260,7 +263,7 @@ test("refusals name their reason and the card, so only the picture can be lost; 
   for (const [id, each] of Object.entries(declared)) assert.deepEqual(each, { card: [8, 0], beats: [["write", "focus"], [10]] }, id);
 });
 
-test("a moment that animates the pair or the count moved is refused with the card's tag, never at OLL", () => {
+test("a moment that animates the pair or the practice pair is left out and recorded; the count moved is refused with the card's tag, never at OLL", () => {
   const result = withTrial(`
     const api = await import(${here("../lesson-plan.js")});
     const { makeTenPlan } = await import(${here("./sample-plans.mjs")});
@@ -268,16 +271,18 @@ test("a moment that animates the pair or the count moved is refused with the car
     for (const [number, value] of [[1, 9], [3, 6], [6, 2]]) {
       const plan = makeTenPlan({ numbers: [8, 6], practice: [7, 5] });
       plan.sections[0].moments.push({ narration: "Now another.", actions: [{ action: "animate", number, end_value: value, duration_intent: "brief", timing: "during_speech" }] });
-      try { api.compileAndValidateLessonPlan(plan, { language: "en-US" }); out[number] = { compiled: true }; }
+      try { out[number] = { compiled: true, left: api.compileAndValidateLessonPlan(plan, { language: "en-US" }).view_adjustments.filter((each) => each.reason === "animation_left_out").map((each) => each.detail) }; }
       catch (error) { out[number] = { code: error.code, capability: error.capability, message: error.message }; }
     }
     console.log(JSON.stringify(out));
   `);
-  for (const number of ["1", "3", "6"]) {
-    assert.equal(result[number].capability, "make_ten", number);
-    assert.notEqual(result[number].code, "LESSON_PLAN_OLL_SEMANTIC", number);
+  for (const number of ["1", "3"]) {
+    assert.equal(result[number].compiled, true, number);
+    assert.equal(result[number].left.length, 1, number);
+    assert.match(result[number].left[0], /stay as written/, number);
   }
-  assert.match(result["1"].message, /stay as written/);
+  assert.equal(result["6"].capability, "make_ten");
+  assert.notEqual(result["6"].code, "LESSON_PLAN_OLL_SEMANTIC");
   assert.match(result["6"].message, /only by the learner's taps/);
 });
 
@@ -330,10 +335,11 @@ test("with the trial on, the model's first request describes the card; without i
   assert.ok(on.text.includes("make_ten_to_add"));
   assert.ok(on.text.includes("凑十（两个十格框）"));
   assert.equal(off.text.includes("make_ten"), false);
-  // Beside the card, the number line in steps no longer claims making ten with two one-digit numbers (MT-07); without
-  // the trial its text is exactly its own guidance.
+  // Beside the card, the number line in steps no longer claims making ten with two one-digit numbers (MT-07): the card
+  // is that sum's picture, and the line only a second view in a later section (lead, 2026-11-27); without the trial its
+  // text is exactly its own guidance.
   const steps = (text) => JSON.parse(JSON.parse(text).prompt).visual_recipes.find((row) => row[0].includes("number_steps"))[2];
-  assert.ok(steps(on.text).includes("不用于两个一位数相加的凑十") && !steps(on.text).includes("如凑十"));
+  assert.ok(steps(on.text).includes("题目的画面是凑十卡片，数轴分步只在卡片之后的节里作第二种看法") && !steps(on.text).includes("如凑十"));
   assert.equal(steps(off.text), api.LESSON_PLAN_CAPABILITY_REGISTRY.number_line_steps.model_guidance);
   assert.ok(steps(off.text).includes("如凑十"));
   console.log(`first request with the trial on: +${on.bytes - off.bytes} B (${off.bytes} -> ${on.bytes})`);

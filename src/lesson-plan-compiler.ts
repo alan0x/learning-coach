@@ -1,7 +1,7 @@
 import { compileText, setLessonTextLanguage } from "./lesson-text.js";
 import { CompiledVisualRegistry, type CompiledVisual } from "./compiled-visual-reuse.js";
 import { applyLessonOpeningPolicy, type LessonOpeningPolicy, compileMathExpression, normalizeAuthoringLesson, reduceCanonicalEvents, validateAuthoringLesson, validateAuthoringSchema, type AuthoringAction, type AuthoringLesson, type ResourceContext } from "octos-lesson-language";
-import { LESSON_PLAN_CAPABILITY_REGISTRY, LessonPlanError, countRange, isNumberLineCapability, recipeDeclares, LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, numericAnswerTolerance, roundingPlaces, roundingTolerance, resolveLessonPlan, type LessonPlan, type LessonPlanBoardContent, type LessonPlanBoardKind, type LessonPlanHostReference, type LessonPlanVisualContent, type ResolveLessonPlanOptions, type ResolvedLessonPlan, type ResolvedLessonPlanReference } from "./lesson-plan.js";
+import { LESSON_PLAN_CAPABILITY_REGISTRY, LessonPlanError, countRange, isNumberLineCapability, recipeDeclares, recipeNumberRole, LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, numericAnswerTolerance, roundingPlaces, roundingTolerance, resolveLessonPlan, type LessonPlan, type LessonPlanBoardContent, type LessonPlanBoardKind, type LessonPlanHostReference, type LessonPlanVisualContent, type ResolveLessonPlanOptions, type ResolvedLessonPlan, type ResolvedLessonPlanReference } from "./lesson-plan.js";
 import { fail, pad, variableAlias, parameters, optionalNumber, assertRange, safeFunctionExpression, mathExpressionToOll, place, includeWrittenCardsInFocus, namedNumbers, actionWhen } from "./recipe-kit.js";
 import { PLUGIN_COMPILERS, VISUAL_COMPILERS } from "./plugins/compilers.js";
 import { INSTALLED_PLUGINS, RECIPE_PLUGIN } from "./plugins/index.js";
@@ -528,10 +528,104 @@ function resolveMetNumberTargets(plan: LessonPlan): void {
   }
 }
 
+/**
+ * Copies of a card's problem numbers (design note "second example and copies"; owner direction, 2026-11-27). A tap card
+ * only reads its problem numbers (make ten's pair, the column card's pair, the times-ten amount and target): no
+ * demonstration moves them. So another picture that names one is given a copy of its own, a new lesson number with the
+ * same start, range and label, instead of being refused; the card's number and the copy are then fitted, moved and
+ * declared each for its own picture. The first picture in the plan that names the number keeps it, and the later one
+ * gets the copy: a published section never changes. When the copy is read by a card as its own problem number, nothing
+ * else changes (that card never moves it, so the first picture keeps the moves); otherwise the copy is the picture's
+ * that moves the number, and that picture's moves, replays and practice of it from its create on are its copy's,
+ * whatever kind of picture it is. Generation walks the same copies (`numberStateAfter`), so a later section is told
+ * the values each picture shows. A number in any other role (a practice number, the number a demonstration moves, a count only the
+ * learner changes) is never copied: the card's own check refuses the other picture, as before. One copy per number.
+ * The model never sees a copy: it keeps writing the outline's number.
+ */
+/** A copy `separateCardProblemNumbers` made: the outline's number, and whether the moves of it from `from` on are the copy's. */
+export interface CardNumberCopy { number: number; routed: boolean; from: readonly [number, number, number] }
+
+export function separateCardProblemNumbers(plan: Pick<LessonPlan, "numbers" | "sections">, adjustments: CompiledLessonPlan["view_adjustments"] = []): Map<number, CardNumberCopy> {
+  // Each copy, by its own index.
+  const copyOf = new Map<number, CardNumberCopy>();
+  const numbers = plan.numbers;
+  if (!numbers?.length) return copyOf;
+  const outlineDefinitions = numbers.map((definition) => structuredClone(definition));
+  type Place = readonly [number, number, number];
+  const before = (left: Place, right: Place) => left[0] - right[0] || left[1] - right[1] || left[2] - right[2];
+  // The first picture that names each number, by its identity as the model wrote it (a picture written again is the same).
+  const first = new Map<number, { picture: string; role: ReturnType<typeof recipeNumberRole> }>();
+  const pictures = new Map<string, Map<number, number>>();
+  // Copies another picture holds, by the outline's number: its index and where that picture is drawn.
+  const routed = new Map<number, { copy: number; from: Place }>();
+  const copied = new Set<number>();
+  plan.sections.forEach((section, sectionAt) => section.moments.forEach((moment, momentAt) => moment.actions.forEach((action, actionAt) => {
+    if (action.action !== "create" || action.kind !== "visual") return;
+    const content = action.content as LessonPlanVisualContent;
+    if (!content.numbers?.length) return;
+    const picture = normalizedVisualIdentity(content);
+    const known = pictures.get(picture);
+    if (known) {
+      if (known.size) content.numbers = content.numbers.map((number) => known.get(number) ?? number);
+      return;
+    }
+    const map = new Map<number, number>();
+    content.numbers.forEach((number, position) => {
+      const role = recipeNumberRole(content.capability, position);
+      const held = first.get(number);
+      if (!held) { first.set(number, { picture, role }); return; }
+      // Only a card's problem number is copied, whichever picture drew first; the other picture uses its copy in its own
+      // role (PT-15: the chart moves its copy of the column card's 8.2; lead, 2026-11-27).
+      if (held.picture === picture || copied.has(number) || (held.role !== "problem" && role !== "problem")) return;
+      const definition = outlineDefinitions[number - 1];
+      if (!definition) return;
+      numbers.push(structuredClone(definition));
+      const copy = numbers.length;
+      copied.add(number);
+      copyOf.set(copy, { number, routed: role !== "problem", from: [sectionAt, momentAt, actionAt] });
+      map.set(number, copy);
+      // The picture that moves the number holds it from its create on: its moves, replays and practice of the number are
+      // its copy's, whatever kind of picture it is (a chart drawn after the column card builds its copy; review of
+      // #194, B3). A card that reads the copy as its own problem never moves it: the first picture keeps those moves.
+      if (role !== "problem") routed.set(number, { copy, from: [sectionAt, momentAt, actionAt] });
+      adjustments.push({ section: sectionAt + 1, reason: "number_copied",
+        detail: `$lessonPlan.sections[${sectionAt}].moments[${momentAt}].actions[${actionAt}]: the ${content.capability} visual shows lesson number ${number} on a copy of its own (number ${copy}): a card reads that number as its problem` });
+    });
+    pictures.set(picture, map);
+    if (map.size) content.numbers = content.numbers.map((number) => map.get(number) ?? number);
+  })));
+  if (!routed.size) return copyOf;
+  // From the picture's create on, the outline's number is the picture's copy: its moves and replays.
+  plan.sections.forEach((section, sectionAt) => section.moments.forEach((moment, momentAt) => {
+    moment.actions.forEach((action, actionAt) => {
+      if (action.action !== "animate") return;
+      const route = routed.get(action.number);
+      if (route && before(route.from, [sectionAt, momentAt, actionAt]) <= 0) action.number = route.copy;
+    });
+    if (moment.restart_numbers) {
+      moment.restart_numbers = moment.restart_numbers.map((number) => {
+        const route = routed.get(number);
+        return route && before(route.from, [sectionAt, momentAt, Number.MAX_SAFE_INTEGER]) <= 0 ? route.copy : number;
+      });
+    }
+  }));
+  // The learner's practice on the number, after the lesson: the picture's own, once the picture is drawn in or before its section.
+  plan.sections.forEach((section, sectionAt) => section.student_activities?.forEach((activity) => {
+    if (activity.kind !== "number_target") return;
+    for (const control of activity.number_controls) {
+      const route = routed.get(control.number);
+      if (route && route.from[0] <= sectionAt) control.number = route.copy;
+    }
+  }));
+  return copyOf;
+}
+
 export function compileLessonPlan(value: unknown, options: CompileLessonPlanOptions = {}): CompiledLessonPlan {
   const resolved = resolveLessonPlan(value, options);
   const plan = resolved.plan;
   setLessonTextLanguage(plan, options.language);
+  const copyAdjustments: CompiledLessonPlan["view_adjustments"] = [];
+  separateCardProblemNumbers(plan, copyAdjustments);
   for (const hooks of PLUGIN_HOOKS) hooks.normalize_plan?.(plan);
   for (const hooks of PLUGIN_HOOKS) hooks.check_plan?.(plan);
   normalizeProgramOwnedNumberRanges(plan);
@@ -549,7 +643,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
   const reusableVisuals = new Map<string, CompiledVisual>();
   // Sliders a visual creates itself (a solid's cut or net), by alias, in the order the visuals appear.
   const visualVariables = new Map<string, NonNullable<CompiledVisual["variables"]>[number]>();
-  const viewAdjustments: CompiledLessonPlan["view_adjustments"] = [];
+  const viewAdjustments: CompiledLessonPlan["view_adjustments"] = [...copyAdjustments];
   const programAdjustments: CompiledLessonPlan["program_adjustments"] = [];
   // What visuals add themselves (OLL decision 0023): tasks before the model's, and the cards whose practice
   // the program writes, so the model's questions on them are dropped.

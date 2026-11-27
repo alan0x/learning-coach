@@ -335,7 +335,7 @@ test("review of #160: a pile with a hundreds number of 0 draws two columns; the 
     console.log(JSON.stringify(out));
   `);
   assert.match(faults.early.message ?? "", /belongs to a card that is drawn later/);
-  assert.match(faults.shared.message ?? "", /lesson numbers of its own/);
+  assert.match(faults.shared.message ?? "", /is a count on the trading mat, which changes only by its trades; the \w+ visual shows it too/);
   assert.match(faults.shared.path ?? "", /^\$lessonPlan\.sections\[0\]\.moments\[0\]/);
   assert.deepEqual(faults.judged, ["nothing changes the pile before the mat is drawn"]);
 });

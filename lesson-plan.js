@@ -18314,6 +18314,10 @@ function placeValueMoves(state, moves) {
   const ignored = [];
   let current = [...state];
   for (const [index, move] of moves.entries()) {
+    if (move.position === 1 && state.length === 4 && move.to !== current[1]) {
+      ignored.push({ index, position: move.position, reason: "the practice number is the learner's: it stays as written, and the demonstration moves only the question's number" });
+      continue;
+    }
     const part = placeValueDrawnBuiltPart(current, move.position, move.to);
     if (part) {
       ignored.push({ index, position: move.position, reason: part });
@@ -18637,6 +18641,9 @@ var MATH_RECIPES = {
     // The pile is lesson numbers, as every earlier component's values are (owner, 2026-11-23): the model
     // declares them in the outline, moves them in its own moments and writes the practice.
     number_inputs: ["loose_ones", "tens", "hundreds"],
+    // What each number is to the card (design note "second example and copies", 2026-11-27): every count changes by
+    // trades, so another picture never shows one.
+    number_roles: ["demonstration", "demonstration", "demonstration"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
     parameter_names: [],
     model_parameter_names: [],
@@ -18656,6 +18663,8 @@ var MATH_RECIPES = {
   place_value_chart: {
     parts: ["whole"],
     number_inputs: ["number", "practice"],
+    // The number is what the demonstration moves (the value on the chart); the practice is the learner's.
+    number_roles: ["demonstration", "practice"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }],
     parameter_names: ["given"],
     model_parameter_names: ["given"],
@@ -18682,6 +18691,8 @@ var MATH_RECIPES = {
   place_value_trade: {
     parts: ["whole"],
     number_inputs: ["first", "second", "practice_first", "practice_second", "columns_finished"],
+    // The pair is the problem, which the card only reads: another picture may show it on a copy of its own.
+    number_roles: ["problem", "problem", "practice", "practice", "demonstration"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
     // Columns finished starts at 0 whatever the outline holds (the card is drawn with no column done), so the
     // program supplies it: an outline that declares only the four numbers before it gets it (0, from 0 to the
@@ -18713,6 +18724,8 @@ var MATH_RECIPES = {
   make_ten: {
     parts: ["whole"],
     number_inputs: ["first", "second", "practice_first", "practice_second", "filled", "moved"],
+    // The pair is the problem, which the card only reads: another picture may show it on a copy of its own.
+    number_roles: ["problem", "problem", "practice", "practice", "demonstration", "program"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
     // The two counts start where the pair puts them (the frames apart, nothing moved), so the program supplies
     // them: an outline that declares the four numbers before them gets both, one that also declares the first
@@ -18734,7 +18747,7 @@ var MATH_RECIPES = {
     // fixed text says how it is used.
     student_controls: [],
     required_features: ["make_ten_to_add"],
-    model_guidance: "\u51D1\u5341\uFF08\u4E24\u4E2A\u5341\u683C\u6846\uFF09\uFF1A\u4E24\u4E2A\u4E00\u4F4D\u6570\u76F8\u52A0\u3001\u548C\u5927\u4E8E10\uFF08\u59828+6\uFF09\uFF0C\u5C0F\u6570\u5206\u51FA\u4E00\u90E8\u5206\u628A\u5927\u6570\u8865\u6210\u5341\u3002\u4E5F\u7528\u4E8E\u95EE\u201C\u5E94\u8BE5\u62C6\u54EA\u4E2A\u6570\u201D\u201C\u600E\u6837\u62C6\u7B97\u5F97\u5FEB\u201D\uFF1A\u5361\u7247\u753B\u5FEB\u7684\u62C6\u6CD5\uFF08\u62C6\u5C0F\u6570\u8865\u5927\u6570\uFF0C\u59824+9\u62C64\u88659\uFF09\uFF0C\u6162\u7684\u62C6\u6CD5\u53EA\u7528\u8BDD\u8BF4\uFF0C\u4E0D\u753B\u3002\u4E0D\u7528\u4E8E\u548C\u6B63\u597D\u662F10\u3001\u63A5\u7740\u6570\u3001\u7834\u5341\u51CF\u3001\u4E24\u4F4D\u6570\u52A0\u4E00\u4F4D\u6570\u3001\u4E09\u4E2A\u6570\u76F8\u52A0\u3002\u8FD9\u9053\u52A0\u6CD5\u53EA\u753B\u8FD9\u5F20\u5361\u7247\uFF0C\u4E0D\u518D\u753B\u6570\u8F74\u3002outline \u7684 numbers \u4F9D\u6B21\u5199\u56DB\u4E2A\u6570\uFF1A\u9898\u76EE\u7684\u4E24\u4E2A\u6570\u3001\u7EC3\u4E60\u7684\u4E24\u4E2A\u6570\uFF08\u53E6\u4E00\u5BF9\uFF0C\u4E5F\u662F\u4E00\u4F4D\u6570\u3001\u548C\u5927\u4E8E10\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u6362\u987A\u5E8F\u4E5F\u4E0D\u7B97\uFF09\u3002\u7A0B\u5E8F\u518D\u8865\u4E24\u4E2A\u6570\uFF1A\u5927\u6570\u90A3\u4E00\u6846\u91CC\u6709\u51E0\u4E2A\uFF08\u5F00\u59CB\u5C31\u662F\u5927\u6570\uFF09\u3001\u79FB\u8FC7\u53BB\u51E0\u4E2A\uFF080\uFF09\u3002\u6F14\u793A\u65F6\u628A\u7B2C\u4E94\u4E2A\u6570\u52A8\u753B\u523010\uFF0C\u4E00\u76F4\u5230\u5927\u6570\u90A3\u4E00\u6846\u6EE1\u5341\uFF0C\u7A0B\u5E8F\u4E00\u4E2A\u4E00\u4E2A\u5730\u79FB\u5706\u7247\uFF1B\u522B\u7684\u6570\u4E0D\u52A8\u753B\u3002\u7EC3\u4E60\uFF1A\u5BF9\u7B2C\u4E94\u4E2A\u6570\u5199\u4E00\u4E2A\u6570\u503C\u76EE\u6807\u9898\uFF08\u6570\u503C\u519910\uFF09\uFF0C\u5B69\u5B50\u81EA\u5DF1\u8865\u6EE1\u5341\uFF0C\u7A0B\u5E8F\u518D\u51FA\u4E00\u884C\u7A7A\uFF088+6=8+__+__=10+__=__\uFF09\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u548C\u3002\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
+    model_guidance: "\u51D1\u5341\uFF08\u4E24\u4E2A\u5341\u683C\u6846\uFF09\uFF1A\u4E24\u4E2A\u4E00\u4F4D\u6570\u76F8\u52A0\u3001\u548C\u5927\u4E8E10\uFF08\u59828+6\uFF09\uFF0C\u5C0F\u6570\u5206\u51FA\u4E00\u90E8\u5206\u628A\u5927\u6570\u8865\u6210\u5341\u3002\u4E5F\u7528\u4E8E\u95EE\u201C\u5E94\u8BE5\u62C6\u54EA\u4E2A\u6570\u201D\u201C\u600E\u6837\u62C6\u7B97\u5F97\u5FEB\u201D\uFF1A\u5361\u7247\u753B\u5FEB\u7684\u62C6\u6CD5\uFF08\u62C6\u5C0F\u6570\u8865\u5927\u6570\uFF0C\u59824+9\u62C64\u88659\uFF09\uFF0C\u6162\u7684\u62C6\u6CD5\u53EA\u7528\u8BDD\u8BF4\uFF0C\u4E0D\u753B\u3002\u4E0D\u7528\u4E8E\u548C\u6B63\u597D\u662F10\u3001\u63A5\u7740\u6570\u3001\u7834\u5341\u51CF\u3001\u4E24\u4F4D\u6570\u52A0\u4E00\u4F4D\u6570\u3001\u4E09\u4E2A\u6570\u76F8\u52A0\u3002\u8FD9\u9053\u52A0\u6CD5\u7684\u753B\u9762\u662F\u8FD9\u5F20\u5361\u7247\uFF1B\u540E\u9762\u7684\u8282\u53EF\u4EE5\u518D\u7528\u6570\u8F74\u628A\u540C\u4E00\u9053\u52A0\u6CD5\u8D70\u4E00\u904D\uFF0C\u6570\u8F74\u4E0D\u4EE3\u66FF\u8FD9\u5F20\u5361\u7247\u3002outline \u7684 numbers \u4F9D\u6B21\u5199\u56DB\u4E2A\u6570\uFF1A\u9898\u76EE\u7684\u4E24\u4E2A\u6570\u3001\u7EC3\u4E60\u7684\u4E24\u4E2A\u6570\uFF08\u53E6\u4E00\u5BF9\uFF0C\u4E5F\u662F\u4E00\u4F4D\u6570\u3001\u548C\u5927\u4E8E10\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u6362\u987A\u5E8F\u4E5F\u4E0D\u7B97\uFF09\u3002\u7A0B\u5E8F\u518D\u8865\u4E24\u4E2A\u6570\uFF1A\u5927\u6570\u90A3\u4E00\u6846\u91CC\u6709\u51E0\u4E2A\uFF08\u5F00\u59CB\u5C31\u662F\u5927\u6570\uFF09\u3001\u79FB\u8FC7\u53BB\u51E0\u4E2A\uFF080\uFF09\u3002\u6F14\u793A\u65F6\u628A\u7B2C\u4E94\u4E2A\u6570\u52A8\u753B\u523010\uFF0C\u4E00\u76F4\u5230\u5927\u6570\u90A3\u4E00\u6846\u6EE1\u5341\uFF0C\u7A0B\u5E8F\u4E00\u4E2A\u4E00\u4E2A\u5730\u79FB\u5706\u7247\uFF1B\u522B\u7684\u6570\u4E0D\u52A8\u753B\u3002\u7EC3\u4E60\uFF1A\u5BF9\u7B2C\u4E94\u4E2A\u6570\u5199\u4E00\u4E2A\u6570\u503C\u76EE\u6807\u9898\uFF08\u6570\u503C\u519910\uFF09\uFF0C\u5B69\u5B50\u81EA\u5DF1\u8865\u6EE1\u5341\uFF0C\u7A0B\u5E8F\u518D\u51FA\u4E00\u884C\u7A7A\uFF088+6=8+__+__=10+__=__\uFF09\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u548C\u3002\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
   },
   // OLL decision 0028 (a trial): the same amount counted in another unit on the place-value chart, a count (3 tenths =
   // ? thousandths) or a times pair (700 is ? times 70). The model writes the amount, the unit asked and a practice of
@@ -18747,6 +18760,8 @@ var MATH_RECIPES = {
     // Named by role, as the guidance names them (35P-04 run 2: PF-11 wrote the unit asked where the start unit goes,
     // PF-01 the unit asked as the start unit; "target" and "counted in" both read as where the count ends).
     number_inputs: ["amount", "unit_asked", "practice_amount", "practice_unit_asked", "start_unit"],
+    // The amount and the unit asked are the problem, which the card only reads: another picture may show them on a copy.
+    number_roles: ["problem", "problem", "practice", "practice", "demonstration"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
     // Counted in starts at the unit the question names: for a count that breaks and for a times pair it is the
     // amount's own place, so the program supplies it from the amount when the outline declares only the four numbers
@@ -18892,7 +18907,7 @@ var MATH_RECIPES = {
     model_guidance: "\u6570\u8F74\u5206\u6B65\uFF1A\u4E24\u5230\u4E09\u6B65\u7684\u52A0\u51CF\uFF08\u6570\u8F74\u52A0\u51CF\u662F\u4E00\u6B65\uFF09\uFF0C\u5982\u51D1\u5341\u3001\u5148\u6574\u5341\u518D\u4E2A\u4F4D\u3001\u4E0A\u4E0B\u79FB\u52A8\uFF1B\u6570\u503C\u4F9D\u6B21\u662F\u8D77\u70B9\u548C\u5404\u6B65\u79FB\u52A8\u91CF\uFF08\u4E24\u6B65\u5199\u4E24\u4E2A\uFF09\uFF0C\u843D\u70B9\u548C\u7EC8\u70B9\u7531\u7A0B\u5E8F\u7B97\uFF1B\u5F80\u56DE\u8D70\u7684\u4E00\u6B65\u4E0D\u8BB2\u4E00\u683C\u4E00\u683C",
     // Beside the make-ten card (a trial, OLL 0027) the line does not claim making ten with two one-digit numbers
     // (MT-07: "4 + 9, which number should I split?" drew the line in 2 of 2 runs). Without the trial its text is unchanged.
-    model_guidance_with: { make_ten: "\u6570\u8F74\u5206\u6B65\uFF1A\u4E24\u5230\u4E09\u6B65\u7684\u52A0\u51CF\uFF08\u6570\u8F74\u52A0\u51CF\u662F\u4E00\u6B65\uFF09\uFF0C\u5982\u5148\u6574\u5341\u518D\u4E2A\u4F4D\u3001\u4E0A\u4E0B\u79FB\u52A8\u3001\u4E24\u4F4D\u6570\u52A0\u4E00\u4F4D\u6570\u5148\u51D1\u6574\u5341\uFF0838+5\uFF09\uFF1B\u4E0D\u7528\u4E8E\u4E24\u4E2A\u4E00\u4F4D\u6570\u76F8\u52A0\u7684\u51D1\u5341\uFF084+9\u30018+6\uFF0C\u4E5F\u5305\u62EC\u95EE\u62C6\u54EA\u4E2A\u6570\uFF09\uFF1B\u6570\u503C\u4F9D\u6B21\u662F\u8D77\u70B9\u548C\u5404\u6B65\u79FB\u52A8\u91CF\uFF08\u4E24\u6B65\u5199\u4E24\u4E2A\uFF09\uFF0C\u843D\u70B9\u548C\u7EC8\u70B9\u7531\u7A0B\u5E8F\u7B97\uFF1B\u5F80\u56DE\u8D70\u7684\u4E00\u6B65\u4E0D\u8BB2\u4E00\u683C\u4E00\u683C" }
+    model_guidance_with: { make_ten: "\u6570\u8F74\u5206\u6B65\uFF1A\u4E24\u5230\u4E09\u6B65\u7684\u52A0\u51CF\uFF08\u6570\u8F74\u52A0\u51CF\u662F\u4E00\u6B65\uFF09\uFF0C\u5982\u5148\u6574\u5341\u518D\u4E2A\u4F4D\u3001\u4E0A\u4E0B\u79FB\u52A8\u3001\u4E24\u4F4D\u6570\u52A0\u4E00\u4F4D\u6570\u5148\u51D1\u6574\u5341\uFF0838+5\uFF09\uFF1B\u4E24\u4E2A\u4E00\u4F4D\u6570\u76F8\u52A0\u7684\u51D1\u5341\uFF084+9\u30018+6\uFF0C\u4E5F\u5305\u62EC\u95EE\u62C6\u54EA\u4E2A\u6570\uFF09\uFF0C\u9898\u76EE\u7684\u753B\u9762\u662F\u51D1\u5341\u5361\u7247\uFF0C\u6570\u8F74\u5206\u6B65\u53EA\u5728\u5361\u7247\u4E4B\u540E\u7684\u8282\u91CC\u4F5C\u7B2C\u4E8C\u79CD\u770B\u6CD5\uFF1B\u6570\u503C\u4F9D\u6B21\u662F\u8D77\u70B9\u548C\u5404\u6B65\u79FB\u52A8\u91CF\uFF08\u4E24\u6B65\u5199\u4E24\u4E2A\uFF09\uFF0C\u843D\u70B9\u548C\u7EC8\u70B9\u7531\u7A0B\u5E8F\u7B97\uFF1B\u5F80\u56DE\u8D70\u7684\u4E00\u6B65\u4E0D\u8BB2\u4E00\u683C\u4E00\u683C" }
   }
 };
 var text4 = { type: "string" };
@@ -19557,6 +19572,13 @@ function compileText(plan, source, values) {
 // src/recipe-kit.ts
 function fail2(code, path, message, capability2) {
   throw new LessonPlanError(code, path, message, capability2);
+}
+function sharedNumberFact(capability2, card, numbers, other, otherCapability, moved = `is the number the ${card}'s demonstration moves`) {
+  const position = numbers.findIndex((number2) => other.includes(number2));
+  const number = numbers[position];
+  const role = recipeNumberRole(capability2, position);
+  const what = role === "practice" ? `is the ${card}'s practice number, which the learner works after class` : role === "program" ? `is a count on the ${card} that only the learner's taps change` : role === "problem" ? `is the ${card}'s problem number, and another picture already shows it on a copy of its own` : moved;
+  return `lesson number ${number} ${what}; the ${otherCapability} visual shows it too`;
 }
 function failSharedTapCardNumbers(path, message, card, other, sharingAt, cardAt) {
   if (sharingAt >= cardAt) throw new LessonPlanError("LESSON_PLAN_SHARED_NUMBER", path, message, other, true, card);
@@ -21002,14 +21024,19 @@ function placeValueTradeMove(state, position, to) {
 }
 function placeValueTradeMoves2(state, moves) {
   const steps = [];
+  const ignored = [];
   let current = [...state];
-  for (const move of moves) {
+  for (const [index, move] of moves.entries()) {
+    if (move.position >= TRADE_NUMBER.first && move.position < TRADE_NUMBER.finished && move.to !== current[move.position]) {
+      ignored.push({ index, position: move.position, reason: "the two numbers and the practice pair stay as written: the demonstration moves only columns finished (the card's fifth lesson number)" });
+      continue;
+    }
     const result = placeValueTradeMove(current, move.position, move.to);
     if (typeof result === "string") return { refused: { position: move.position, reason: result } };
     steps.push({ position: move.position, from: current, to: result });
     current = result;
   }
-  return { steps };
+  return { steps, ...ignored.length ? { ignored } : {} };
 }
 
 // src/plugins/make-ten-moves.ts
@@ -21064,14 +21091,19 @@ function makeTenMove(state, position, to) {
 }
 function makeTenMoves(state, moves) {
   const steps = [];
+  const ignored = [];
   let current = [...state];
-  for (const move of moves) {
+  for (const [index, move] of moves.entries()) {
+    if (move.position >= MAKE_TEN_NUMBER.first && move.position <= MAKE_TEN_NUMBER.practiceSecond && move.to !== current[move.position]) {
+      ignored.push({ index, position: move.position, reason: "the pair and the practice pair stay as written: the demonstration moves only the count in the bigger number's frame (the card's fifth lesson number)" });
+      continue;
+    }
     const result = makeTenMove(current, move.position, move.to);
     if (typeof result === "string") return { refused: { position: move.position, reason: result } };
     steps.push({ position: move.position, from: current, to: result });
     current = result;
   }
-  return { steps };
+  return { steps, ...ignored.length ? { ignored } : {} };
 }
 var FULL_WIDTH5 = /[０-９＝]/gu;
 var halfWidth4 = (text5) => text5.replace(FULL_WIDTH5, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
@@ -21246,7 +21278,14 @@ var MATH_HOOKS = {
       return /* @__PURE__ */ new Map();
     },
     // Columns finished moves forward from 0; the two numbers and the practice pair never move.
-    number_moves: { state: placeValueTradeState2, moves: placeValueTradeMoves2 }
+    number_moves: { state: placeValueTradeState2, moves: placeValueTradeMoves2 },
+    // The pair, columns finished and one status a column: the more columns of adding or subtracting the pair.
+    planned_variables(values) {
+      const [a, b] = values.slice(0, 2).map(placeValueTradeThousandths);
+      if (a === void 0 || b === void 0) return void 0;
+      const columns = ["add", "subtract"].filter((operation) => operation === "add" || a >= b).map((operation) => placeValueTradeColumnsOf(operation, a, b).length);
+      return 3 + Math.max(...columns);
+    }
   },
   make_ten: {
     // The card's numbers have no control: the learner works it by its own taps (OLL 0027; owner, 2026-11-24: the
@@ -21265,7 +21304,9 @@ var MATH_HOOKS = {
       return /* @__PURE__ */ new Map();
     },
     // The count in the bigger frame moves forward from the bigger number to 10; nothing else moves.
-    number_moves: { state: makeTenState2, moves: makeTenMoves }
+    number_moves: { state: makeTenState2, moves: makeTenMoves },
+    // The pair, the count in the bigger frame and the count moved.
+    planned_variables: () => 4
   },
   place_value_times_ten: {
     // The card's numbers have no control: the learner works it by its own taps (OLL 0028; the model never names a
@@ -21290,7 +21331,12 @@ var MATH_HOOKS = {
     // number is left out and recorded).
     number_moves: { state: placeValueTimesTenState2, moves: placeValueTimesTenMoves },
     // Numbers the card cannot start on go with the outline, before any section is written for them.
-    outline_fault: timesTenOutlineFault
+    outline_fault: timesTenOutlineFault,
+    // The amount, the unit asked, the start unit and one or two row sets (two when the count crosses two places).
+    planned_variables(values) {
+      const found = timesTenStartProblem(values.slice(0, 5));
+      return "fault" in found ? 5 : 4 + (found.problem.g === 2 ? 1 : 0);
+    }
   },
   number_line: { fit_numbers: fitNumberLineNumbers },
   number_line_compare: { fit_numbers: fitComparedNumbers },
@@ -21625,6 +21671,10 @@ function recipeDeclares(capability2, flag) {
 function recipeProgramNumbers(capability2) {
   const declared = recipeEntry(capability2)?.program_number_inputs;
   return Array.isArray(declared) ? declared : [];
+}
+function recipeNumberRole(capability2, position) {
+  const roles = recipeEntry(capability2)?.number_roles;
+  return Array.isArray(roles) ? roles[position] : void 0;
 }
 function recipeGuidance(capability2, offered) {
   const entry = recipeEntry(capability2);
@@ -24795,13 +24845,13 @@ function compileBaseTenTrade(base, content, role, placement, plan, path) {
   if (sharing) {
     const matAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
     const sharingCapability = sharing.content.capability;
-    failSharedTapCardNumbers(`${path}.numbers`, `the trading mat needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the pile on the mat only, or in words`, "base_ten_trade", sharingCapability, sharingAt, matAt);
+    failSharedTapCardNumbers(`${path}.numbers`, sharedNumberFact("base_ten_trade", "trading mat", numbers, sharing.content.numbers ?? [], sharingCapability, "is a count on the trading mat, which changes only by its trades"), "base_ten_trade", sharingCapability, sharingAt, matAt);
   }
   const fault = baseTenStartFault(start);
   if (fault) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault, "base_ten_trade");
   const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "base_ten_trade");
   if (first && JSON.stringify(first.content.numbers ?? []) !== JSON.stringify(numbers)) {
-    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a lesson has one trading mat: use the same lesson numbers each time, or show another pile in words", "base_ten_trade");
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `a lesson has one trading mat: this lesson's is on lesson numbers ${(first.content.numbers ?? []).join(", ")}`, "base_ten_trade");
   }
   const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
   const text5 = BASE_TEN_TEXT[language];
@@ -24894,13 +24944,13 @@ function compilePlaceValueChart(base, content, role, placement, plan, path) {
     const sharing = plan.sections[sharingAt].moments.flatMap((moment) => moment.actions).find(sharesNumbers);
     const chartAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
     const sharingCapability = sharing.content.capability;
-    failSharedTapCardNumbers(`${path}.numbers`, `the place-value chart needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the number on the chart only, or in words`, "place_value_chart", sharingCapability, sharingAt, chartAt);
+    failSharedTapCardNumbers(`${path}.numbers`, sharedNumberFact("place_value_chart", "place-value chart", numbers, sharing.content.numbers ?? [], sharingCapability), "place_value_chart", sharingCapability, sharingAt, chartAt);
   }
   const fault = placeValueStartFault(values, given);
   if (fault) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault, "place_value_chart");
   const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "place_value_chart");
   if (first && (JSON.stringify(first.content.numbers ?? []) !== JSON.stringify(numbers) || first.content.parameters?.given !== given)) {
-    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a lesson has one place-value chart: use the same lesson numbers and given each time, or write another number in words", "place_value_chart");
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `a lesson has one place-value chart: this lesson's is on lesson numbers ${(first.content.numbers ?? []).join(", ")}`, "place_value_chart");
   }
   const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
   const text5 = PLACE_VALUE_TEXT[language];
@@ -25036,13 +25086,13 @@ function compilePlaceValueTrade(base, content, role, placement, plan, path) {
     const sharing = plan.sections[sharingAt].moments.flatMap((moment) => moment.actions).find(sharesNumbers);
     const cardAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
     const sharingCapability = sharing.content.capability;
-    failSharedTapCardNumbers(`${path}.numbers`, `the place-value trade card needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the numbers on the card only, or in words`, "place_value_trade", sharingCapability, sharingAt, cardAt);
+    failSharedTapCardNumbers(`${path}.numbers`, sharedNumberFact("place_value_trade", "place-value trade card", numbers, sharing.content.numbers ?? [], sharingCapability), "place_value_trade", sharingCapability, sharingAt, cardAt);
   }
   const fault = placeValueTradeStartFault2(values, operation);
   if (fault) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault, "place_value_trade");
   const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "place_value_trade");
   if (first && (JSON.stringify(first.content.numbers ?? []) !== JSON.stringify(numbers) || first.content.parameters?.operation !== operation)) {
-    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a lesson has one place-value trade card: use the same lesson numbers and operation each time, or write another sum in words", "place_value_trade");
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `a lesson has one place-value trade card: this lesson's is on lesson numbers ${(first.content.numbers ?? []).join(", ")}`, "place_value_trade");
   }
   const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
   const text5 = PLACE_VALUE_TRADE_TEXT[language];
@@ -25132,13 +25182,13 @@ function compileMakeTen(base, content, role, placement, plan, path) {
     const sharing = plan.sections[sharingAt].moments.flatMap((moment) => moment.actions).find(sharesNumbers);
     const cardAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
     const sharingCapability = sharing.content.capability;
-    failSharedTapCardNumbers(`${path}.numbers`, `the make-ten card needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the numbers on the card only, or in words`, "make_ten", sharingCapability, sharingAt, cardAt);
+    failSharedTapCardNumbers(`${path}.numbers`, sharedNumberFact("make_ten", "make-ten card", numbers, sharing.content.numbers ?? [], sharingCapability), "make_ten", sharingCapability, sharingAt, cardAt);
   }
   const fault = makeTenStartFault2(values);
   if (fault) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault, "make_ten");
   const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "make_ten");
   if (first && JSON.stringify(first.content.numbers ?? []) !== JSON.stringify(numbers)) {
-    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a lesson has one make-ten card: use the same lesson numbers each time, or write another sum in words", "make_ten");
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `a lesson has one make-ten card: this lesson's is on lesson numbers ${(first.content.numbers ?? []).join(", ")}`, "make_ten");
   }
   const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
   const text5 = MAKE_TEN_TEXT[language];
@@ -25223,19 +25273,14 @@ function compilePlaceValueTimesTen(base, content, role, placement, plan, path) {
     const sharing = plan.sections[sharingAt].moments.flatMap((moment) => moment.actions).find(sharesNumbers);
     const cardAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
     const sharingCapability = sharing.content.capability;
-    fail2(
-      "LESSON_PLAN_SHARED_NUMBER",
-      `${path}.numbers`,
-      `the times-ten card needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the numbers on the card only, or in words`,
-      sharingAt > cardAt ? sharingCapability : "place_value_times_ten"
-    );
+    failSharedTapCardNumbers(`${path}.numbers`, sharedNumberFact("place_value_times_ten", "times-ten card", numbers, sharing.content.numbers ?? [], sharingCapability), "place_value_times_ten", sharingCapability, sharingAt, cardAt);
   }
   const found = timesTenStartProblem(values);
   if ("fault" in found) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, found.fault, "place_value_times_ten");
   const { problem, practice } = found;
   const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "place_value_times_ten");
   if (first && JSON.stringify(first.content.numbers ?? []) !== JSON.stringify(numbers)) {
-    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a lesson has one times-ten card: use the same lesson numbers each time, or write another amount in words", "place_value_times_ten");
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `a lesson has one times-ten card: this lesson's is on lesson numbers ${(first.content.numbers ?? []).join(", ")}`, "place_value_times_ten");
   }
   const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
   const text5 = TIMES_TEN_TEXT[language];
@@ -26079,10 +26124,81 @@ function resolveMetNumberTargets(plan) {
     }
   }
 }
+function separateCardProblemNumbers(plan, adjustments = []) {
+  const copyOf = /* @__PURE__ */ new Map();
+  const numbers = plan.numbers;
+  if (!numbers?.length) return copyOf;
+  const outlineDefinitions = numbers.map((definition) => structuredClone(definition));
+  const before = (left, right) => left[0] - right[0] || left[1] - right[1] || left[2] - right[2];
+  const first = /* @__PURE__ */ new Map();
+  const pictures = /* @__PURE__ */ new Map();
+  const routed = /* @__PURE__ */ new Map();
+  const copied = /* @__PURE__ */ new Set();
+  plan.sections.forEach((section, sectionAt) => section.moments.forEach((moment, momentAt) => moment.actions.forEach((action, actionAt) => {
+    if (action.action !== "create" || action.kind !== "visual") return;
+    const content = action.content;
+    if (!content.numbers?.length) return;
+    const picture = normalizedVisualIdentity(content);
+    const known = pictures.get(picture);
+    if (known) {
+      if (known.size) content.numbers = content.numbers.map((number) => known.get(number) ?? number);
+      return;
+    }
+    const map = /* @__PURE__ */ new Map();
+    content.numbers.forEach((number, position) => {
+      const role = recipeNumberRole(content.capability, position);
+      const held = first.get(number);
+      if (!held) {
+        first.set(number, { picture, role });
+        return;
+      }
+      if (held.picture === picture || copied.has(number) || held.role !== "problem" && role !== "problem") return;
+      const definition = outlineDefinitions[number - 1];
+      if (!definition) return;
+      numbers.push(structuredClone(definition));
+      const copy = numbers.length;
+      copied.add(number);
+      copyOf.set(copy, { number, routed: role !== "problem", from: [sectionAt, momentAt, actionAt] });
+      map.set(number, copy);
+      if (role !== "problem") routed.set(number, { copy, from: [sectionAt, momentAt, actionAt] });
+      adjustments.push({
+        section: sectionAt + 1,
+        reason: "number_copied",
+        detail: `$lessonPlan.sections[${sectionAt}].moments[${momentAt}].actions[${actionAt}]: the ${content.capability} visual shows lesson number ${number} on a copy of its own (number ${copy}): a card reads that number as its problem`
+      });
+    });
+    pictures.set(picture, map);
+    if (map.size) content.numbers = content.numbers.map((number) => map.get(number) ?? number);
+  })));
+  if (!routed.size) return copyOf;
+  plan.sections.forEach((section, sectionAt) => section.moments.forEach((moment, momentAt) => {
+    moment.actions.forEach((action, actionAt) => {
+      if (action.action !== "animate") return;
+      const route = routed.get(action.number);
+      if (route && before(route.from, [sectionAt, momentAt, actionAt]) <= 0) action.number = route.copy;
+    });
+    if (moment.restart_numbers) {
+      moment.restart_numbers = moment.restart_numbers.map((number) => {
+        const route = routed.get(number);
+        return route && before(route.from, [sectionAt, momentAt, Number.MAX_SAFE_INTEGER]) <= 0 ? route.copy : number;
+      });
+    }
+  }));
+  plan.sections.forEach((section, sectionAt) => section.student_activities?.forEach((activity) => {
+    if (activity.kind !== "number_target") return;
+    for (const control of activity.number_controls) {
+      const route = routed.get(control.number);
+      if (route && route.from[0] <= sectionAt) control.number = route.copy;
+    }
+  }));
+  return copyOf;
+}
 function compileLessonPlan(value2, options = {}) {
   const resolved = resolveLessonPlan(value2, options);
   const plan = resolved.plan;
   setLessonTextLanguage(plan, options.language);
+  const copyAdjustments = [];
+  separateCardProblemNumbers(plan, copyAdjustments);
   for (const hooks of PLUGIN_HOOKS) hooks.normalize_plan?.(plan);
   for (const hooks of PLUGIN_HOOKS) hooks.check_plan?.(plan);
   normalizeProgramOwnedNumberRanges(plan);
@@ -26099,7 +26215,7 @@ function compileLessonPlan(value2, options = {}) {
   const primaryScenes = /* @__PURE__ */ new Map();
   const reusableVisuals = /* @__PURE__ */ new Map();
   const visualVariables = /* @__PURE__ */ new Map();
-  const viewAdjustments = [];
+  const viewAdjustments = [...copyAdjustments];
   const programAdjustments = [];
   const movers = /* @__PURE__ */ new Map();
   const moverStates = /* @__PURE__ */ new Map();
@@ -28704,16 +28820,21 @@ function practiceCard(draft) {
   return questionCard ?? lastCard;
 }
 function numberStateAfter(outline, drafts, afterMoment) {
-  const state = new Map((outline.numbers ?? []).map((number, index) => [index + 1, number.initial]));
+  const walked = { numbers: structuredClone(outline.numbers ?? []), sections: structuredClone(drafts) };
+  const copies = separateCardProblemNumbers(walked);
+  const numbers = walked.numbers;
+  const sections = walked.sections;
+  const shown = (number) => copies.get(number)?.number ?? number;
+  const state = new Map(numbers.map((number, index) => [index + 1, number.initial]));
   const cards = [];
-  const cardNumbers = new Set(cardMovedNumbers(drafts.flatMap((draft) => draft.moments).flatMap((moment) => moment.actions)));
-  for (const [draftAt, draft] of drafts.entries()) for (const [momentAt, moment] of draft.moments.entries()) {
+  const cardNumbers = new Set(cardMovedNumbers(sections.flatMap((draft) => draft.moments).flatMap((moment) => moment.actions)));
+  for (const [draftAt, draft] of sections.entries()) for (const [momentAt, moment] of draft.moments.entries()) {
     for (const action of moment.actions) {
       if (action.action !== "create" || action.kind !== "visual") continue;
       const content = action.content;
       const hook = RECIPE_HOOKS[content.capability]?.number_moves;
       if (hook && content.numbers?.length && !cards.some((card) => card.numbers.join() === content.numbers.join())) {
-        const initial = content.numbers.map((number) => outline.numbers[number - 1].initial);
+        const initial = content.numbers.map((number) => numbers[number - 1].initial);
         const started = [...hook.state(initial, content, draft.moments.slice(momentAt).flatMap((each) => each.actions))];
         initial.forEach((value2, position) => {
           if (started[position] === void 0) started[position] = value2;
@@ -28725,7 +28846,7 @@ function numberStateAfter(outline, drafts, afterMoment) {
     for (const number of moment.restart_numbers ?? []) {
       const card = cards.find((each) => each.numbers.includes(number));
       if (card) card.numbers.forEach((each, position) => state.set(each, card.started[position]));
-      else state.set(number, outline.numbers[number - 1].initial);
+      else state.set(number, numbers[number - 1].initial);
     }
     const drawn = afterMoment ? new Map(state) : void 0;
     for (const card of cards) {
@@ -28738,9 +28859,12 @@ function numberStateAfter(outline, drafts, afterMoment) {
     for (const action of moment.actions) {
       if (action.action === "animate" && !cardNumbers.has(action.number)) state.set(action.number, action.end_value);
     }
-    afterMoment?.(draftAt, momentAt, drawn, state);
+    afterMoment?.(draftAt, momentAt, drawn, state, moment, shown);
   }
-  return state;
+  const current = new Map((outline.numbers ?? []).map((_number, index) => [index + 1, state.get(index + 1)]));
+  const drawnBy = sections.length;
+  for (const [copy, { number, routed, from }] of copies) if (routed && from[0] < drawnBy) current.set(number, state.get(copy));
+  return { state, current, shown };
 }
 function boardText(content) {
   if ("latex" in content) return content.latex;
@@ -28757,11 +28881,12 @@ function earlierSectionsRecord(outline, drafts, dropped, slots) {
     const slot = writtenSlot.get(`${section}:${action.reusable_item}`) ?? action.reusable_item;
     return (outline.course_visuals ?? []).findIndex((visual) => visual.create_section === section && visual.reusable_item === slot && visual.capability === capability2) + 1;
   };
-  const values = (numbers, state) => (numbers ?? []).map((number) => ({ number, value: state.get(number) }));
+  let shown = (number) => number;
+  const values = (numbers, state) => (numbers ?? []).map((number) => ({ number: shown(number), value: state.get(number) }));
   const sections = drafts.map(() => ({ taught: [] }));
   const pictures = [];
-  const end = numberStateAfter(outline, drafts, (draftAt, momentAt, drawn, after) => {
-    const moment = drafts[draftAt].moments[momentAt];
+  const walk = numberStateAfter(outline, drafts, (draftAt, momentAt, drawn, after, moment, walkShown) => {
+    shown = walkShown;
     const wrote = [];
     const drew = [];
     for (const action of moment.actions) {
@@ -28781,15 +28906,17 @@ function earlierSectionsRecord(outline, drafts, dropped, slots) {
         ...content.numbers?.length ? { numbers: values(content.numbers, drawn) } : {}
       });
     }
-    const moved = [...after].filter(([number, value2]) => drawn.get(number) !== value2).map(([number, to]) => ({ number, to }));
+    const moved = [...after].filter(([number, value2]) => drawn.get(number) !== value2).map(([number, to]) => ({ number: shown(number), to }));
     sections[draftAt].taught.push({
       ...moment.narration ? { narration: moment.narration } : {},
       ...wrote.length ? { wrote } : {},
       ...drew.length ? { drew } : {},
-      ...moment.restart_numbers?.length ? { restarted: moment.restart_numbers } : {},
+      ...moment.restart_numbers?.length ? { restarted: moment.restart_numbers.map((number) => shown(number)) } : {},
       ...moved.length ? { moved } : {}
     });
   });
+  shown = walk.shown;
+  const end = walk.state;
   drafts.forEach((draft, draftAt) => {
     const kept = (draft.student_activities ?? []).filter((_activity, index) => !dropped(draftAt + 1)?.has(index));
     if (kept.length) sections[draftAt].learner_turn = kept.map((activity) => ({ kind: activity.kind, prompt: activity.prompt }));
@@ -29726,13 +29853,32 @@ function certainNumberSharing(outline) {
   for (const [index, other] of visuals.entries()) {
     const fewer = recipeMinLessonNumbers(other.capability);
     if (!fewer) continue;
+    const problems = (capability2) => Array.from(
+      { length: LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[capability2] ?? 0 },
+      (_unused, position) => recipeNumberRole(capability2, position)
+    ).filter((role) => role === "problem").length;
     const card = visuals.find((each) => {
       const more = recipeMinLessonNumbers(each.capability);
-      return each.capability !== other.capability && more > fewer && more <= declared && more + fewer > declared;
+      return each.capability !== other.capability && more > fewer && more <= declared && more + fewer - declared > problems(each.capability);
     });
     if (card) return { visual: index + 1, capability: other.capability, card: card.capability };
   }
   return void 0;
+}
+function plannedCardOverflow(outline, sectionOne, declared) {
+  const visuals = outline.course_visuals ?? [];
+  const owner = visuals.filter((visual) => RECIPE_HOOKS[visual.capability]?.planned_variables).reduce((best, visual) => !best || recipeMinLessonNumbers(visual.capability) > recipeMinLessonNumbers(best.capability) ? visual : best, void 0);
+  if (!owner || owner.create_section === 1) return void 0;
+  const limit = LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[owner.capability] ?? 0;
+  if ((outline.numbers?.length ?? 0) < limit) return void 0;
+  const planned = RECIPE_HOOKS[owner.capability].planned_variables(outline.numbers.slice(0, limit).map((number) => number.initial));
+  if (planned === void 0 || declared + planned <= 16) return void 0;
+  const heavy = sectionOne.moments.flatMap((moment) => moment.actions).flatMap((action) => action.action === "create" && action.kind === "visual" ? [action.content.capability] : []).filter((capability2) => capability2 !== owner.capability && recipeDeclares(capability2, "binds_many_variables")).at(-1);
+  return heavy === void 0 ? void 0 : {
+    capability: heavy,
+    card: owner.capability,
+    detail: `the lesson holds at most 16 numbers (OLL): section 1 uses ${declared} and the ${owner.capability} card planned for section ${owner.create_section} needs up to ${planned}`
+  };
 }
 var OUTLINE_OWNED_FAULT = "LESSON_PLAN_OUTLINE_VISUAL";
 var isOutlineOwnedFault = (error) => error instanceof LessonPlanError && error.code === OUTLINE_OWNED_FAULT;
@@ -30274,7 +30420,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   if (earlyOutlineResult) return earlyOutlineResult;
   const outlineResult = await acceptOutline();
   if (outlineResult) return outlineResult;
-  const currentNumbersBefore = (section) => numberStateAfter(outline, drafts.slice(0, section - 1));
+  const currentNumbersBefore = (section) => numberStateAfter(outline, drafts.slice(0, section - 1)).current;
   const visualsForSection = (section, state) => (outline.course_visuals ?? []).flatMap((visual, index) => {
     if (!visual.use_sections.includes(section)) return [];
     const source = visual.create_section < section ? drafts[visual.create_section - 1]?.moments.flatMap((m) => m.actions).find((a) => a.action === "create" && a.kind === "visual" && a.reusable_item === visual.reusable_item && a.content.capability === visual.capability) : void 0;
@@ -30419,19 +30565,19 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
           if (section === 1 && outlineRestarts < 2) throw error;
         }
         if (section > 1 && error instanceof LessonPlanError && error.withdrawAtOnce && error.capability) {
-          const cardsIn = (from) => (from?.course_visuals ?? []).filter((visual) => visual.capability === error.tapCard).length;
-          const unlinked = outline ? structuredClone(outline) : void 0;
-          for (const visual of unlinked?.course_visuals ?? []) {
-            const related = visual.related_visual === void 0 ? void 0 : unlinked.course_visuals[visual.related_visual - 1];
+          const cardsIn2 = (from) => (from?.course_visuals ?? []).filter((visual) => visual.capability === error.tapCard).length;
+          const unlinked2 = outline ? structuredClone(outline) : void 0;
+          for (const visual of unlinked2?.course_visuals ?? []) {
+            const related = visual.related_visual === void 0 ? void 0 : unlinked2.course_visuals[visual.related_visual - 1];
             if (visual.capability === error.tapCard && visual.create_section === section && related?.capability === error.capability) {
               delete visual.related_visual;
               visual.relation = "primary";
             }
           }
-          const trial = unlinked ? withdrawSectionVisual(unlinked, section, error.capability, fixedRequestParts.length) : void 0;
-          const cardSurvives = !withdrawnFrom(section, error.capability) && trial !== void 0 && cardsIn(trial) === cardsIn(outline);
-          if (cardSurvives) outline = unlinked;
-          const withdrawn = cardSurvives && await withdrawLaterSectionVisual(
+          const trial = unlinked2 ? withdrawSectionVisual(unlinked2, section, error.capability, fixedRequestParts.length) : void 0;
+          const cardSurvives = !withdrawnFrom(section, error.capability) && trial !== void 0 && cardsIn2(trial) === cardsIn2(outline);
+          if (cardSurvives) outline = unlinked2;
+          const withdrawn2 = cardSurvives && await withdrawLaterSectionVisual(
             section,
             error.capability,
             "shares_tap_card_numbers",
@@ -30440,7 +30586,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
               await options.on_rejected_part?.({ label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error) });
             }
           );
-          if (withdrawn) {
+          if (withdrawn2) {
             sectionErrors.delete(section);
             sectionAttempts.set(section, Math.max(0, (sectionAttempts.get(section) ?? 1) - 1));
             candidate = void 0;
@@ -30456,7 +30602,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
           const capability2 = faultingPicture(error, section);
           const site = faultSite(error, section);
           const withdrawable = site ? site.section === section : error instanceof LessonPlanError && error.capability !== void 0;
-          const withdrawn = withdrawable && capability2 !== void 0 && await withdrawLaterSectionVisual(
+          const withdrawn2 = withdrawable && capability2 !== void 0 && await withdrawLaterSectionVisual(
             section,
             capability2,
             "visual_limits_after_retries",
@@ -30465,7 +30611,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
               await options.on_rejected_part?.({ label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error) });
             }
           );
-          if (!withdrawn) {
+          if (!withdrawn2) {
             const kept = leaveOutEarlierPictureMoves(error, section);
             if (kept) {
               await options.on_rejected_part?.({ label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error) });
@@ -30505,6 +30651,22 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
           attempt: sectionAttempts.get(section) ?? 1,
           error: rejectionDetails(error)
         });
+        candidate = void 0;
+        continue;
+      }
+      const overflow = section === 1 && outline ? plannedCardOverflow(outline, candidate, prefix.lesson.lesson.variables?.length ?? 0) : void 0;
+      const unlinked = overflow && outline ? structuredClone(outline) : void 0;
+      for (const visual of unlinked?.course_visuals ?? []) {
+        const related = visual.related_visual === void 0 ? void 0 : unlinked.course_visuals[visual.related_visual - 1];
+        if (visual.capability === overflow.card && related?.capability === overflow.capability) {
+          delete visual.related_visual;
+          visual.relation = "primary";
+        }
+      }
+      const cardsIn = (from) => (from?.course_visuals ?? []).filter((visual) => visual.capability === overflow?.card).length;
+      const withdrawn = overflow && unlinked && !withdrawnFrom(1, overflow.capability) ? withdrawSectionVisual(unlinked, 1, overflow.capability, fixedRequestParts.length, true) : void 0;
+      if (overflow && withdrawn && cardsIn(withdrawn) === cardsIn(outline)) {
+        await withdrawBeforePublishing(1, overflow.capability, withdrawn, "planned_card_budget", overflow.detail);
         candidate = void 0;
         continue;
       }
@@ -30784,6 +30946,7 @@ export {
   offeredRecipes,
   placeValueThousandths,
   placeValueWordsWrite,
+  plannedCardOverflow,
   praiseArithmetic,
   programNumberDefinitions,
   promptSlot,
@@ -30791,10 +30954,12 @@ export {
   recipeGuidance,
   recipeInitialCamera,
   recipeMinLessonNumbers,
+  recipeNumberRole,
   recipeProgramNumbers,
   resolveLessonPlan,
   roundingPlaces,
   roundingTolerance,
+  separateCardProblemNumbers,
   soleProgramNumberCard,
   supplyProgramNumbers,
   validateLessonPlan,

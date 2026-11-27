@@ -185,20 +185,16 @@ const chartThenCard = (spare) => run(`
   console.log(JSON.stringify(log));
 `);
 
-test("PF-10: a picture that must share the card's numbers goes as the outline is accepted, before any section call", () => {
-  const failing = chartThenCard(false);
-  assert.equal(failing.error, undefined, JSON.stringify(failing.error));
-  // The chart and the card's adjustments come first, before any section is asked for; the bootstrap's section 1 (with
-  // the chart) is set aside and section 1 is written once, told the picture is gone.
-  assert.deepEqual(failing.adjustments.slice(0, 2), [
-    ["visual_removed", 1, "place_value_chart", "shares_tap_card_numbers"],
-    ["reusable_item_added", 1, null, "section_lost_its_only_item"],
-  ]);
-  assert.deepEqual(failing.requests, ["lesson-plan-bootstrap", "lesson-plan-section1", "lesson-plan-section2"]);
-  assert.match(sectionPrompt(failing, "lesson-plan-section1").removed_picture, /place_value_parts/u);
-  assert.deepEqual(failing.rejected, []);
-  assert.equal(failing.written.includes("place_value_chart"), false);
-  assert.ok(failing.written.includes("place_value_times_ten"));
+test("PF-10: the chart on the card's amount keeps it, the card reads a copy of its own: both are drawn, nothing is dropped", () => {
+  // Before copies (design note "second example and copies", 2026-11-27) the chart went as the outline was accepted: with
+  // five lesson numbers the chart and the card had to share one. The number they share is the card's amount, which the
+  // card only reads, so the card, drawn later, reads a copy of it, and the chart keeps number 1.
+  const shared = chartThenCard(false);
+  assert.equal(shared.error, undefined, JSON.stringify(shared.error));
+  assert.deepEqual(shared.requests, ["lesson-plan-bootstrap", "lesson-plan-section2"]);
+  assert.deepEqual(shared.adjustments.filter(([kind]) => kind === "visual_removed" || kind === "reusable_item_added"), []);
+  assert.deepEqual(shared.rejected, []);
+  assert.ok(shared.written.includes("place_value_chart") && shared.written.includes("place_value_times_ten"), JSON.stringify(shared.written));
 });
 
 test("PF-10's twin: with a spare number the chart (one) and the card (five) fit six numbers, and nothing is dropped", () => {
@@ -210,7 +206,7 @@ test("PF-10's twin: with a spare number the chart (one) and the card (five) fit 
   assert.ok(passing.written.includes("place_value_chart") && passing.written.includes("place_value_times_ten"));
 });
 
-test("certain sharing is read from minimum counts only: a tie, a fit or a card the outline cannot start names nothing", () => {
+test("certain sharing is read from minimum counts only: a tie, a fit, an overlap a copy of the card's problem takes, or a card the outline cannot start names nothing", () => {
   const result = run(`
     const outline = (count, ...capabilities) => ({ numbers: Array.from({ length: count }, () => ({ initial: 1, min: 0, max: 1 })),
       course_visuals: capabilities.map((capability, index) => ({ capability, create_section: index + 1, use_sections: [index + 1], relation: "primary", reusable_item: 1 })) });
@@ -226,8 +222,9 @@ test("certain sharing is read from minimum counts only: a tie, a fit or a card t
     ]));
   `);
   assert.deepEqual(result, [
-    { visual: 1, capability: "place_value_chart", card: "place_value_times_ten" },
-    { visual: 2, capability: "place_value_chart", card: "place_value_times_ten" },
+    // The chart and the times-ten card on five numbers share one at most, which a copy of the card's problem takes.
+    null,
+    null,
     null,
     { visual: 2, capability: "place_value_times_ten", card: "make_ten" },
     null,
@@ -266,13 +263,15 @@ test("PF-17: a chart in an outline that declares no number goes at once, never a
 });
 
 test("a note on a picture dropped as an outline was accepted does not outlive that outline (review of this change)", () => {
-  // The card in section 1 and the chart in section 2 on the card's five numbers: the chart goes as the outline is
-  // accepted. The card then faults three times and the lesson is planned again, on a clean two-section outline.
+  // The make-ten card in section 1 and the times-ten card in section 2 on six numbers: they must share five, more
+  // than a copy of the make-ten pair can take, so the times-ten card goes as the outline is accepted. (Before copies,
+  // a chart on the times-ten card's amount went the same way; it now keeps its number and the card reads a copy.)
+  // The make-ten card then faults three times and the lesson is planned again, on a clean two-section outline.
   const result = run(`
-    const plan = sp.timesTenPlan({ amount: 0.3, target: 0.001, practice: [5, 0.01] });
+    const plan = sp.makeTenPlan({ numbers: [8, 6], practice: [7, 5] });
     offPath(plan);
-    plan.sections[1] = { purpose: "Build a number", reusable_items: [{ kind: "board_item", board_kind: "visual", capability: "place_value_chart" }], moments: [
-      { narration: "A chart.", actions: [{ action: "create", kind: "visual", role: "main_visual", content: { capability: "place_value_chart", parameters: { given: "name" }, numbers: [1] }, placement: { relation: "new_region" }, reusable_item: 1 }] }] };
+    plan.sections[1] = { purpose: "Count in tenths", reusable_items: [{ kind: "board_item", board_kind: "visual", capability: "place_value_times_ten" }], moments: [
+      { narration: "Another card.", actions: [{ action: "create", kind: "visual", role: "main_visual", content: { capability: "place_value_times_ten", parameters: {}, numbers: [1, 2, 3, 4, 5] }, placement: { relation: "new_region" }, reusable_item: 1 }] }] };
     const first = staged(plan);
     const clean = staged(sp.samplePlan("base_ten_trade"));
     let stage = first;
@@ -285,8 +284,8 @@ test("a note on a picture dropped as an outline was accepted does not outlive th
   `);
   assert.equal(result.error, undefined, JSON.stringify(result.error));
   assert.deepEqual(result.adjustments.filter(([kind]) => kind === "visual_removed"), [
-    ["visual_removed", 2, "place_value_chart", "shares_tap_card_numbers"],
-    ["visual_removed", 1, "place_value_times_ten", "visual_limits_after_retries"],
+    ["visual_removed", 2, "place_value_times_ten", "shares_tap_card_numbers"],
+    ["visual_removed", 1, "make_ten", "visual_limits_after_retries"],
   ]);
   assert.deepEqual(result.requests, ["lesson-plan-bootstrap", "lesson-plan-section1", "lesson-plan-section1", "lesson-plan-section1", "lesson-plan-outline", "lesson-plan-section1", "lesson-plan-section2"]);
   // The first outline's section 1 was told nothing (its note was section 2's); the new outline's sections are told nothing.
