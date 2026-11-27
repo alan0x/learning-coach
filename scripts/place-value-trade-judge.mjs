@@ -27,10 +27,16 @@
 // reachable state of every pair the sketch tried can still finish), so reachability is read from the start
 // pair, not searched.
 //
+// Second cards (Coach #199): the first card holds the question and the practice; each later trade card is a
+// demonstration on its own example. Checks: its example is neither the question's pair nor a practice pair (adding:
+// either order); it opens fresh; its demonstration plays forward and finishes every column; no task is anchored on
+// it. The verdict lists the second cards and their examples (`second_cards`).
+//
 // Narration is not judged.
 
 import { normalizeAuthoringLesson, reduceCanonicalEvents } from "octos-lesson-language";
 import { placeValueTradeColumns, placeValueTradeColumnsFor, placeValueTradeFault } from "octos-lesson-language/plugin-math";
+import { cardsIn, judgeSecondCards, secondCardsText } from "./judge-cards.mjs";
 
 const KIND = "place_value_trade";
 const CHART = "place_value_chart";
@@ -148,7 +154,8 @@ export function judgePlaceValueTrade(item, lesson) {
   const notes = [];
   const check = (name, pass, detail) => checks.push({ check: name, pass: Boolean(pass), ...(pass ? {} : { detail }) });
   const note = (name, holds, detail) => notes.push({ check: name, pass: Boolean(holds), ...(holds ? {} : { detail }) });
-  const done = () => ({ pass: checks.every((each) => each.pass), checks, notes });
+  let seconds = [];
+  const done = () => ({ pass: checks.every((each) => each.pass), checks, notes, second_cards: seconds });
   const card = placeValueTradeIn(lesson);
   check("the lesson plays", !card.error, card.error);
   if (item.expect?.forbid) {
@@ -162,7 +169,7 @@ export function judgePlaceValueTrade(item, lesson) {
     else check("a place-value trade card is drawn", false, "no trade card");
     return done();
   }
-  note("one place-value trade card", card.cards === 1, `${card.cards} trade cards`);
+  note("one place-value trade card, and a second at most", card.cards <= 2, `${card.cards} trade cards`);
   note("no place-value chart beside the trade card", card.charts === 0, `${card.charts} place-value chart(s) as well`);
 
   const { start } = card;
@@ -238,6 +245,20 @@ export function judgePlaceValueTrade(item, lesson) {
   }
   note("the learner has a task on the card", cardTasks > 0, "no task on the card");
   note("a typed answer follows", card.tasks.some((task) => ["numeric_answer", "numeric_row"].includes(task.completion?.kind)), "no typed question in the lesson");
+
+  // Second cards: each a demonstration on its own example (Coach #199).
+  const practices = card.tasks.filter((task) => task.completion?.kind === "card_fact" && task.completion.node === card.as && task.start?.values)
+    .map((task) => cardAt(card.content, { ...card.declared, ...task.start.values }));
+  const samePair = (x, y) => (x.a === y.a && x.b === y.b) || (x.operation !== "subtract" && x.a === y.b && x.b === y.a);
+  seconds = judgeSecondCards({
+    cards: cardsIn(lesson, KIND).cards, tasks: card.tasks, question: { ...want, operation: start.operation }, practices, read: cardAt, check,
+    kind: {
+      example: shownPair, same: samePair,
+      fresh: (state) => (state.finished === 0 && state.statuses.every((status) => status === 0) ? undefined : JSON.stringify({ finished: state.finished, statuses: state.statuses })),
+      position: (state) => state.finished,
+      end: (state) => (Number.isInteger(state.top_place) && Number.isInteger(state.low_place) ? state.top_place - state.low_place + 1 : undefined),
+    },
+  });
   return done();
 }
 
@@ -265,7 +286,7 @@ if (process.argv[1] && new URL(import.meta.url).pathname === (await import("node
     if (verdict.pass) passed += 1;
     const failed = verdict.checks.filter((each) => !each.pass).map((each) => `${each.check}: ${each.detail}`).join("; ");
     const noted = verdict.notes.filter((each) => !each.pass).map((each) => `note: ${each.check}: ${each.detail}`).join("; ");
-    console.log(`${item.id}\t${verdict.pass ? "pass" : "FAIL"}\t${[failed, noted].filter(Boolean).join("; ")}`);
+    console.log(`${item.id}\t${verdict.pass ? "pass" : "FAIL"}\t${[failed, noted, secondCardsText(verdict.second_cards)].filter(Boolean).join("; ")}`);
   }
   console.log(`${passed}/${cases.length} pass`);
   process.exitCode = passed === cases.length ? 0 : 1;

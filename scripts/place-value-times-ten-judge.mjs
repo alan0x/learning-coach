@@ -25,8 +25,13 @@
 // The lesson plays through OLL itself (normalized and reduced, as the player plays it: "the lesson plays"), so every
 // rule of the card OLL keeps is checked by OLL. The card is read from the lesson as written, its bound fields at the
 // variables' values, by 0028's rules (the accepted sketch's), so each fault is also named. Narration is not judged.
+// Second cards (Coach #199): the first card holds the question and the practice; each later times-ten card is a
+// demonstration on its own example. Checks: its example is neither the question nor a practice; it opens fresh; its
+// demonstration moves "counted in" forward along its path to the target; no task is anchored on it. The verdict lists
+// the second cards and their examples (`second_cards`).
 
 import { normalizeAuthoringLesson, reduceCanonicalEvents } from "octos-lesson-language";
+import { cardsIn, judgeSecondCards, secondCardsText } from "./judge-cards.mjs";
 
 const KIND = "place_value_times_ten";
 /** Cards a served case may draw instead, named in its failure. */
@@ -172,7 +177,8 @@ export function judgePlaceValueTimesTen(item, lesson) {
   const notes = [];
   const check = (name, pass, detail) => checks.push({ check: name, pass: Boolean(pass), ...(pass ? {} : { detail }) });
   const note = (name, holds, detail) => notes.push({ check: name, pass: Boolean(holds), ...(holds ? {} : { detail }) });
-  const done = () => ({ pass: checks.every((each) => each.pass), checks, notes });
+  let seconds = [];
+  const done = () => ({ pass: checks.every((each) => each.pass), checks, notes, second_cards: seconds });
   const card = timesTenIn(lesson);
   check("the lesson plays", !card.error, card.error);
   if (item.expect?.forbid) {
@@ -183,7 +189,7 @@ export function judgePlaceValueTimesTen(item, lesson) {
     check("a times-ten card is drawn", false, card.instead.length ? `no times-ten card; drawn instead: ${card.instead.join(", ")}` : "no times-ten card");
     return done();
   }
-  note("one times-ten card", card.cards === 1, `${card.cards} times-ten cards`);
+  note("one times-ten card, and a second at most", card.cards <= 2, `${card.cards} times-ten cards`);
 
   const { start, shape } = card;
   const expect = item.expect;
@@ -256,6 +262,24 @@ export function judgePlaceValueTimesTen(item, lesson) {
   }
   note("the learner has a task on the card", cardTasks > 0, "no task on the card");
   note("a row of blanks follows", card.tasks.some((task) => task.completion?.kind === "numeric_row"), "no row of blanks in the lesson");
+
+  // Second cards: each a demonstration on its own example (Coach #199), read with the problem its own shape makes.
+  const read = (content, values) => {
+    const state = cardAt(content, values);
+    return { ...state, problem: timesTenProblemOfShape(shapeOf(content), state.amount, state.target) };
+  };
+  const practices = card.tasks.filter((task) => task.completion?.kind === "card_fact" && task.completion.node === card.as && task.start?.values)
+    .map((task) => cardAt(card.content, { ...card.declared, ...task.start.values }));
+  seconds = judgeSecondCards({
+    cards: cardsIn(lesson, KIND).cards, tasks: card.tasks, question: want, practices, read, check,
+    kind: {
+      example: problemText,
+      same: (state, pair) => state.amount === pair.amount && state.target === pair.target,
+      fresh: (state) => (state.problem.fault ? `${problemText(state)}: ${state.problem.fault}` : freshFault(state, state.problem)),
+      position: (state) => (state.problem.fault ? -1 : pathOf(state.problem).indexOf(state.counted_in)),
+      end: (state) => (state.problem.fault ? undefined : pathOf(state.problem).length - 1),
+    },
+  });
   return done();
 }
 
@@ -283,7 +307,7 @@ if (process.argv[1] && new URL(import.meta.url).pathname === (await import("node
     if (verdict.pass) passed += 1;
     const failed = verdict.checks.filter((each) => !each.pass).map((each) => `${each.check}: ${each.detail}`).join("; ");
     const noted = verdict.notes.filter((each) => !each.pass).map((each) => `note: ${each.check}: ${each.detail}`).join("; ");
-    console.log(`${item.id}\t${verdict.pass ? "pass" : "FAIL"}\t${[failed, noted].filter(Boolean).join("; ")}`);
+    console.log(`${item.id}\t${verdict.pass ? "pass" : "FAIL"}\t${[failed, noted, secondCardsText(verdict.second_cards)].filter(Boolean).join("; ")}`);
   }
   console.log(`${passed}/${cases.length} pass`);
   process.exitCode = passed === cases.length ? 0 : 1;
