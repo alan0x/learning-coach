@@ -1,0 +1,344 @@
+{
+ "note": "Comparing two numbers by place, from the largest place down: development cases for need 35P-06, 2026-11-26, written from blueprint.json in this folder (rows C1-C6) and the standards, never from the question set. Used for design and tuning; the scoring set is separate, written later by a fresh agent from the blueprint alone, sealed. PC-01 to PC-15 are cases this need serves (8 en-US, 7 zh-CN; 7 whole numbers, 8 decimals; 2 equal pairs): expect.numbers are the two numbers as written (trailing zeros kept: 0.70), expect.relation is >, < or = read first-to-second, expect.deciding_place is the first place from the left whose digits differ (null when every place matches). PC-16 to PC-21 are near misses that belong to other needs (expect.need names it): this need's component must not be used (forbid names the tentative recipe). Chinese cases use 比大小, 从最高位比起 as Chinese learners say them.",
+ "cases": [
+  {
+   "id": "PC-01",
+   "row": "C1",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "7284 and 7248 as disks on one place-value chart, one number per row, lined up by place; compared from the largest place down; the first place that differs is the tens, so 7284 > 7248; the places after it do not matter; the learner records it with the sign.",
+   "prompt": "Homework has 7,284 against 7,248 and they look nearly identical to me. Where should my eyes go first?",
+   "expect": {
+    "need": "35P-06",
+    "numbers": [
+     "7284",
+     "7248"
+    ],
+    "relation": ">",
+    "deciding_place": "tens"
+   }
+  },
+  {
+   "id": "PC-02",
+   "row": "C1",
+   "language": "zh-CN",
+   "kind": "detailed",
+   "teacher_picture": "36815 and 36851 as disks on one place-value chart, one number per row, lined up by place; compared from the largest place down; the first place that differs is the tens, so 36815 < 36851; the places after it do not matter; the learner records it with the sign.",
+   "prompt": "36815 和 36851 哪个大？孩子说个位 5 比 1 大，所以 36815 大，怎么跟他讲？",
+   "expect": {
+    "need": "35P-06",
+    "numbers": [
+     "36815",
+     "36851"
+    ],
+    "relation": "<",
+    "deciding_place": "tens"
+   }
+  },
+  {
+   "id": "PC-03",
+   "row": "C1",
+   "language": "en-US",
+   "kind": "detailed",
+   "teacher_picture": "5602 and 5620 as disks on one place-value chart, one number per row, lined up by place; compared from the largest place down; the first place that differs is the tens, so 5602 < 5620; the places after it do not matter; the learner records it with the sign.",
+   "prompt": "My son compared 5,602 and 5,620 and picked 5,602 because it ends in 2 and the other ends in 0. How do I show him what's wrong?",
+   "expect": {
+    "need": "35P-06",
+    "numbers": [
+     "5602",
+     "5620"
+    ],
+    "relation": "<",
+    "deciding_place": "tens"
+   }
+  },
+  {
+   "id": "PC-04",
+   "row": "C2",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "10200 and 9876 as disks on one place-value chart, one number per row, lined up by place; compared from the largest place down; the first place that differs is the ten thousands, so 10200 > 9876; the places after it do not matter; the learner records it with the sign.",
+   "prompt": "Which is larger: 10,200 or 9,876? My kid says 9,876 because nine beats one.",
+   "expect": {
+    "need": "35P-06",
+    "numbers": [
+     "10200",
+     "9876"
+    ],
+    "relation": ">",
+    "deciding_place": "ten_thousands"
+   }
+  },
+  {
+   "id": "PC-05",
+   "row": "C2",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "120345 and 98765 as disks on one place-value chart, one number per row, lined up by place; compared from the largest place down; the first place that differs is the hundred thousands, so 120345 > 98765; the places after it do not matter; the learner records it with the sign.",
+   "prompt": "孩子比 120345 和 98765，盯着开头的 1 和 9 看，觉得后者大。该怎么讲？",
+   "expect": {
+    "need": "35P-06",
+    "numbers": [
+     "120345",
+     "98765"
+    ],
+    "relation": ">",
+    "deciding_place": "hundred_thousands"
+   }
+  },
+  {
+   "id": "PC-06",
+   "row": "C3",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "607198 and 607912 as disks on one place-value chart, one number per row, lined up by place; compared from the largest place down; the first place that differs is the hundreds, so 607198 < 607912; the places after it do not matter; the learner records it with the sign.",
+   "prompt": "Compare 607,198 and 607,912 and write >, < or = between them.",
+   "expect": {
+    "need": "35P-06",
+    "numbers": [
+     "607198",
+     "607912"
+    ],
+    "relation": "<",
+    "deciding_place": "hundreds"
+   }
+  },
+  {
+   "id": "PC-07",
+   "row": "C3",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "483920 and 483290 as disks on one place-value chart, one number per row, lined up by place; compared from the largest place down; the first place that differs is the hundreds, so 483920 > 483290; the places after it do not matter; the learner records it with the sign.",
+   "prompt": "四年级题：在 483920 和 483290 之间填上 > 或 <，前面三位都一样怎么办？",
+   "expect": {
+    "need": "35P-06",
+    "numbers": [
+     "483920",
+     "483290"
+    ],
+    "relation": ">",
+    "deciding_place": "hundreds"
+   }
+  },
+  {
+   "id": "PC-08",
+   "row": "C4",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "0.8 and 0.75 as disks on one place-value chart, one number per row, lined up by place; compared from the largest place down; the first place that differs is the tenths, so 0.8 > 0.75; the places after it do not matter; the learner records it with the sign.",
+   "prompt": "Teacher said 0.8 tops 0.75. Shorter decimal winning seems backwards to my son; explain please?",
+   "expect": {
+    "need": "35P-06",
+    "numbers": [
+     "0.8",
+     "0.75"
+    ],
+    "relation": ">",
+    "deciding_place": "tenths"
+   }
+  },
+  {
+   "id": "PC-09",
+   "row": "C4",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "0.45 and 0.405 as disks on one place-value chart, one number per row, lined up by place; compared from the largest place down; the first place that differs is the hundredths, so 0.45 > 0.405; the places after it do not matter; the learner records it with the sign.",
+   "prompt": "0.45 和 0.405 哪个大？女儿觉得 0.405 的数字多，就更大。",
+   "expect": {
+    "need": "35P-06",
+    "numbers": [
+     "0.45",
+     "0.405"
+    ],
+    "relation": ">",
+    "deciding_place": "hundredths"
+   }
+  },
+  {
+   "id": "PC-10",
+   "row": "C4",
+   "language": "en-US",
+   "kind": "detailed",
+   "teacher_picture": "0.389 and 0.4 as disks on one place-value chart, one number per row, lined up by place; compared from the largest place down; the first place that differs is the tenths, so 0.389 < 0.4; the places after it do not matter; the learner records it with the sign.",
+   "prompt": "A student of mine insists 0.389 beats 0.4 since 389 is more than 4. What picture would convince her?",
+   "expect": {
+    "need": "35P-06",
+    "numbers": [
+     "0.389",
+     "0.4"
+    ],
+    "relation": "<",
+    "deciding_place": "tenths"
+   }
+  },
+  {
+   "id": "PC-11",
+   "row": "C5",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "2.35 and 2.305 as disks on one place-value chart, one number per row, lined up by place; compared from the largest place down; the first place that differs is the hundredths, so 2.35 > 2.305; the places after it do not matter; the learner records it with the sign.",
+   "prompt": "2.35 和 2.305 比较大小，小数点要怎么对齐？",
+   "expect": {
+    "need": "35P-06",
+    "numbers": [
+     "2.35",
+     "2.305"
+    ],
+    "relation": ">",
+    "deciding_place": "hundredths"
+   }
+  },
+  {
+   "id": "PC-12",
+   "row": "C5",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "12.4 and 9.87 as disks on one place-value chart, one number per row, lined up by place; compared from the largest place down; the first place that differs is the tens, so 12.4 > 9.87; the places after it do not matter; the learner records it with the sign.",
+   "prompt": "Which is greater, 12.4 or 9.87? I lined up the last digits and got muddled.",
+   "expect": {
+    "need": "35P-06",
+    "numbers": [
+     "12.4",
+     "9.87"
+    ],
+    "relation": ">",
+    "deciding_place": "tens"
+   }
+  },
+  {
+   "id": "PC-13",
+   "row": "C5",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "5.06 and 5.6 as disks on one place-value chart, one number per row, lined up by place; compared from the largest place down; the first place that differs is the tenths, so 5.06 < 5.6; the places after it do not matter; the learner records it with the sign.",
+   "prompt": "5.06 和 5.6 谁大？十分位上一个是 0 一个是 6。",
+   "expect": {
+    "need": "35P-06",
+    "numbers": [
+     "5.06",
+     "5.6"
+    ],
+    "relation": "<",
+    "deciding_place": "tenths"
+   }
+  },
+  {
+   "id": "PC-14",
+   "row": "C6",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "0.7 and 0.70 as disks on one place-value chart, one number per row, lined up by place; compared from the largest place down; every place matches, so 0.7 = 0.70.",
+   "prompt": "Is 0.7 the same as 0.70? My daughter thinks the extra zero makes it bigger.",
+   "expect": {
+    "need": "35P-06",
+    "numbers": [
+     "0.7",
+     "0.70"
+    ],
+    "relation": "=",
+    "deciding_place": null
+   }
+  },
+  {
+   "id": "PC-15",
+   "row": "C6",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "4.300 and 4.3 as disks on one place-value chart, one number per row, lined up by place; compared from the largest place down; every place matches, so 4.300 = 4.3.",
+   "prompt": "4.300 和 4.3 相等吗？末尾多写两个 0 有关系吗？",
+   "expect": {
+    "need": "35P-06",
+    "numbers": [
+     "4.300",
+     "4.3"
+    ],
+    "relation": "=",
+    "deciding_place": null
+   }
+  },
+  {
+   "id": "PC-16",
+   "row": null,
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "Not this need: comparing three-digit numbers with base-ten blocks in grade 2 (2.NBT.A.4). Need K2N-24.",
+   "prompt": "Second grade: using base-ten blocks, is 352 more or less than 325?",
+   "expect": {
+    "need": "K2N-24",
+    "forbid": [
+     "place_value_compare"
+    ]
+   }
+  },
+  {
+   "id": "PC-17",
+   "row": null,
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "Not this need: comparing decimals to hundredths by shading a hundred grid (4.NF.C.7). Need FR-16.",
+   "prompt": "四年级：在百格图上分别涂出 0.4 和 0.38，比一比谁涂得多。",
+   "expect": {
+    "need": "FR-16",
+    "forbid": [
+     "place_value_compare"
+    ]
+   }
+  },
+  {
+   "id": "PC-18",
+   "row": null,
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "Not this need: rounding a decimal to the nearest hundredth (5.NBT.A.4). Need 35P-01.",
+   "prompt": "Round 0.468 to the nearest hundredth.",
+   "expect": {
+    "need": "35P-01",
+    "forbid": [
+     "place_value_compare"
+    ]
+   }
+  },
+  {
+   "id": "PC-19",
+   "row": null,
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "Not this need: writing a decimal in expanded form (5.NBT.A.3.a). Need 35P-05.",
+   "prompt": "5.072 写成展开式是什么？",
+   "expect": {
+    "need": "35P-05",
+    "forbid": [
+     "place_value_compare"
+    ]
+   }
+  },
+  {
+   "id": "PC-20",
+   "row": null,
+   "language": "en-US",
+   "kind": "detailed",
+   "teacher_picture": "Not this need: adding decimals with the points lined up (5.NBT.B.7). Need 35P-07.",
+   "prompt": "Working 3.45 + 2.8 tonight: when I carry, should those dots sit under each other?",
+   "expect": {
+    "need": "35P-07",
+    "forbid": [
+     "place_value_compare"
+    ]
+   }
+  },
+  {
+   "id": "PC-21",
+   "row": null,
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "Not this need: comparing two fractions with different denominators (4.NF.A.2). Need FR-07.",
+   "prompt": "3/8 和 2/5 哪个大？分母不一样怎么比？",
+   "expect": {
+    "need": "FR-07",
+    "forbid": [
+     "place_value_compare"
+    ]
+   }
+  }
+ ]
+}
