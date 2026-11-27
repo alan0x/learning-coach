@@ -3448,6 +3448,22 @@ export async function generateLessonPlanWithModel(
       } catch (error) {
         // A fault only the outline can fix is not retried as a section: the caller asks for a new outline.
         if (section === 1 && isOutlineOwnedFault(error)) throw error;
+        // A picture on a tap card's lesson numbers goes at once, with no repair: the card is the need's picture.
+        // Section 1's by a new outline without it (acceptFirstSection), a later section's from the outline in place.
+        if (error instanceof LessonPlanError && error.withdrawAtOnce && error.capability) {
+          if (section === 1) throw error;
+          const withdrawn = await withdrawLaterSectionVisual(
+            section, error.capability, "shares_tap_card_numbers", error.message,
+            async () => { await options.on_rejected_part?.({ label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error) }); },
+          );
+          if (withdrawn) {
+            // The attempt that drew the picture is not a repair: the section keeps its whole repair budget.
+            sectionErrors.delete(section);
+            sectionAttempts.set(section, Math.max(0, (sectionAttempts.get(section) ?? 1) - 1));
+            candidate = undefined;
+            continue;
+          }
+        }
         const previousError = sectionErrors.get(section);
         if (unsupportedSectionResponse(error, previousError, input.language)) throw error;
         if ((sectionAttempts.get(section) ?? 0) >= maxAttempts) {
@@ -3498,15 +3514,16 @@ export async function generateLessonPlanWithModel(
     } catch (error) {
       const capability = error instanceof LessonPlanError ? error.capability : undefined;
       const numbersMissing = error instanceof LessonPlanError && error.code === OUTLINE_NUMBERS_MISSING;
+      const sharesTapCard = error instanceof LessonPlanError && error.withdrawAtOnce === true;
       const spentOnPicture = capability !== undefined && !excludedCapabilities.has(capability)
-        && (numbersMissing || (sectionAttempts.get(1) ?? 0) >= maxAttempts);
+        && (numbersMissing || sharesTapCard || (sectionAttempts.get(1) ?? 0) >= maxAttempts);
       if (!(isOutlineOwnedFault(error) || spentOnPicture) || outlineRestarts >= 2) throw error;
       outlineRestarts += 1;
       await options.on_rejected_part?.({ label: "lesson-plan-section", section: 1, attempt: sectionAttempts.get(1) ?? 1, error: rejectionDetails(error) });
       if (spentOnPicture) {
         await options.on_program_adjustment?.({
           kind: "visual_removed", section: 1, capability: capability as keyof typeof LESSON_PLAN_CAPABILITIES,
-          reason: numbersMissing ? "outline_numbers_missing" : "visual_limits_after_retries", detail: error instanceof Error ? error.message : String(error),
+          reason: numbersMissing ? "outline_numbers_missing" : sharesTapCard ? "shares_tap_card_numbers" : "visual_limits_after_retries", detail: error instanceof Error ? error.message : String(error),
         });
       }
       if (outline) excludeFaulting(outline, error);

@@ -17051,7 +17051,7 @@ var MATH_RECIPES = {
     // fixed text says how it is used.
     student_controls: [],
     required_features: ["make_ten_to_add"],
-    model_guidance: "\u51D1\u5341\uFF08\u4E24\u4E2A\u5341\u683C\u6846\uFF09\uFF1A\u4E24\u4E2A\u4E00\u4F4D\u6570\u76F8\u52A0\u3001\u548C\u5927\u4E8E10\uFF08\u59828+6\uFF09\uFF0C\u5C0F\u6570\u5206\u51FA\u4E00\u90E8\u5206\u628A\u5927\u6570\u8865\u6210\u5341\u3002\u4E0D\u7528\u4E8E\u548C\u6B63\u597D\u662F10\u3001\u63A5\u7740\u6570\u3001\u7834\u5341\u51CF\u3001\u4E24\u4F4D\u6570\u52A0\u4E00\u4F4D\u6570\u3001\u4E09\u4E2A\u6570\u76F8\u52A0\u3002outline \u7684 numbers \u4F9D\u6B21\u5199\u56DB\u4E2A\u6570\uFF1A\u9898\u76EE\u7684\u4E24\u4E2A\u6570\u3001\u7EC3\u4E60\u7684\u4E24\u4E2A\u6570\uFF08\u53E6\u4E00\u5BF9\uFF0C\u4E5F\u662F\u4E00\u4F4D\u6570\u3001\u548C\u5927\u4E8E10\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u6362\u987A\u5E8F\u4E5F\u4E0D\u7B97\uFF09\u3002\u7A0B\u5E8F\u518D\u8865\u4E24\u4E2A\u6570\uFF1A\u5927\u6570\u90A3\u4E00\u6846\u91CC\u6709\u51E0\u4E2A\uFF08\u5F00\u59CB\u5C31\u662F\u5927\u6570\uFF09\u3001\u79FB\u8FC7\u53BB\u51E0\u4E2A\uFF080\uFF09\u3002\u6F14\u793A\u65F6\u628A\u7B2C\u4E94\u4E2A\u6570\u52A8\u753B\u523010\uFF08\u53EF\u4EE5\u53EA\u52309\uFF09\uFF0C\u7A0B\u5E8F\u4E00\u4E2A\u4E00\u4E2A\u5730\u79FB\u5706\u7247\uFF1B\u522B\u7684\u6570\u4E0D\u52A8\u753B\u3002\u7EC3\u4E60\uFF1A\u5BF9\u7B2C\u4E94\u4E2A\u6570\u5199\u4E00\u4E2A\u6570\u503C\u76EE\u6807\u9898\uFF08\u6570\u503C\u519910\uFF09\uFF0C\u5B69\u5B50\u81EA\u5DF1\u8865\u6EE1\u5341\uFF0C\u7A0B\u5E8F\u518D\u51FA\u4E00\u884C\u7A7A\uFF088+6=8+__+__=10+__=__\uFF09\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u548C\u3002\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
+    model_guidance: "\u51D1\u5341\uFF08\u4E24\u4E2A\u5341\u683C\u6846\uFF09\uFF1A\u4E24\u4E2A\u4E00\u4F4D\u6570\u76F8\u52A0\u3001\u548C\u5927\u4E8E10\uFF08\u59828+6\uFF09\uFF0C\u5C0F\u6570\u5206\u51FA\u4E00\u90E8\u5206\u628A\u5927\u6570\u8865\u6210\u5341\u3002\u4E0D\u7528\u4E8E\u548C\u6B63\u597D\u662F10\u3001\u63A5\u7740\u6570\u3001\u7834\u5341\u51CF\u3001\u4E24\u4F4D\u6570\u52A0\u4E00\u4F4D\u6570\u3001\u4E09\u4E2A\u6570\u76F8\u52A0\u3002\u8FD9\u9053\u52A0\u6CD5\u53EA\u753B\u8FD9\u5F20\u5361\u7247\uFF0C\u4E0D\u518D\u753B\u6570\u8F74\u3002outline \u7684 numbers \u4F9D\u6B21\u5199\u56DB\u4E2A\u6570\uFF1A\u9898\u76EE\u7684\u4E24\u4E2A\u6570\u3001\u7EC3\u4E60\u7684\u4E24\u4E2A\u6570\uFF08\u53E6\u4E00\u5BF9\uFF0C\u4E5F\u662F\u4E00\u4F4D\u6570\u3001\u548C\u5927\u4E8E10\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u6362\u987A\u5E8F\u4E5F\u4E0D\u7B97\uFF09\u3002\u7A0B\u5E8F\u518D\u8865\u4E24\u4E2A\u6570\uFF1A\u5927\u6570\u90A3\u4E00\u6846\u91CC\u6709\u51E0\u4E2A\uFF08\u5F00\u59CB\u5C31\u662F\u5927\u6570\uFF09\u3001\u79FB\u8FC7\u53BB\u51E0\u4E2A\uFF080\uFF09\u3002\u6F14\u793A\u65F6\u628A\u7B2C\u4E94\u4E2A\u6570\u52A8\u753B\u523010\uFF08\u53EF\u4EE5\u53EA\u52309\uFF09\uFF0C\u7A0B\u5E8F\u4E00\u4E2A\u4E00\u4E2A\u5730\u79FB\u5706\u7247\uFF1B\u522B\u7684\u6570\u4E0D\u52A8\u753B\u3002\u7EC3\u4E60\uFF1A\u5BF9\u7B2C\u4E94\u4E2A\u6570\u5199\u4E00\u4E2A\u6570\u503C\u76EE\u6807\u9898\uFF08\u6570\u503C\u519910\uFF09\uFF0C\u5B69\u5B50\u81EA\u5DF1\u8865\u6EE1\u5341\uFF0C\u7A0B\u5E8F\u518D\u51FA\u4E00\u884C\u7A7A\uFF088+6=8+__+__=10+__=__\uFF09\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u548C\u3002\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
@@ -17831,6 +17831,10 @@ function compileText(plan, source, values) {
 // src/recipe-kit.ts
 function fail2(code, path, message, capability2) {
   throw new LessonPlanError(code, path, message, capability2);
+}
+function failSharedTapCardNumbers(path, message, card, other, sharingAt, cardAt) {
+  if (sharingAt >= cardAt) throw new LessonPlanError("LESSON_PLAN_SHARED_NUMBER", path, message, other, true);
+  throw new LessonPlanError("LESSON_PLAN_SHARED_NUMBER", path, message, card);
 }
 function pad2(index) {
   return String(index).padStart(2, "0");
@@ -20039,12 +20043,19 @@ var LessonPlanError = class extends Error {
   path;
   /** The recipe that cannot show what the plan asks of it, when the fault is that recipe's. */
   capability;
-  constructor(code, path, message, capability2) {
+  /**
+   * The picture named by `capability` goes at once, with no repair: it shows a tap card's lesson numbers, and the
+   * card is the need's picture (make-ten objective check 1: a number line on the card's numbers was refused three
+   * times before it went, three calls and about 20 s each).
+   */
+  withdrawAtOnce;
+  constructor(code, path, message, capability2, withdrawAtOnce) {
     super(`${path}: ${message}`);
     this.name = "LessonPlanError";
     this.code = code;
     this.path = path;
     if (capability2) this.capability = capability2;
+    if (capability2 && withdrawAtOnce) this.withdrawAtOnce = true;
   }
 };
 var FORBIDDEN_PARAMETER_KEYS = /* @__PURE__ */ new Set([
@@ -23126,12 +23137,7 @@ function compileBaseTenTrade(base, content, role, placement, plan, path) {
   if (sharing) {
     const matAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
     const sharingCapability = sharing.content.capability;
-    fail2(
-      "LESSON_PLAN_SHARED_NUMBER",
-      `${path}.numbers`,
-      `the trading mat needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the pile on the mat only, or in words`,
-      sharingAt > matAt ? sharingCapability : "base_ten_trade"
-    );
+    failSharedTapCardNumbers(`${path}.numbers`, `the trading mat needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the pile on the mat only, or in words`, "base_ten_trade", sharingCapability, sharingAt, matAt);
   }
   const fault = baseTenStartFault(start);
   if (fault) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault, "base_ten_trade");
@@ -23230,12 +23236,7 @@ function compilePlaceValueChart(base, content, role, placement, plan, path) {
     const sharing = plan.sections[sharingAt].moments.flatMap((moment) => moment.actions).find(sharesNumbers);
     const chartAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
     const sharingCapability = sharing.content.capability;
-    fail2(
-      "LESSON_PLAN_SHARED_NUMBER",
-      `${path}.numbers`,
-      `the place-value chart needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the number on the chart only, or in words`,
-      sharingAt > chartAt ? sharingCapability : "place_value_chart"
-    );
+    failSharedTapCardNumbers(`${path}.numbers`, `the place-value chart needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the number on the chart only, or in words`, "place_value_chart", sharingCapability, sharingAt, chartAt);
   }
   const fault = placeValueStartFault(values, given);
   if (fault) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault, "place_value_chart");
@@ -23372,12 +23373,7 @@ function compilePlaceValueTrade(base, content, role, placement, plan, path) {
     const sharing = plan.sections[sharingAt].moments.flatMap((moment) => moment.actions).find(sharesNumbers);
     const cardAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
     const sharingCapability = sharing.content.capability;
-    fail2(
-      "LESSON_PLAN_SHARED_NUMBER",
-      `${path}.numbers`,
-      `the place-value trade card needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the numbers on the card only, or in words`,
-      sharingAt > cardAt ? sharingCapability : "place_value_trade"
-    );
+    failSharedTapCardNumbers(`${path}.numbers`, `the place-value trade card needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the numbers on the card only, or in words`, "place_value_trade", sharingCapability, sharingAt, cardAt);
   }
   const fault = placeValueTradeStartFault2(values, operation);
   if (fault) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault, "place_value_trade");
@@ -23473,12 +23469,7 @@ function compileMakeTen(base, content, role, placement, plan, path) {
     const sharing = plan.sections[sharingAt].moments.flatMap((moment) => moment.actions).find(sharesNumbers);
     const cardAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
     const sharingCapability = sharing.content.capability;
-    fail2(
-      "LESSON_PLAN_SHARED_NUMBER",
-      `${path}.numbers`,
-      `the make-ten card needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the numbers on the card only, or in words`,
-      sharingAt > cardAt ? sharingCapability : "make_ten"
-    );
+    failSharedTapCardNumbers(`${path}.numbers`, `the make-ten card needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the numbers on the card only, or in words`, "make_ten", sharingCapability, sharingAt, cardAt);
   }
   const fault = makeTenStartFault2(values);
   if (fault) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault, "make_ten");
@@ -28289,6 +28280,24 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
         prefix = compilePrefix(outline, drafts.slice(0, section), options.compile);
       } catch (error) {
         if (section === 1 && isOutlineOwnedFault(error)) throw error;
+        if (error instanceof LessonPlanError && error.withdrawAtOnce && error.capability) {
+          if (section === 1) throw error;
+          const withdrawn = await withdrawLaterSectionVisual(
+            section,
+            error.capability,
+            "shares_tap_card_numbers",
+            error.message,
+            async () => {
+              await options.on_rejected_part?.({ label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error) });
+            }
+          );
+          if (withdrawn) {
+            sectionErrors.delete(section);
+            sectionAttempts.set(section, Math.max(0, (sectionAttempts.get(section) ?? 1) - 1));
+            candidate = void 0;
+            continue;
+          }
+        }
         const previousError = sectionErrors.get(section);
         if (unsupportedSectionResponse(error, previousError, input.language)) throw error;
         if ((sectionAttempts.get(section) ?? 0) >= maxAttempts) {
@@ -28331,7 +28340,8 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
     } catch (error) {
       const capability2 = error instanceof LessonPlanError ? error.capability : void 0;
       const numbersMissing = error instanceof LessonPlanError && error.code === OUTLINE_NUMBERS_MISSING;
-      const spentOnPicture = capability2 !== void 0 && !excludedCapabilities.has(capability2) && (numbersMissing || (sectionAttempts.get(1) ?? 0) >= maxAttempts);
+      const sharesTapCard = error instanceof LessonPlanError && error.withdrawAtOnce === true;
+      const spentOnPicture = capability2 !== void 0 && !excludedCapabilities.has(capability2) && (numbersMissing || sharesTapCard || (sectionAttempts.get(1) ?? 0) >= maxAttempts);
       if (!(isOutlineOwnedFault(error) || spentOnPicture) || outlineRestarts >= 2) throw error;
       outlineRestarts += 1;
       await options.on_rejected_part?.({ label: "lesson-plan-section", section: 1, attempt: sectionAttempts.get(1) ?? 1, error: rejectionDetails(error) });
@@ -28340,7 +28350,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
           kind: "visual_removed",
           section: 1,
           capability: capability2,
-          reason: numbersMissing ? "outline_numbers_missing" : "visual_limits_after_retries",
+          reason: numbersMissing ? "outline_numbers_missing" : sharesTapCard ? "shares_tap_card_numbers" : "visual_limits_after_retries",
           detail: error instanceof Error ? error.message : String(error)
         });
       }
