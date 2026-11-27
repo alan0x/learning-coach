@@ -77,12 +77,13 @@ test("MT-02: a number line in section 2 on the make-ten pair draws on copies of 
   `);
   assert.equal(result.error, undefined, JSON.stringify(result.error));
   assert.deepEqual(result.copied, [2, 2]);
-  // The card reads 1 to 6 unbound; the line binds its copies, 7 (of 7) and 8 (of 5).
-  assert.deepEqual(result.declared.map(({ as, initial }) => [as, initial]), [["number_07", 7], ["number_08", 5]]);
+  // The card reads 1 to 6 unbound; the line binds its copies, numbered after every number an outline can hold (16):
+  // 17 (of 7) and 18 (of 5) (review of #197, B2).
+  assert.deepEqual(result.declared.map(({ as, initial }) => [as, initial]), [["number_17", 7], ["number_18", 5]]);
   // The copies keep the outline's ranges: the card's fit would have made 7's range 0 to 7 as well, but no wider.
   assert.ok(result.declared.every(({ min, max, initial }) => min <= initial && max >= initial), JSON.stringify(result.declared));
   // "Animate number 1" in section 2, after the line is drawn, moves the line's copy, never the card.
-  assert.deepEqual(result.moved, [["number_07", 6]]);
+  assert.deepEqual(result.moved, [["number_17", 6]]);
   assert.ok(result.written.includes("make_ten") && result.written.includes("number_line"), JSON.stringify(result.written));
 });
 
@@ -113,14 +114,13 @@ test("one copy per problem number: a third picture on it is refused, with the fa
   assert.match(result.error.message, /lesson number 1 is the make-ten card's problem number, and another picture already shows it on a copy of its own; the rectangle_unit_square_array visual shows it too/u);
 });
 
-test("before the line is drawn, a move of the pair is left out and recorded; it never refuses the section", () => {
+test("before the line is drawn, a move of the pair is the card's, which keeps it as written: refused with the fact (pilot 1)", () => {
   const result = run(`
     const compiled = compile(makeTen([{ narration: "先说一说。", actions: [animate(2, 4)] }, { narration: "数轴。", actions: [local("number_line", [1, 2])] }]));
-    console.log(JSON.stringify(compiled.error ?? { left: compiled.view_adjustments.filter((each) => each.reason === "animation_left_out").length,
-      moved: actions(compiled.lesson).filter((action) => action.do === "animate" && action.variable.startsWith("number_")).length }));
+    console.log(JSON.stringify(compiled.error ?? { compiled: true }));
   `);
-  assert.equal(result.code, undefined, JSON.stringify(result));
-  assert.deepEqual(result, { left: 1, moved: 0 });
+  assert.equal(result.code, "LESSON_PLAN_CARD_NUMBER_STAYS");
+  assert.match(result.message, /lesson number 2 is the make-ten card's second addend 5, which stays as written/u);
 });
 
 test("PT-15 with a built chart (7 variables): the chart in section 1 keeps 8.2 and the column card in section 2 reads a copy; section 1 compiles exactly as it did alone", () => {
@@ -181,9 +181,9 @@ test("the record of earlier sections names the model's number with the line's va
   const shows = (capability) => Object.fromEntries(result.third.pictures_now.find((picture) => picture.capability === capability).numbers.map(({ number, value }) => [number, value]));
   assert.equal(shows("make_ten")[1], 7);
   assert.deepEqual(shows("number_line"), { 1: 6, 2: 5 });
-  // The copies (numbers 7 and 8 of the compiled lesson) are never in the request.
+  // The copies (numbers 17 and 18 of the compiled lesson) are never in the request.
   assert.ok(result.third.numbers.every(({ number }) => number <= 6), JSON.stringify(result.third.numbers.map(({ number }) => number)));
-  assert.doesNotMatch(JSON.stringify(result.third), /"number":(7|8)\b/u);
+  assert.doesNotMatch(JSON.stringify(result.third), /"number":(17|18)\b/u);
 });
 
 // Review of #194, B1: a later section is told only the moves the lesson plays, each on the picture that plays it.

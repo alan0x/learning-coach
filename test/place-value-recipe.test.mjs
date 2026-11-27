@@ -229,7 +229,7 @@ test("section facts: the chart in its own terms, once it is drawn", () => {
     still_on_chart: 0.075, taken_out: 26,
     // Where the demonstration can go next, as facts: the places still on, and the values left as the highest come out.
     places_still_on_chart: ["Hundredths", "Thousandths"], next_values: [0.005, 0],
-    practice_number: 18.064,
+    after_class_practice: 18.064,
   });
   // A later section of a whole number half pulled apart (objective check 1, PV-07's shape: 62017 at 17) is told
   // the tens and ones are still on, and that 7 or 0 come next; once all is out, nothing is left and no next value.
@@ -289,7 +289,7 @@ test("a stubbed generation run: the chart, its steps and the practice reach the 
   assert.deepEqual(result.plugins, { math: "0.12.0", shared: "0.1.0" });
   // Section 2 is told the chart in its own terms, with what the demonstration left to do.
   const facts = JSON.stringify(result.later);
-  for (const fact of ['"number":60408', '"given":"name"', '"on_chart_now":60408', '"still_to_place":0', '"practice_number":30705', '"Ten thousands"']) assert.ok(facts.includes(fact), fact);
+  for (const fact of ['"number":60408', '"given":"name"', '"on_chart_now":60408', '"still_to_place":0', '"after_class_practice":30705', '"Ten thousands"']) assert.ok(facts.includes(fact), fact);
 });
 
 test("a chart drawn in section 2, on ranges a model writes: only the chart's own variables are declared, and a replay names only them", () => {
@@ -561,7 +561,7 @@ test("beside the times-ten card the chart does not take counting in another unit
   // Trials off: every recipe's guidance is its own text (request-hashes checks the bytes of every default request).
   assert.equal(off.all, true);
   assert.equal(off.offered, off.base);
-  assert.equal(Buffer.byteLength(off.base), 1927);
+  assert.equal(Buffer.byteLength(off.base), 2115);
   // Offered beside the times-ten card: the chart's "not for" list gains counting the same amount in another unit.
   assert.notEqual(on.offered, on.base);
   assert.ok(on.offered.includes("凑整、同一个数换一个单位来数（一千里有几个十；3个十分之一=?个千分之一），也不用于低年级"));
