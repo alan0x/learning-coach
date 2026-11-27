@@ -18,6 +18,7 @@ import {
   matchLessonPlanCapability,
   validateLessonPlanNumbers,
   validateLessonPlanOutline,
+  type LessonPlan,
   type LessonPlanNumber,
   type LessonPlanOutline,
   type ProgramNumberInput,
@@ -127,6 +128,8 @@ export interface GenerateLessonPlanOptions {
     number?: number;
     reason: string;
     detail?: string;
+    /** Trace only: a move left out (`animation_left_out`) was its moment's only action, so the moment keeps its narration alone. */
+    narration_only_moment?: true;
     /** A lesson ended early (`sections_removed`): its close summary is left out of the lesson. */
     close_summary?: "left_out";
     /** The task a success-message record is about. */
@@ -2570,6 +2573,15 @@ function compilePrefix(
   drafts: LessonPlanSectionDraft[],
   options: CompileLessonPlanOptions | undefined,
 ): CompiledLessonPlan {
+  return compileAndValidateLessonPlan(prefixPlan(outline, drafts, options), { ...options, construction_rules: "explicit-v1" });
+}
+
+/** The lesson plan a playable prefix compiles: the one a compile fault's path points into. */
+function prefixPlan(
+  outline: LessonPlanOutline,
+  drafts: LessonPlanSectionDraft[],
+  options: CompileLessonPlanOptions | undefined,
+): LessonPlan {
   const sectionCount = drafts.length;
   let focus: { source: "reusable"; section: number; item: number } | undefined;
   for (let section = sectionCount; section >= 1 && !focus; section -= 1) {
@@ -2600,8 +2612,7 @@ function compilePrefix(
     close: { summary: lessonText(options?.language, "课程内容仍在继续生成。"), focus: [focus] },
   };
   const normalized = normalizeExecutableNumberInteractions(prefixOutline, drafts);
-  const prefixPlan = assembleLessonPlan(normalized.outline, normalized.drafts, options);
-  return compileAndValidateLessonPlan(prefixPlan, { ...options, construction_rules: "explicit-v1" });
+  return assembleLessonPlan(normalized.outline, normalized.drafts, options);
 }
 
 /**
@@ -3314,6 +3325,102 @@ export async function generateLessonPlanWithModel(
   return undefined;
   };
   const drafts: LessonPlanSectionDraft[] = [];
+  // Where a compile fault in `section` points, read in the very plan that compile saw (so no index can shift): the
+  // action at the fault's path, when it is a visual's create (the picture's own check) or an animation (a move the
+  // picture refuses), with the section it is in and the picture's capability and numbers. Undefined otherwise.
+  const faultSite = (error: unknown, section: number): {
+    kind: "create" | "animate"; section: number; capability: string; numbers: number[]; in: number; moment: number; action: number;
+    move?: { number: number; end_value: number };
+  } | undefined => {
+    if (!(error instanceof LessonPlanError) || !outline) return undefined;
+    const at = /^\$lessonPlan\.sections\[(\d+)\]\.moments\[(\d+)\]\.actions\[(\d+)\](\.content\b|\.end_value$)/u.exec(error.path);
+    if (!at) return undefined;
+    let plan: LessonPlan;
+    try { plan = prefixPlan(outline, drafts.slice(0, section), options.compile); } catch { return undefined; }
+    const [sectionAt, momentAt, actionAt] = [Number(at[1]), Number(at[2]), Number(at[3])];
+    const action = plan.sections[sectionAt]?.moments[momentAt]?.actions[actionAt];
+    const creates = (from: number) => plan.sections.slice(0, from + 1).flatMap((each, index) => each.moments.flatMap((moment) => moment.actions
+      .flatMap((item) => (item.action === "create" && item.kind === "visual" ? [{ section: index + 1, content: item.content as LessonPlanVisualContent }] : []))));
+    if (at[4] === ".content" && action?.action === "create" && action.kind === "visual") {
+      const content = action.content as LessonPlanVisualContent;
+      return { kind: "create", section: sectionAt + 1, capability: content.capability, numbers: [...(content.numbers ?? [])], in: sectionAt + 1, moment: momentAt, action: actionAt };
+    }
+    if (at[4] === ".end_value" && action?.action === "animate") {
+      // The picture whose number it moves: the latest drawn on that number, up to this section, of the recipe the
+      // fault names when it names one (review of #190).
+      const named = error.capability;
+      const drawn = creates(sectionAt).filter((each) => (each.content.numbers ?? []).includes(action.number)
+        && (!named || each.content.capability === named)).at(-1);
+      return drawn ? {
+        kind: "animate", section: drawn.section, capability: drawn.content.capability, numbers: [...(drawn.content.numbers ?? [])],
+        in: sectionAt + 1, moment: momentAt, action: actionAt, move: { number: action.number, end_value: action.end_value },
+      } : undefined;
+    }
+    return undefined;
+  };
+  // The picture a fault is about: the recipe it names, or, for a fault the outline owns that names none (a number
+  // line's tick limits: "choose another visual"), the course visual whose create the fault's path points at. 35P-04
+  // run 2's PF-19 and 35P-07's PT-16 lost their lessons to such a fault on section 1's line in section 2's repairs.
+  const faultingPicture = (error: unknown, section: number): string | undefined => {
+    if (!(error instanceof LessonPlanError)) return undefined;
+    if (error.capability) return error.capability;
+    if (!isOutlineOwnedFault(error)) return undefined;
+    const site = faultSite(error, section);
+    return site?.kind === "create" && outline && outlineCapabilities(outline).has(site.capability as never) ? site.capability : undefined;
+  };
+  // A later section's repairs spent on a move a picture drawn in an earlier section refuses, or on that picture's
+  // own check (a number line that cannot mark where this section moves its number: PF-19, PT-16): the section's
+  // moves of that picture's numbers are left out, as few as compile allows, and the section is kept without them,
+  // with no extra call. Undefined when the fault is not such a move, or the section still fails without them.
+  const leaveOutEarlierPictureMoves = (error: unknown, section: number): CompiledLessonPlan | undefined => {
+    const site = faultSite(error, section);
+    const draft = drafts[section - 1];
+    if (!site || !draft || site.section >= section) return undefined;
+    const keyOf = (moment: number, action: number) => `${moment}:${action}`;
+    const candidates = new Set<string>();
+    if (site.kind === "animate") {
+      // The fault's own move, read in the section's draft at the same place (the compiled plan is assembled from it).
+      // Only this section's own move, the same move in its draft at the same place as in the plan compile saw.
+      const own = draft.moments[site.moment]?.actions[site.action];
+      if (site.in === section && own?.action === "animate" && own.number === site.move?.number && own.end_value === site.move.end_value
+        && site.numbers.includes(own.number)) candidates.add(keyOf(site.moment, site.action));
+    } else {
+      draft.moments.forEach((moment, momentAt) => moment.actions.forEach((action, actionAt) => {
+        if (action.action === "animate" && site.numbers.includes(action.number)) candidates.add(keyOf(momentAt, actionAt));
+      }));
+    }
+    if (!candidates.size || !outline) return undefined;
+    const without = (removed: ReadonlySet<string>): LessonPlanSectionDraft => ({
+      ...draft, moments: draft.moments.map((moment, momentAt) => ({ ...moment, actions: moment.actions.filter((_action, actionAt) => !removed.has(keyOf(momentAt, actionAt))) })),
+    });
+    const attempt = (removed: ReadonlySet<string>) => {
+      try { return compilePrefix(outline!, [...drafts.slice(0, section - 1), without(removed)], options.compile); } catch { return undefined; }
+    };
+    const removed = new Set(candidates);
+    let compiled = attempt(removed);
+    if (!compiled) return undefined;
+    // Each move goes back in when the section still compiles with it: only the moves the picture refuses are left out.
+    for (const key of candidates) {
+      removed.delete(key);
+      const kept = attempt(removed);
+      if (kept) compiled = kept;
+      else removed.add(key);
+    }
+    leftOutMoves = [...removed].map((key) => {
+      const [momentAt, actionAt] = key.split(":").map(Number) as [number, number];
+      const action = draft.moments[momentAt]!.actions[actionAt]!;
+      // Trace only: a moment left with its narration alone (every action it had was a move left out).
+      const narrationOnly = draft.moments[momentAt]!.actions.every((_each, offset) => removed.has(keyOf(momentAt, offset)));
+      return {
+        detail: `$lessonPlan.sections[${section - 1}].moments[${momentAt}].actions[${actionAt}]: the ${site.capability} visual cannot show lesson number ${action.action === "animate" ? action.number : "?"} at ${action.action === "animate" ? action.end_value : "?"}; left out`,
+        ...(narrationOnly ? { narration_only_moment: true as const } : {}),
+      };
+    });
+    // The draft itself loses them, so its program adjustments stay attached to it.
+    draft.moments.forEach((moment, momentAt) => { moment.actions = moment.actions.filter((_action, actionAt) => !removed.has(keyOf(momentAt, actionAt))); });
+    return compiled;
+  };
+  let leftOutMoves: Array<{ detail: string; narration_only_moment?: true }> = [];
   // A later section's picture is taken out of the outline, and the section is written without it, told why.
   const withdrawLaterSectionVisual = async (section: number, capability: string, reason: string, detail: string, reported?: () => Promise<void>): Promise<boolean> => {
     const withdrawn = section > 1 && !withdrawnNotes.has(section) && outline
@@ -3652,12 +3759,29 @@ export async function generateLessonPlanWithModel(
           // The repairs are spent on a picture's own limits: a later section is written once more without
           // that picture, outside the repair budget, so the lesson keeps its published sections. Section 1
           // is handled by acceptFirstSection, which asks for a new outline without it.
-          const capability = error instanceof LessonPlanError ? error.capability : undefined;
-          const withdrawn = capability !== undefined && await withdrawLaterSectionVisual(
+          const capability = faultingPicture(error, section);
+          // Only a picture this section drew can go: when the fault's site is known it must be in this section, so a
+          // fault on an earlier picture never withdraws this section's own picture of the same kind (review of #190).
+          // With no known site, the recipe the fault names decides, as before. The capability still names the
+          // picture when the lesson ends early (below).
+          const site = faultSite(error, section);
+          const withdrawable = site ? site.section === section : error instanceof LessonPlanError && error.capability !== undefined;
+          const withdrawn = withdrawable && capability !== undefined && await withdrawLaterSectionVisual(
             section, capability, "visual_limits_after_retries", error instanceof Error ? error.message : String(error),
             async () => { await options.on_rejected_part?.({ label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error) }); },
           );
           if (!withdrawn) {
+            // A move of a picture an earlier section drew, which that picture cannot show: the section is kept
+            // without it, with no extra call (review of #190), recorded as #188 records a move a card leaves out.
+            const kept = leaveOutEarlierPictureMoves(error, section);
+            if (kept) {
+              await options.on_rejected_part?.({ label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error) });
+              sectionErrors.delete(section);
+              for (const left of leftOutMoves) await options.on_program_adjustment?.({ kind: "plot_view_adjusted", section, reason: "animation_left_out", ...left });
+              await reportDraftAdjustments(drafts[section - 1]!);
+              await options.on_playable_prefix?.({ completed_sections: section, compiled: kept });
+              return;
+            }
             // A picture an earlier section drew cannot be taken out (35P-04 objective run, PF-03: section 2's
             // repairs were spent on section 1's trading mat): the lesson ends at its published sections instead.
             const shorter = capability !== undefined && outline ? endOutlineBefore(outline, section, fixedRequestParts.length) : undefined;
@@ -3726,15 +3850,19 @@ export async function generateLessonPlanWithModel(
       const capability = dropCard ? (error as LessonPlanError).tapCard : error instanceof LessonPlanError ? error.capability : undefined;
       const spentOnPicture = capability !== undefined && !excludedCapabilities.has(capability)
         && (numbersMissing || sharesTapCard || (sectionAttempts.get(1) ?? 0) >= maxAttempts);
-      if (outlineRestarts >= 2 && capability !== undefined && !withdrawnNotes.has(1) && outline
+      // A fault the outline owns that names no recipe (a number line's tick limits) is about the picture at its path:
+      // restarts still exclude the whole number-line family, as before; the rewrite takes out that picture.
+      const picture = capability ?? faultingPicture(error, 1);
+      if (outlineRestarts >= 2 && picture !== undefined && !withdrawnNotes.has(1) && outline
         && (isOutlineOwnedFault(error) || numbersMissing || sharesTapCard || (sectionAttempts.get(1) ?? 0) >= maxAttempts)) {
         // Both restarts spent and section 1 still faults on a picture (35P-04 objective run, PF-09: the mat, then the
         // chart, then the times-ten card): section 1 is written once more without it, as a later section is, so a
         // lesson is never lost to a picture. A supporting picture goes with it, as in a later section.
-        const withdrawn = withdrawSectionVisual(outline, 1, capability, fixedRequestParts.length, true);
+        const withdrawn = withdrawSectionVisual(outline, 1, picture, fixedRequestParts.length, true);
         if (!withdrawn) throw error;
-        await withdrawBeforePublishing(1, capability, withdrawn,
-          numbersMissing ? outlineNumbersReason(error as LessonPlanError) : sharesTapCard ? "shares_tap_card_numbers" : "visual_limits_after_retries",
+        await withdrawBeforePublishing(1, picture, withdrawn,
+          numbersMissing ? outlineNumbersReason(error as LessonPlanError) : sharesTapCard ? "shares_tap_card_numbers"
+            : isOutlineOwnedFault(error) ? "outline_visual_fault" : "visual_limits_after_retries",
           error instanceof Error ? error.message : String(error),
           async () => { await options.on_rejected_part?.({ label: "lesson-plan-section", section: 1, attempt: sectionAttempts.get(1) ?? 1, error: rejectionDetails(error) }); });
         // Exactly once more, outside the repair budget, whatever the fault (review of #189).
