@@ -3167,6 +3167,36 @@ export function plannedCardOverflow(outline: LessonPlanOutline, sectionOne: Less
   };
 }
 
+/** The outline's second cards (a later course visual of a kind that takes one, `second_card_label`), in order. */
+function secondCardVisuals(outline: LessonPlanOutline): Array<{ capability: string; create_section: number; label: string }> {
+  const visuals = outline.course_visuals ?? [];
+  return visuals.flatMap((visual, index) => {
+    const label = (LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability] as { second_card_label?: string }).second_card_label;
+    return label !== undefined && visuals.slice(0, index).some((each) => each.capability === visual.capability)
+      ? [{ capability: visual.capability, create_section: visual.create_section, label }] : [];
+  });
+}
+
+/**
+ * The lesson's planned cards after section 1 that cannot fit beside it: when section 1 and the card the outline's
+ * numbers are written for fit OLL's 16 variables, each second card adds one (its demonstration's), and those that would
+ * go over go before anything is published (review of #199). Their capabilities and sections, with the fact.
+ */
+export function plannedSecondCardOverflow(outline: LessonPlanOutline, declared: number): Array<{ capability: string; section: number; detail: string }> {
+  const visuals = outline.course_visuals ?? [];
+  const owner = visuals.filter((visual) => RECIPE_HOOKS[visual.capability as keyof typeof RECIPE_HOOKS]?.planned_variables)
+    .reduce<typeof visuals[number] | undefined>((best, visual) => (!best || recipeMinLessonNumbers(visual.capability) > recipeMinLessonNumbers(best.capability) ? visual : best), undefined);
+  const limit = owner ? LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[owner.capability as keyof typeof LESSON_PLAN_CAPABILITY_NUMBER_LIMITS] ?? 0 : 0;
+  const planned = owner && owner.create_section > 1 && (outline.numbers?.length ?? 0) >= limit
+    ? RECIPE_HOOKS[owner.capability as keyof typeof RECIPE_HOOKS]!.planned_variables!(outline.numbers!.slice(0, limit).map((number) => number.initial)) ?? 0 : 0;
+  let total = declared + planned;
+  return secondCardVisuals(outline).flatMap((second) => {
+    total += 1;
+    return total > 16 ? [{ capability: second.capability, section: second.create_section,
+      detail: `the lesson holds at most 16 numbers (OLL): section 1 uses ${declared}${planned ? ` and the ${owner!.capability} card planned for section ${owner!.create_section} up to ${planned}` : ""}; the second ${second.capability} card needs one more` }] : [];
+  });
+}
+
 /** A fault only a new outline can fix: the outline chose the visual and the numbers it cannot show. */
 const OUTLINE_OWNED_FAULT = "LESSON_PLAN_OUTLINE_VISUAL";
 const isOutlineOwnedFault = (error: unknown) => error instanceof LessonPlanError && error.code === OUTLINE_OWNED_FAULT;
@@ -3983,6 +4013,14 @@ export async function generateLessonPlanWithModel(
     // an outline number), so it goes now, before any section is written or retried: section 1's by a new
     // outline without it (acceptFirstSection), a later section's from the outline in place.
     if (outline) for (const hooks of PLUGIN_HOOKS) hooks.prepare_section?.(outline, section, { language: input.language });
+    // A second card whose demonstration the program could give no number (the outline holds 16 already) goes before
+    // its section is written, with the fact (review of #199, B3).
+    if (outline) for (const second of secondCardVisuals(outline).filter((each) => each.create_section === section)) {
+      if (!(outline.numbers ?? []).some((number) => number.label === lessonText(input.language, second.label))) {
+        await withdrawLaterSectionVisual(section, second.capability, "planned_card_budget",
+          `the lesson holds at most 16 numbers and this outline declares ${outline.numbers?.length ?? 0}: the second ${second.capability} card's demonstration has no number of its own`);
+      }
+    }
     const missing = outline ? outlineNumbersMissing(outline, section) : undefined;
     if (missing && section === 1) throw missing;
     if (missing) await withdrawLaterSectionVisual(section, missing.capability!, outlineNumbersReason(missing), missing.message);
@@ -4131,6 +4169,26 @@ export async function generateLessonPlanWithModel(
         await withdrawBeforePublishing(1, overflow.capability, withdrawn, "planned_card_budget", overflow.detail);
         candidate = undefined;
         continue;
+      }
+      // A second card planned for a later section that would go over the 16 variables goes now, before anything is
+      // published, with the fact; section 1 stays as written (review of #199).
+      if (section === 1 && outline) {
+        for (const over of plannedSecondCardOverflow(outline, prefix.lesson.lesson.variables?.length ?? 0)) {
+          await withdrawLaterSectionVisual(over.section, over.capability, "planned_card_budget", over.detail);
+        }
+      }
+      // A second card drawn in this section: its demonstration number now starts where the card does (the example is
+      // known once the section is accepted), so later sections are told the value the card shows (review of #199).
+      if (outline) for (const second of secondCardVisuals(outline).filter((each) => each.create_section === section)) {
+        const index = (outline.numbers ?? []).findIndex((number) => number.label === lessonText(input.language, second.label));
+        const create = candidate.moments.flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual"
+          && (action.content as LessonPlanVisualContent).capability === second.capability && ((action.content as LessonPlanVisualContent).numbers ?? []).includes(index + 1));
+        const walked = create && RECIPE_HOOKS[second.capability]?.second_card?.(create.content as LessonPlanVisualContent, drafts.slice(0, section), outline.numbers ?? []);
+        if (index >= 0 && walked) {
+          const start = walked.started[walked.positions[0]!]!;
+          const number = outline.numbers![index]!;
+          if (start >= number.min && start <= number.max) number.initial = start;
+        }
       }
       await reportDraftAdjustments(candidate);
       noteCompiledDrops(prefix, section);

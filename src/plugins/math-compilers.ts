@@ -2048,7 +2048,7 @@ function compilePlaceValueTrade(
   // One card per lesson: a later card on other numbers is refused at its own path (as the chart's is).
   const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions)
     .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "place_value_trade"
-      && !exampleOf("place_value_trade", (action.content as LessonPlanVisualContent).parameters));
+      && !isSecondCard("place_value_trade", action.content as LessonPlanVisualContent, plan.sections));
   if (first && (JSON.stringify((first.content as LessonPlanVisualContent).numbers ?? []) !== JSON.stringify(numbers)
     || (first.content as LessonPlanVisualContent).parameters?.operation !== operation)) {
     fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `a lesson has one place-value trade card: this lesson's is on lesson numbers ${((first.content as LessonPlanVisualContent).numbers ?? []).join(", ")}`, "place_value_trade");
@@ -2173,7 +2173,7 @@ function compileMakeTen(
   // One card per lesson: a later card on other numbers is refused at its own path.
   const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions)
     .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "make_ten"
-      && !exampleOf("make_ten", (action.content as LessonPlanVisualContent).parameters));
+      && !isSecondCard("make_ten", action.content as LessonPlanVisualContent, plan.sections));
   if (first && JSON.stringify((first.content as LessonPlanVisualContent).numbers ?? []) !== JSON.stringify(numbers)) {
     fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `a lesson has one make-ten card: this lesson's is on lesson numbers ${((first.content as LessonPlanVisualContent).numbers ?? []).join(", ")}`, "make_ten");
   }
@@ -2290,7 +2290,7 @@ function compilePlaceValueTimesTen(
   // One card per lesson: a later card on other numbers is refused at its own path.
   const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions)
     .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "place_value_times_ten"
-      && !exampleOf("place_value_times_ten", (action.content as LessonPlanVisualContent).parameters));
+      && !isSecondCard("place_value_times_ten", action.content as LessonPlanVisualContent, plan.sections));
   if (first && JSON.stringify((first.content as LessonPlanVisualContent).numbers ?? []) !== JSON.stringify(numbers)) {
     fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `a lesson has one times-ten card: this lesson's is on lesson numbers ${((first.content as LessonPlanVisualContent).numbers ?? []).join(", ")}`, "place_value_times_ten");
   }
@@ -2507,7 +2507,8 @@ function secondCard(
   const creates = plan.sections.flatMap((section, sectionAt) => section.moments.flatMap((moment) => moment.actions)
     .flatMap((action) => (action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === capability
       ? [{ sectionAt, content: action.content as LessonPlanVisualContent }] : [])));
-  const first = creates.find((each) => !exampleOf(capability, each.content.parameters));
+  // The kind's first create is the lesson's first card, whatever parameters it writes.
+  const first = creates[0];
   // A later card of the kind drawn on the program's one number (the lowering binds a second card there) that writes no
   // example: a fact, at the create.
   if (!example && first && first.content !== content && content.numbers?.length === 1 && (first.content.numbers?.length ?? 0) > 1
@@ -2519,7 +2520,7 @@ function secondCard(
     if (content.parameters) for (const name of SECOND_CARDS[capability].parameters) delete (content.parameters as Record<string, unknown>)[name];
     return undefined;
   }
-  const examples = creates.filter((each) => exampleOf(capability, each.content.parameters));
+  const examples = creates.filter((each) => isSecondCard(capability, each.content, plan.sections));
   if (examples[0]!.content !== content && JSON.stringify(examples[0]!.content.parameters) !== JSON.stringify(content.parameters)) {
     fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${SECOND_CARDS[capability].parameters[0]}`, `a lesson has one second ${cardName(capability)}: this lesson's is on ${exampleOf(capability, examples[0]!.content.parameters)!.join(" and ")}`, capability);
   }
@@ -2530,6 +2531,17 @@ function secondCard(
   const demonstration = content.numbers?.[0];
   if (demonstration === undefined || !plan.numbers?.[demonstration - 1]) {
     fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `the second ${cardName(capability)} is drawn on the number the program gives its demonstration`, capability);
+  }
+  // Its number is the one its demonstration moves: another picture never shows it (as the first card's own
+  // demonstration number; review of #199, B2).
+  const sharingAt = plan.sections.findIndex((section) => section.moments.some((moment) => moment.actions.some((action) => action.action === "create"
+    && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability !== capability && ((action.content as LessonPlanVisualContent).numbers ?? []).includes(demonstration!))));
+  if (sharingAt >= 0) {
+    const sharing = plan.sections[sharingAt]!.moments.flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual"
+      && (action.content as LessonPlanVisualContent).capability !== capability && ((action.content as LessonPlanVisualContent).numbers ?? []).includes(demonstration!))!;
+    const other = (sharing.content as LessonPlanVisualContent).capability;
+    const cardAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
+    failSharedTapCardNumbers(`${path}.numbers`, `lesson number ${demonstration} is the number the second ${cardName(capability)}'s demonstration moves; the ${other} visual shows it too`, capability, other, sharingAt, cardAt);
   }
   const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
   const stem = base.replace(/[^A-Za-z0-9]+/gu, "_").toLowerCase();

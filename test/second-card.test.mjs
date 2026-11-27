@@ -13,6 +13,7 @@ const run = (body) => JSON.parse(execFileSync(process.execPath, ["--input-type=m
   const api = await import(${here("../lesson-plan.js")});
   const sp = await import(${here("./sample-plans.mjs")});
   const { modelResponseHelpers } = await import(${here("./model-responses.mjs")});
+  const { normalizeAuthoringLesson } = await import("octos-lesson-language");
   const H = modelResponseHelpers(api.LESSON_PLAN_CAPABILITY_REGISTRY);
   const animate = (number, end_value) => ({ action: "animate", number, end_value, duration_intent: "brief", timing: "during_speech" });
   const KINDS = {
@@ -22,19 +23,22 @@ const run = (body) => JSON.parse(execFileSync(process.execPath, ["--input-type=m
   };
   // A three-section lesson: the first card in section 1, the second card in section 2 (its create writing the example,
   // or nothing), a text in section 3. The outline holds the first card's numbers only: the program adds the second's.
-  const lesson = async (kind, example = KINDS[kind].example, replies) => {
-    const plan = KINDS[kind].plan();
+  // opts: plan (→ plan), moves, mutate(plan), section3, outlineNumbers, language.
+  const lesson = async (kind, example = KINDS[kind].example, replies, opts = {}) => {
+    const plan = (opts.plan ?? KINDS[kind].plan)();
     const card = structuredClone(plan.sections[0].moments[0].actions[0]);
-    const demonstration = plan.numbers.length + 1;
+    const declared = plan.numbers.length;
+    const demonstration = declared + 1;
     plan.sections[1].reusable_items = [{ kind: "board_item", board_kind: "visual", capability: kind }];
     plan.sections[1].moments.push({ narration: "再看一个例子。", actions: [{ ...card, content: { ...card.content, parameters: { ...(card.content.parameters ?? {}), ...example }, numbers: [1, 2] }, reusable_item: 1 }] },
-      ...KINDS[kind].moves.map((value) => ({ narration: "看。", actions: [animate(demonstration, value)] })));
-    plan.sections[2] = { purpose: "Sum up", moments: [{ narration: "小结。", actions: [{ action: "create", kind: "text", role: "follow_up_explanation", content: { text: "summary" }, placement: { relation: "new_region" } }] }] };
+      ...(opts.moves ?? KINDS[kind].moves).map((value) => ({ narration: "看。", actions: [animate(demonstration, value)] })));
+    plan.sections[2] = opts.section3 ?? { purpose: "Sum up", moments: [{ narration: "小结。", actions: [{ action: "create", kind: "text", role: "follow_up_explanation", content: { text: "summary" }, placement: { relation: "new_region" } }] }] };
+    opts.mutate?.(plan);
     const compatible = sp.makeSamplePlanModelCompatible(plan);
     const drafts = compatible.sections.map(({ moments, student_activities }, index) => H.toModelSectionDraft({ section: index + 1, version: compatible.version, moments, student_activities }));
     const stage = { outline: H.stagedOutline(compatible, drafts), drafts };
-    stage.outline.numbers = stage.outline.numbers.slice(0, plan.numbers.length);
-    const log = { requests: [], prompts: [], adjustments: [], rejected: [], ready: [] };
+    stage.outline.numbers = stage.outline.numbers.slice(0, opts.outlineNumbers ?? declared);
+    const log = { requests: [], prompts: [], adjustments: [], rejected: [], ready: [], published: [] };
     let section2 = 0;
     try {
       log.lesson = (await api.generateLessonPlanWithModel(async (request) => {
@@ -46,22 +50,29 @@ const run = (body) => JSON.parse(execFileSync(process.execPath, ["--input-type=m
         const draft = structuredClone(stage.drafts[request.section - 1]);
         // After the second card is withdrawn, section 2 is written without it.
         if (request.section === 2 && JSON.parse(request.prompt).removed_picture) { delete draft.course_visual_creates; draft.moments = draft.moments.slice(0, 1); }
+        if (request.section === 3 && JSON.parse(request.prompt).removed_picture) { delete draft.course_visual_creates; draft.moments = draft.moments.slice(-1); }
         return JSON.stringify(replies?.(request, draft) ?? draft);
-      }, { turn_id: "second-card", learner_request: "再讲一个例子", language: "zh-CN" }, {
+      }, { turn_id: "second-card", learner_request: "再讲一个例子", language: opts.language ?? "zh-CN" }, {
         max_attempts_per_part: 3,
         on_outline_ready: (event) => log.ready.push(event),
         on_program_adjustment: (adjustment) => log.adjustments.push([adjustment.kind, adjustment.section, adjustment.capability ?? null, adjustment.reason]),
         on_rejected_part: (part) => log.rejected.push([part.section, part.error.code, part.error.message.slice(0, 240)]),
+        on_playable_prefix: ({ compiled }) => log.published.push(normalizeAuthoringLesson(compiled.lesson, { lessonId: "p", boardId: "b", baseRevision: 0, regionIntent: "new_topic" })[0].lesson.variables ?? []),
       })).lesson;
     } catch (caught) { log.error = caught.message.slice(0, 300); }
     const actions = log.lesson ? log.lesson.steps.flatMap((step, at) => step.beats.flatMap((beat) => beat.actions.map((action) => ({ ...action, step: at + 1 })))) : [];
     const second = log.prompts[log.requests.indexOf("lesson-plan-section2")];
-    return { error: log.error, requests: log.requests, rejected: log.rejected, adjustments: log.adjustments, ready: log.ready,
+    const third = log.prompts[log.requests.lastIndexOf("lesson-plan-section3")];
+    // Every variable a published part declared is declared the same in the next part.
+    const changed = log.published.slice(1).flatMap((now, k) => log.published[k].filter((before) => JSON.stringify(now.find((each) => each.as === before.as)) !== JSON.stringify(before)).map((before) => (k + 1) + "->" + (k + 2) + ":" + before.as));
+    return { changed, parts: log.published.length, error: log.error, requests: log.requests, rejected: log.rejected, adjustments: log.adjustments, ready: log.ready,
       cards: actions.filter((action) => action.do === "write" && action.kind === kind).map((action) => [action.step, action.content]),
       moved: actions.filter((action) => action.do === "animate").map((action) => [action.step, action.variable, action.value]),
       variables: (log.lesson?.lesson.variables ?? []).map((variable) => variable.as),
       tasks: (log.lesson?.lesson.tasks ?? []).map((task) => [task.completion.kind, task.completion.node ?? task.anchor]),
-      sectionTwoNumbers: second && JSON.parse(second).course_and_section.numbers.map(({ number, label }) => [number, label]) };
+      initials: (log.lesson?.lesson.variables ?? []).map((variable) => [variable.as, variable.initial]),
+      sectionTwoNumbers: second && JSON.parse(second).course_and_section.numbers.map(({ number, label }) => [number, label]),
+      sectionThreeNumbers: third && JSON.parse(third).course_and_section.numbers.map(({ number, label, initial }) => [number, label, initial]) };
   };
   ${body}
 `], {
@@ -151,4 +162,101 @@ test("the guidance the outline call reads plans a second card for another exampl
   `);
   assert.equal(result.length, 3);
   for (const guidance of result) assert.match(guidance, /要在后面的节再讲另一个例子，outline 在那一节再规划一张.*另一个例子画在第二张卡片上，不用练习的数，练习仍在第一张上。/u);
+});
+
+// Review round 1 of #199 (the reviewer's probes, as tests).
+const line = (numbers, slot) => ({ action: "create", kind: "visual", role: "supporting_visual", content: { capability: "number_line_compare", parameters: {}, numbers }, placement: { relation: "new_region" }, reusable_item: slot });
+const lineInSectionOne = (numbers) => `(plan) => { const first = plan.sections[0]; first.reusable_items = [...first.reusable_items, { kind: "board_item", board_kind: "visual", capability: "number_line_compare" }]; first.moments.push({ narration: "数轴。", actions: [${JSON.stringify(line(numbers, 0)).replace('"reusable_item":0', '"reusable_item":first.reusable_items.length')}] }); }`;
+
+for (const [kind, plan, example, moves] of [
+  ["make_ten", "KINDS.make_ten.plan", undefined, [10]],
+  ["place_value_trade", `() => sp.placeValueTradePlan({ operation: "add", numbers: [47, 38], practice: [56, 27] })`, { example_first_number: 68, example_second_number: 25 }, [1, 2]],
+]) {
+  test(`${kind}: a copy of the question's pair published in section 1 keeps its variables when the second card's number arrives`, () => {
+    const result = run(`console.log(JSON.stringify(await lesson(${JSON.stringify(kind)}, ${JSON.stringify(example)}, undefined, { plan: ${plan}, moves: ${JSON.stringify(moves)}, mutate: ${lineInSectionOne([1, 2])} })));`);
+    assert.equal(result.error, undefined, result.error);
+    assert.deepEqual(result.rejected, []);
+    assert.ok(result.parts >= 2);
+    assert.deepEqual(result.changed, []);
+    assert.ok(result.variables.includes("number_17"), JSON.stringify(result.variables));
+    assert.equal(result.cards.length, 2);
+  });
+}
+
+test("a picture on the second card's demonstration number is refused at once with the fact: it is not the card's problem", () => {
+  const result = run(`
+    const back = (request, draft) => { if (request.section === 3 && JSON.parse(request.prompt).removed_picture) { delete draft.course_visual_creates; draft.moments = draft.moments.slice(-1); } return draft; };
+    const section3 = { purpose: "line", reusable_items: [{ kind: "board_item", board_kind: "visual", capability: "number_line_compare" }], moments: [
+      { narration: "数轴。", actions: [${JSON.stringify(line([7, 2], 1))}] }, { narration: "回到那张卡片。", restart_numbers: [7], actions: [animate(7, 10)] }] };
+    console.log(JSON.stringify(await lesson("make_ten", undefined, back, { section3 })));
+  `);
+  assert.equal(result.error, undefined, result.error);
+  assert.deepEqual(result.rejected.map(([section, code]) => [section, code]), [[3, "LESSON_PLAN_SHARED_NUMBER"]]);
+  assert.match(result.rejected[0][2], /lesson number 7 is the number the second make-ten card's demonstration moves; the number_line_compare visual shows it too/u);
+  // No copy: the second card's number stays its own; its demonstration plays again in section 3.
+  assert.ok(!result.variables.some((alias) => /^number_1[7-9]$/u.test(alias)), JSON.stringify(result.variables));
+  assert.ok(result.moved.some(([step, variable]) => step === 3 && variable.startsWith("section_02_")), JSON.stringify(result.moved));
+});
+
+for (const kind of ["make_ten", "place_value_trade", "place_value_times_ten"]) {
+  test(`${kind}: an outline with room for the second card's number keeps it; one at 16 numbers withdraws the second card before its section, the lesson stays`, () => {
+    const result = run(`
+      const extra = (n) => () => { const plan = KINDS[${JSON.stringify(kind)}].plan(); for (let i = plan.numbers.length; i < n; i += 1) plan.numbers.push({ initial: i, min: 0, max: 20, label: "extra " + (i + 1) }); return plan; };
+      const at = async (n) => { const r = await lesson(${JSON.stringify(kind)}, undefined, undefined, { plan: extra(n), outlineNumbers: n, moves: [] }); return { error: r.error, rejected: r.rejected, adjustments: r.adjustments, cards: r.cards.length, requests: r.requests }; };
+      console.log(JSON.stringify({ fifteen: await at(15), sixteen: await at(16) }));
+    `);
+    assert.equal(result.fifteen.error, undefined, result.fifteen.error);
+    assert.deepEqual([result.fifteen.cards, result.fifteen.adjustments], [2, []]);
+    assert.equal(result.sixteen.error, undefined, result.sixteen.error);
+    assert.deepEqual(result.sixteen.rejected, []);
+    assert.deepEqual(result.sixteen.adjustments.map(([kind, section, capability, reason]) => [kind, section, capability, reason]), [["visual_removed", 2, kind, "planned_card_budget"]]);
+    assert.deepEqual([result.sixteen.cards, result.sixteen.requests], [1, ["lesson-plan-bootstrap", "lesson-plan-section2", "lesson-plan-section3"]]);
+  });
+}
+
+test("a trade example on other places than the question's, or a subtraction written small first, is refused with the fact naming the example", () => {
+  const result = run(`
+    const plan = () => sp.placeValueTradePlan({ operation: "subtract", numbers: [8.2, 3.75], practice: [6.4, 2.85] });
+    const first = async (example) => (await lesson("place_value_trade", example, undefined, { plan, moves: [1] })).rejected[0]?.[2];
+    console.log(JSON.stringify({ places: await first({ example_first_number: 73.1, example_second_number: 2.65 }), swapped: await first({ example_first_number: 2.65, example_second_number: 7.1 }) }));
+  `);
+  assert.match(result.places, /the second place-value trade card's example 73\.1, 2\.65 has other places than the question's pair 8\.2, 3\.75: the second card keeps the question's places/u);
+  assert.match(result.swapped, /the second place-value trade card's example 2\.65 − 7\.1: 2\.65 − 7\.1 is below zero: the first number is the larger/u);
+});
+
+test("an English lesson labels the second card's number in English", () => {
+  const result = run(`console.log(JSON.stringify(await lesson("make_ten", undefined, undefined, { language: "en" })));`);
+  assert.equal(result.error, undefined, result.error);
+  assert.equal(result.sectionTwoNumbers.at(-1)[1], "second example: in the bigger number's frame");
+});
+
+for (const [kind, label, start] of [
+  ["make_ten", "第二个例子：大数那一框里有几个", 9],
+  ["place_value_trade", "第二个例子：做完了几列", 0],
+  ["place_value_times_ten", "第二个例子：现在用什么单位在数", 0.1],
+]) {
+  test(`${kind}: a first card that writes example parameters is still the first; the second card is recognised; later sections read the second card's number from its start`, () => {
+    const result = run(`
+      const mutate = (plan) => { const content = plan.sections[0].moments[0].actions[0].content; content.parameters = { ...(content.parameters ?? {}), ...KINDS[${JSON.stringify(kind)}].example }; };
+      console.log(JSON.stringify(await lesson(${JSON.stringify(kind)}, undefined, undefined, { mutate })));
+    `);
+    assert.equal(result.error, undefined, result.error);
+    assert.deepEqual(result.rejected, []);
+    assert.deepEqual(result.cards.map(([step]) => step), [1, 2]);
+    assert.equal(result.variables.filter((alias) => alias.startsWith("section_02_")).length, 1);
+    const [, named, initial] = result.sectionThreeNumbers.at(-1);
+    assert.deepEqual([named, initial], [label, start]);
+  });
+}
+
+test("the acceptance budget counts the second card's number: section 1 at 16 variables leaves it no room", () => {
+  const result = run(`
+    const outline = { version: "0.1", title: "Two examples", goals: ["one"], numbers: [{ initial: 8, min: 1, max: 9 }, { initial: 6, min: 1, max: 9 }, { initial: 7, min: 1, max: 9 }, { initial: 5, min: 1, max: 9 }],
+      course_visuals: [1, 2].map((section) => ({ capability: "make_ten", create_section: section, use_sections: [section], relation: "primary", reusable_item: 1 })),
+      sections: [1, 2, 3].map(() => ({ purpose: "Teach", allowed_capabilities: ["make_ten"] })), close: { summary: "Review." } };
+    console.log(JSON.stringify({ fifteen: api.plannedSecondCardOverflow(outline, 15), sixteen: api.plannedSecondCardOverflow(outline, 16) }));
+  `);
+  assert.deepEqual(result.fifteen, []);
+  assert.deepEqual(result.sixteen.map(({ capability, section }) => [capability, section]), [["make_ten", 2]]);
+  assert.match(result.sixteen[0].detail, /the lesson holds at most 16 numbers \(OLL\): section 1 uses 16; the second make_ten card needs one more/u);
 });

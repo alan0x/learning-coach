@@ -632,7 +632,7 @@ function secondCardState(capability: string, content: LessonPlanVisualContent, s
   { positions: number[]; started: number[] } | undefined {
   if (!isSecondCardKind(capability) || !isSecondCard(capability, content, sections)) return undefined;
   const first = sections.flatMap((section) => section.moments.flatMap((moment) => moment.actions)).map((raw) => raw as { action?: string; kind?: string; content?: LessonPlanVisualContent })
-    .find((action) => action.action === "create" && action.kind === "visual" && action.content?.capability === capability && !exampleOf(capability, action.content.parameters))?.content;
+    .find((action) => action.action === "create" && action.kind === "visual" && action.content?.capability === capability)?.content;
   if (!first) return undefined;
   const found = exampleStart(capability, exampleOf(capability, content.parameters)!, (first.numbers ?? []).map((number) => numbers[number - 1]?.initial ?? Number.NaN), first.parameters as Record<string, unknown> | undefined);
   if ("fault" in found) return undefined;
