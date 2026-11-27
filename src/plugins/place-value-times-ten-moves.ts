@@ -91,30 +91,44 @@ export function timesTenNext(problem: PlaceValueTimesTenProblem, from: number): 
   return path.filter((value, k) => k >= Math.ceil(at - 1e-9) && value !== placeValueThousandths(from)).map(decimal);
 }
 
+/** Where the card's state keeps its problem's start (as written), after its five lesson numbers. */
+const TIMES_TEN_START = 5;
+
 /**
- * The problem the card shows while "counted in" is at `state`'s value: the state holds counted in as it is now, not
- * where it started, so the problem is the one whose path holds it. Counted from the amount's own place when that
- * path holds it (0.3: 0.1 -> 0.01 -> 0.001), else from counted in itself (a put-together question's declared start,
- * 40 hundredths from 0.01: the path from there to the target is the same).
+ * The problem the card shows: the state keeps the problem's start after the five lesson numbers (sixth, as written),
+ * since counted in itself moves (a put-together that has reached its target no longer says where it started).
+ * Without it (a state written by hand), the problem whose path holds counted in now: counted from the amount's own
+ * place when that path holds it, else from counted in itself.
  */
 function timesTenProblemNow(state: readonly number[]): { problem: PlaceValueTimesTenProblem } | { fault: string } {
   const [A, T] = [state[TIMES_TEN_NUMBER.amount], state[TIMES_TEN_NUMBER.target]].map(placeValueThousandths);
+  const S = state[TIMES_TEN_START] === undefined ? undefined : placeValueThousandths(state[TIMES_TEN_START]!);
   const C = placeValueThousandths(state[TIMES_TEN_NUMBER.countedIn] ?? Number.NaN);
+  if (A !== undefined && T !== undefined && S !== undefined) {
+    const started = timesTenProblemOf(A, T, S);
+    if (!("fault" in started)) return { problem: started };
+  }
   if (A !== undefined && T !== undefined && C !== undefined) {
     const own = timesTenProblemOf(A, T, undefined);
     if (!("fault" in own) && placeValueTimesTenPath(own).includes(C)) return { problem: own };
     const at = timesTenProblemOf(A, T, C);
     if (!("fault" in at)) return { problem: at };
   }
-  const found = timesTenStartProblem(state);
+  const found = timesTenStartProblem(state.slice(0, 5));
   return "fault" in found ? found : { problem: found.problem };
 }
 
-/** The card's state when it is drawn: its five lesson numbers as it reads them (counted in at the problem's start). */
+/**
+ * The card's state when it is drawn: its five lesson numbers as it reads them (counted in at the problem's start),
+ * then that start, kept while counted in moves.
+ */
 export function placeValueTimesTenState(start: readonly number[]): number[] {
   const values = [...start.slice(0, 5)];
   const found = timesTenStartProblem(values);
-  if (!("fault" in found)) values[TIMES_TEN_NUMBER.countedIn] = decimal(found.problem.start);
+  if (!("fault" in found)) {
+    values[TIMES_TEN_NUMBER.countedIn] = decimal(found.problem.start);
+    values[TIMES_TEN_START] = decimal(found.problem.start);
+  }
   return values;
 }
 
@@ -159,10 +173,13 @@ const halfWidth = (text: string) => text.replace(FULL_WIDTH, (char) => String.fr
 
 /**
  * Whether a task's words give away the practice's count (a numeral that is it: 500 hundredths, or a times pair's
- * renamed count). The amount and target themselves are fine to write (the card shows them), and so is 10.
+ * renamed count). The amount and target themselves are fine to write (the card shows them), and so is 10, the
+ * rule's own number ("10 of one place make 1 of the next"): a practice whose count is 10 (1 one = 10 tenths) is
+ * never dropped for it, since words cannot say the rule without it.
  */
 export function placeValueTimesTenWordsGiveAnswer(words: string, practice: PlaceValueTimesTenProblem): boolean {
   const count = practice.question === "times" ? practice.renamed! : practice.result;
+  if (count === 10) return false;
   const shown = new Set([practice.amount, practice.target].map(decimal));
   for (const match of halfWidth(String(words)).matchAll(/\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d*\.\d+|\d+/gu)) {
     const value = Number(match[0].replace(/,/gu, ""));

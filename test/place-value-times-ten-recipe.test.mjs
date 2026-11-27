@@ -57,9 +57,11 @@ test("place_value_times_ten is a trial, off by default: built, not offered; its 
 test("counted in moves forward along the problem's path; nothing else moves", () => {
   const moves = api.RECIPE_HOOKS.place_value_times_ten.number_moves;
   const to = (state, ...values) => moves.moves(state, values.map((value) => ({ position: 4, to: value })));
-  // The card's state when drawn: the four numbers as written, counted in at the question's unit.
+  // The card's state when drawn: the four numbers as written, counted in at the question's unit, then that start
+  // (kept while counted in moves, so the problem is always known).
   const start = moves.state([0.3, 0.001, 5, 0.01, 0]);
-  assert.deepEqual(start, [0.3, 0.001, 5, 0.01, 0.1]);
+  assert.deepEqual(start, [0.3, 0.001, 5, 0.01, 0.1, 0.1]);
+  assert.deepEqual(to(start, 0.01).steps.at(-1).to, [0.3, 0.001, 5, 0.01, 0.01, 0.1]);
   assert.deepEqual(to(start, 0.01, 0.001).steps.map((step) => step.to[4]), [0.01, 0.001]);
   assert.deepEqual(to(start, 0.001).steps.map((step) => step.to[4]), [0.001], "straight to the target");
   assert.deepEqual(to(start, 0.01, 0.01).steps.map((step) => step.to[4]), [0.01, 0.01], "the same value again changes nothing");
@@ -68,13 +70,16 @@ test("counted in moves forward along the problem's path; nothing else moves", ()
   assert.match(to(start, 0.001, 0.0001).refused.reason, /from 0.001 it has reached the target, 0.001/);
   // A put-together question counts from the unit it names, up to the target.
   const together = moves.state([0.4, 0.1, 0.7, 0.1, 0.01]);
-  assert.deepEqual(together, [0.4, 0.1, 0.7, 0.1, 0.01]);
+  assert.deepEqual(together, [0.4, 0.1, 0.7, 0.1, 0.01, 0.01]);
   assert.deepEqual(to(together, 0.1).steps.map((step) => step.to[4]), [0.1]);
+  // Once it has reached the target, the refusal says so (review of #187: it once named the start instead).
+  assert.match(to(together, 0.1, 0.01).refused.reason, /never back to 0.01; from 0.1 it has reached the target, 0.1/);
+  assert.match(to(together, 0.1, 1).refused.reason, /1 is not one of its values; from 0.1 it has reached the target, 0.1/);
   const far = moves.state([0.5, 0.1, 0.3, 0.1, 0.001]);
   assert.deepEqual(to(far, 0.01, 0.1).steps.map((step) => step.to[4]), [0.01, 0.1], "two places up, one at a time");
   // A times pair: the larger number's unit, then the smaller number (written either way).
   assert.deepEqual(to(moves.state([700, 70, 4000, 400, 0]), 70).steps.map((step) => step.to[4]), [70]);
-  assert.deepEqual(moves.state([70, 700, 400, 4000, 0]), [70, 700, 400, 4000, 100]);
+  assert.deepEqual(moves.state([70, 700, 400, 4000, 0]), [70, 700, 400, 4000, 100, 100]);
   assert.match(to(moves.state([700, 70, 4000, 400, 0]), 10).refused.reason, /100 \(hundreds\) -> 70; 10 is not one of its values; from 100 the next values are 70/);
   assert.match(moves.moves(start, [{ position: 0, to: 0.5 }]).refused.reason, /stay as written: the demonstration moves only counted in/);
   assert.match(moves.moves(start, [{ position: 3, to: 0.1 }]).refused.reason, /stay as written/);
@@ -208,6 +213,9 @@ test("the practice is the learner's own problem, worked by taps; then the card's
     ["leak-hint", { amount: 700, target: 70, practice: [4000, 400], hints: ["4000 里有４０个百。"] }, "zh-CN"],
     // Writing the practice's own numbers, or 10, is fine.
     ["numbers-words", { amount: 0.3, target: 0.001, practice: [5, 0.01], prompt: "Now count 5 in hundredths (0.01): ten of one place make one of the next." }, "en-US"],
+    // 10 is the rule's own number: a practice whose count is 10 (1 one = 10 tenths) keeps its task when the words
+    // say 10 (review of #187). A times pair's renamed count is never 10 (100 and 10 is a count).
+    ["ten-count", { amount: 0.7, target: 0.01, practice: [1, 0.1], prompt: "10 of one place make 1 of the next: count 1 in tenths." }, "en-US"],
     // A model's typed question in a later section stays as written.
     ["typed", { amount: 0.3, target: 0.001, practice: [5, 0.01], typed: { prompt: "How many thousandths are in 0.3?", answer: "300" } }, "en-US"],
   ]));
@@ -236,6 +244,10 @@ test("the practice is the learner's own problem, worked by taps; then the card's
     assert.deepEqual(result[id].adjustments.map((adjustment) => [adjustment.kind, adjustment.reason]), [["activity_removed", "practice_answer_in_words"]], id);
   }
   assert.deepEqual(result["numbers-words"].lesson.lesson.tasks.map((each) => each.completion.kind), ["card_fact", "numeric_row"]);
+  for (const id of ["ten-count"]) {
+    assert.deepEqual(result[id].lesson.lesson.tasks.map((each) => each.completion.kind), ["card_fact", "numeric_row"], id);
+    assert.ok(result[id].lesson.lesson.tasks[1].completion.parts.some((part) => part.blank?.answer === "10"), id);
+  }
   assert.deepEqual(result.typed.lesson.lesson.tasks.map((each) => [each.completion.kind, each.completion.answer]), [["card_fact", undefined], ["numeric_row", undefined], ["numeric_answer", "300"]]);
 });
 
@@ -362,7 +374,7 @@ test("with the trial on, the model's first request describes the card; without i
   assert.ok(on.text.includes("count_in_another_unit"));
   assert.ok(on.text.includes("换一个单位来数"));
   assert.equal(off.text.includes("place_value_times_ten"), false);
-  console.log(`first request with the trial on: +${on.bytes - off.bytes} B (${off.bytes} -> ${on.bytes})`);
+  console.log(`times-ten trial: first request prompt (UTF-8 bytes) +${on.bytes - off.bytes} B (${off.bytes} -> ${on.bytes})`);
 });
 
 // A stubbed generation run, the outline declaring only the card's four numbers (or also counted in): the program
@@ -413,6 +425,57 @@ test("a stubbed generation run: the outline's four numbers, the program's counte
     // Section 2 is told where the demonstration stands.
     for (const fact of ['"reached_target":true', '"counted_in_now":0.001', '"practice":[5,0.01]']) assert.ok(result.later.includes(fact), `${outlineNumbers}: ${fact}`);
   }
+});
+
+test("a replay before a card is drawn is left out and recorded, never the lesson (times ten and make ten; review of #187)", () => {
+  const result = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    const { timesTenPlan, makeTenPlan } = await import(${here("./sample-plans.mjs")});
+    // A moment before the card's own that replays the card's fifth number.
+    const early = (plan) => {
+      const moments = plan.sections[0].moments;
+      for (const action of moments[0].actions) for (const ref of action.references ?? []) if (ref.source === "local_board_item") ref.moment = 2;
+      moments.unshift({ narration: "Before the card.", restart_numbers: [5], actions: [{ action: "teacher_expression", expression: "neutral" }] });
+      return plan;
+    };
+    const out = {};
+    for (const [name, plan] of [["times", early(timesTenPlan({ amount: 0.3, target: 0.001, practice: [5, 0.01] }))], ["make", early(makeTenPlan({ numbers: [8, 6], practice: [7, 5] }))]]) {
+      try {
+        const compiled = api.compileAndValidateLessonPlan(plan, { language: "en-US" });
+        out[name] = { first: compiled.lesson.steps[0].beats[0], adjustments: compiled.view_adjustments.map((adjustment) => adjustment.reason), tasks: compiled.lesson.lesson.tasks.length };
+      } catch (error) { out[name] = { code: error.code, capability: error.capability, message: error.message }; }
+    }
+    console.log(JSON.stringify(out));
+  `, "place_value_times_ten,make_ten");
+  for (const name of ["times", "make"]) {
+    assert.deepEqual(result[name].first, { key: "moment-01", say: "Before the card.", actions: [{ do: "expression", expression: "neutral" }] }, name);
+    assert.deepEqual(result[name].adjustments, ["restart_before_card"], name);
+    assert.equal(result[name].tasks, 2, name);
+  }
+});
+
+test("the card's numbers keep their own ranges, so a picture sharing one is refused with the card's tag (review of #187)", () => {
+  // The fit: each of the four numbers from 0 to its value; counted in over the problem's path.
+  const fit = (values) => {
+    const plan = { numbers: values.map((initial) => ({ initial, min: -5, max: 9_999_999, student_control: { kind: "slider", step: 1 } })) };
+    api.RECIPE_HOOKS.place_value_times_ten.fit_numbers({ capability: "place_value_times_ten", parameters: {}, numbers: [1, 2, 3, 4, 5] }, plan);
+    return plan.numbers.map((number) => [number.min, number.max, "student_control" in number]);
+  };
+  assert.deepEqual(fit([0.3, 0.001, 5, 0.01, 0.1]), [[0, 0.3, false], [0, 0.001, false], [0, 5, false], [0, 0.01, false], [0.001, 0.1, false]]);
+  assert.deepEqual(fit([0.4, 0.1, 0.7, 0.1, 0.01]), [[0, 0.4, false], [0, 0.1, false], [0, 0.7, false], [0, 0.1, false], [0.01, 0.1, false]]);
+  assert.deepEqual(fit([700, 70, 4000, 400, 100]), [[0, 700, false], [0, 70, false], [0, 4000, false], [0, 400, false], [70, 100, false]]);
+  assert.deepEqual(fit([0.3, 0.001, 5, 0.01, 0]).at(-1), [0, 0.1, false], "a start read over still lies in the range");
+  const result = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    const { timesTenPlan } = await import(${here("./sample-plans.mjs")});
+    const plan = timesTenPlan({ amount: 0.3, target: 0.001, practice: [5, 0.01] });
+    plan.sections[0].moments.unshift({ narration: "A line first.", actions: [{ action: "create", kind: "visual", role: "main_visual", content: { capability: "number_line", parameters: {}, numbers: [1] }, placement: { relation: "new_region" } }] });
+    for (const action of plan.sections[0].moments[1].actions) for (const ref of action.references ?? []) if (ref.source === "local_board_item") ref.moment = 2;
+    try { api.compileAndValidateLessonPlan(plan, { language: "en-US" }); console.log(JSON.stringify({ compiled: true })); }
+    catch (error) { console.log(JSON.stringify({ code: error.code, capability: error.capability, message: error.message })); }
+  `);
+  assert.deepEqual([result.code, result.capability], ["LESSON_PLAN_SHARED_NUMBER", "place_value_times_ten"]);
+  assert.match(result.message, /the times-ten card needs lesson numbers of its own: the number_line visual shows one of them/);
 });
 
 test("a put-together question whose outline leaves out counted in loses the card at once, never a section's attempts", () => {

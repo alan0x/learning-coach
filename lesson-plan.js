@@ -17730,22 +17730,31 @@ function timesTenNext(problem, from) {
   const at2 = placeValueTimesTenPosition(problem, placeValueThousandths(from) ?? 0);
   return path.filter((value2, k) => k >= Math.ceil(at2 - 1e-9) && value2 !== placeValueThousandths(from)).map(decimal);
 }
+var TIMES_TEN_START = 5;
 function timesTenProblemNow(state) {
   const [A, T] = [state[TIMES_TEN_NUMBER.amount], state[TIMES_TEN_NUMBER.target]].map(placeValueThousandths);
+  const S = state[TIMES_TEN_START] === void 0 ? void 0 : placeValueThousandths(state[TIMES_TEN_START]);
   const C = placeValueThousandths(state[TIMES_TEN_NUMBER.countedIn] ?? Number.NaN);
+  if (A !== void 0 && T !== void 0 && S !== void 0) {
+    const started = timesTenProblemOf(A, T, S);
+    if (!("fault" in started)) return { problem: started };
+  }
   if (A !== void 0 && T !== void 0 && C !== void 0) {
     const own = timesTenProblemOf(A, T, void 0);
     if (!("fault" in own) && placeValueTimesTenPath(own).includes(C)) return { problem: own };
     const at2 = timesTenProblemOf(A, T, C);
     if (!("fault" in at2)) return { problem: at2 };
   }
-  const found = timesTenStartProblem(state);
+  const found = timesTenStartProblem(state.slice(0, 5));
   return "fault" in found ? found : { problem: found.problem };
 }
 function placeValueTimesTenState2(start) {
   const values = [...start.slice(0, 5)];
   const found = timesTenStartProblem(values);
-  if (!("fault" in found)) values[TIMES_TEN_NUMBER.countedIn] = decimal(found.problem.start);
+  if (!("fault" in found)) {
+    values[TIMES_TEN_NUMBER.countedIn] = decimal(found.problem.start);
+    values[TIMES_TEN_START] = decimal(found.problem.start);
+  }
   return values;
 }
 function placeValueTimesTenMove2(state, position, to) {
@@ -17783,6 +17792,7 @@ var FULL_WIDTH3 = /[０-９．，＝]/gu;
 var halfWidth2 = (text5) => text5.replace(FULL_WIDTH3, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
 function placeValueTimesTenWordsGiveAnswer(words, practice) {
   const count = practice.question === "times" ? practice.renamed : practice.result;
+  if (count === 10) return false;
   const shown = new Set([practice.amount, practice.target].map(decimal));
   for (const match of halfWidth2(String(words)).matchAll(/\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d*\.\d+|\d+/gu)) {
     const value2 = Number(match[0].replace(/,/gu, ""));
@@ -20567,15 +20577,18 @@ var MATH_HOOKS = {
   },
   place_value_times_ten: {
     // The card's numbers have no control: the learner works it by its own taps (OLL 0028; the model never names a
-    // control). Each number's range runs from 0 to the most the card takes; counted in runs over every unit (the
-    // demonstration's path is the card's to check). The compiler checks every number and each step itself.
+    // control). Each number's range is its own value, and counted in runs over the problem's path (as written: 0.1
+    // to 0.001), as make ten's and the trade card's do; the compiler checks every number and each step itself.
     fit_numbers(content, plan) {
       const numbers = content.numbers ?? [];
       const definitions = numbers.map((number) => plan.numbers?.[number - 1]);
       if (!definitions.length || definitions.some((definition) => !definition)) return /* @__PURE__ */ new Map();
+      const found = timesTenStartProblem(definitions.map((definition) => definition.initial));
+      const path = "fault" in found ? [] : placeValueTimesTenPath(found.problem).map(timesTenDecimal);
       definitions.forEach((definition, position) => {
-        definition.min = 0;
-        definition.max = Math.max(definition.initial, position === TIMES_TEN_NUMBER.countedIn ? 1e6 : 9e6);
+        const span3 = position === TIMES_TEN_NUMBER.countedIn ? [0, definition.initial, ...path].slice(path.length ? 1 : 0) : [0, definition.initial];
+        definition.min = Math.min(...span3);
+        definition.max = Math.max(...span3);
         delete definition.student_control;
         delete definition.unit;
       });
@@ -25431,6 +25444,11 @@ function compileLessonPlan(value2, options = {}) {
       for (const number of moment.restart_numbers ?? []) {
         const mover = movers.get(number);
         const state = mover && moverStates.get(mover.visual);
+        if (!mover && cardNumbers.has(number)) {
+          replayed.delete(variableAlias(number));
+          viewAdjustments.push({ section: sectionIndex, reason: "restart_before_card", detail: `${momentPath}.restart_numbers: number ${number} is replayed before the card that moves it is drawn; left out` });
+          continue;
+        }
         if (!mover || !state) continue;
         state.now = [...state.start];
         for (const other of mover.visual.mover.numbers) {
