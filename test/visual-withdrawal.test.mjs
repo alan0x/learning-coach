@@ -40,7 +40,7 @@ test("BT-32: the mat section 2 could not draw is withdrawn; section 2 is written
   assert.deepEqual(removed.map(({ section, capability, reason }) => ({ section, capability, reason })),
     [{ section: 2, capability: "base_ten_trade", reason: "visual_limits_after_retries" }]);
   // The true fault is named (the numbers are the number line's), not "at most 19 tens".
-  assert.match(removed[0].detail, /needs lesson numbers of its own/u);
+  assert.match(removed[0].detail, /lesson number \d+ is a count on the trading mat, which changes only by its trades; the number_line_steps visual shows it too/u);
   // The extra request is outside the repair budget and carries no stale error. It offers section 1's number
   // line, not the mat, and says the mat is gone: the outline's purposes still name the blocks.
   const last = JSON.parse(requests.at(-1).prompt);

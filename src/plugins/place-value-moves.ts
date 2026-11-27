@@ -202,6 +202,12 @@ export function placeValueMoves(state: readonly number[], moves: ReadonlyArray<{
   const ignored: Array<{ index: number; position: number; reason: string }> = [];
   let current = [...state];
   for (const [index, move] of moves.entries()) {
+    // The practice number never moves: an animation of it is left out (and recorded by the compiler), not refused, as
+    // the times-ten card's are (#188).
+    if (move.position === 1 && state.length === 4 && move.to !== current[1]) {
+      ignored.push({ index, position: move.position, reason: "the practice number is the learner's: it stays as written, and the demonstration moves only the question's number" });
+      continue;
+    }
     const part = placeValueDrawnBuiltPart(current, move.position, move.to);
     if (part) {
       ignored.push({ index, position: move.position, reason: part });

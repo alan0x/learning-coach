@@ -83,7 +83,7 @@ test("too many variables names a picture the last section drew, not a card an ea
   assert.deepEqual(result, { code: "LESSON_PLAN_OLL_SCHEMA", capability: "number_line" });
 });
 
-test("a later section can lose two pictures, each at once: a line, then an array, both on the card's numbers", () => {
+test("a later section can lose two pictures, each at once: a line, then an array, both on the card's practice numbers", () => {
   const result = run(`
     const api = await import(${here("../lesson-plan.js")});
     const { makeTenPlan, samplePlan, makeSamplePlanModelCompatible } = await import(${here("./sample-plans.mjs")});
@@ -111,7 +111,7 @@ test("a later section can lose two pictures, each at once: a line, then an array
       const drafts = compatible.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({ section: index + 1, version: compatible.version, moments, student_activities }));
       return { outline: stagedOutline(compatible, drafts), drafts };
     };
-    const line = ["number_line_steps", [1, 2, 3]], array = ["rectangle_unit_square_array", [1, 2]];
+    const line = ["number_line_steps", [1, 2, 3]], array = ["rectangle_unit_square_array", [3, 4]];
     const staged = [build([line, array]), build([array]), build([])];
     const requests = [], adjustments = [];
     let error, generated, sectionTwo = 0;

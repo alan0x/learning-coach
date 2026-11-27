@@ -50,7 +50,7 @@ test("place_value_chart is offered by default, last in the catalog (owner, 2026-
   assert.deepEqual(to(moves.state([26.075, 18.064], apart), 0.075).steps.at(-1).to[0], 0.075);
   assert.match(to(whole, 409).refused.reason, /what is still on the chart.* from 60408 it can be 408, 8, 0/);
   assert.match(to([408, 30705, 60408, 0], 60408).refused.reason, /takes whole places out/);
-  assert.match(moves.moves(built, [{ position: 1, to: 0 }]).refused.reason, /practice number is the learner's/);
+  assert.match(moves.moves(built, [{ position: 1, to: 0 }]).ignored[0].reason, /practice number is the learner's/);
 });
 
 /** Runs a script in its own process. (It named the trial when the chart was one; the chart is offered since 2026-11-26.) */
@@ -286,7 +286,7 @@ test("a stubbed generation run: the chart, its steps and the practice reach the 
   `);
   assert.deepEqual(result.beats, [["write", "focus"], ["animate"], ["animate"], ["animate"]]);
   assert.deepEqual(result.tasks.map((task) => [task.completion.kind, task.completion.fact, task.start.values.section_01_moment_01_item_01_number]), [["card_fact", "built", 30705000]]);
-  assert.deepEqual(result.plugins, { math: "0.11.0", shared: "0.1.0" });
+  assert.deepEqual(result.plugins, { math: "0.12.0", shared: "0.1.0" });
   // Section 2 is told the chart in its own terms, with what the demonstration left to do.
   const facts = JSON.stringify(result.later);
   for (const fact of ['"number":60408', '"given":"name"', '"on_chart_now":60408', '"still_to_place":0', '"practice_number":30705', '"Ten thousands"']) assert.ok(facts.includes(fact), fact);
@@ -462,7 +462,7 @@ test("a chart to build that its own section never builds is drawn showing its nu
   assert.deepEqual([part.steps.map((step) => step.to[0]), part.ignored.map((each) => each.index)], [[60408], [0, 1]]);
   assert.match(part.ignored[0].reason, /the chart has shown all of 60408 since it was drawn \(the section that drew it put none of it on\), so 60000 is on it already/);
   assert.match(to(drawn, 60409).refused.reason, /from 60408 it can be only 60408: the number is built/);
-  assert.match(moves.moves(drawn, [{ position: 1, to: 0 }]).refused.reason, /practice number is the learner's/);
+  assert.match(moves.moves(drawn, [{ position: 1, to: 0 }]).ignored[0].reason, /practice number is the learner's/);
   // A chart built the normal way and then written a part again is still refused (objective check 1, unchanged).
   assert.match(to([60408, 30705, 60408, 1], 60000).refused.reason, /the number is built/);
 

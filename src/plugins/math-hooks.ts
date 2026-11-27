@@ -205,6 +205,14 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
     },
     // Columns finished moves forward from 0; the two numbers and the practice pair never move.
     number_moves: { state: placeValueTradeState, moves: placeValueTradeMoves },
+    // The pair, columns finished and one status a column: the more columns of adding or subtracting the pair.
+    planned_variables(values) {
+      const [a, b] = values.slice(0, 2).map(placeValueTradeThousandths);
+      if (a === undefined || b === undefined) return undefined;
+      const columns = (["add", "subtract"] as const).filter((operation) => operation === "add" || a >= b)
+        .map((operation) => placeValueTradeColumnsOf(operation, a, b).length);
+      return 3 + Math.max(...columns);
+    },
   },
   make_ten: {
     // The card's numbers have no control: the learner works it by its own taps (OLL 0027; owner, 2026-11-24: the
@@ -224,6 +232,8 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
     },
     // The count in the bigger frame moves forward from the bigger number to 10; nothing else moves.
     number_moves: { state: makeTenState, moves: makeTenMoves },
+    // The pair, the count in the bigger frame and the count moved.
+    planned_variables: () => 4,
   },
   place_value_times_ten: {
     // The card's numbers have no control: the learner works it by its own taps (OLL 0028; the model never names a
@@ -249,6 +259,11 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
     number_moves: { state: placeValueTimesTenState, moves: placeValueTimesTenMoves },
     // Numbers the card cannot start on go with the outline, before any section is written for them.
     outline_fault: timesTenOutlineFault,
+    // The amount, the unit asked, the start unit and one or two row sets (two when the count crosses two places).
+    planned_variables(values) {
+      const found = timesTenStartProblem(values.slice(0, 5));
+      return "fault" in found ? 5 : 4 + (found.problem.g === 2 ? 1 : 0);
+    },
   },
   place_value_compare: {
     // The card's numbers have no control: the learner works it by its own taps (OLL 0029; the model never names a

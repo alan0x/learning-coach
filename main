@@ -7174,8 +7174,8 @@ import { appendFileSync, mkdirSync, realpathSync, writeFileSync } from "node:fs"
 
 // src/raw-reply.ts
 var RAW_REPLY_PREFIX = "learning-coach: raw ";
-function frameRawReply(record6) {
-  return `${RAW_REPLY_PREFIX}${JSON.stringify(record6)}
+function frameRawReply(record7) {
+  return `${RAW_REPLY_PREFIX}${JSON.stringify(record7)}
 `;
 }
 
@@ -7627,7 +7627,7 @@ var v0_1_schema_default = {
         do: { enum: ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate", "hide", "view", "tap"] },
         when: { enum: ["before_speech", "during_speech", "after_speech"] },
         as: { $ref: "#/$defs/alias" },
-        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model", "base_ten_trade", "place_value_chart", "place_value_trade", "make_ten", "place_value_times_ten"] },
+        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model", "base_ten_trade", "place_value_chart", "place_value_trade", "make_ten", "place_value_times_ten", "place_value_compare"] },
         role: { type: "string" },
         content: { type: "object" },
         place: { $ref: "#/$defs/placement" },
@@ -7748,6 +7748,13 @@ var v0_1_schema_default = {
             properties: { do: { const: "write" }, kind: { const: "place_value_times_ten" } }
           },
           then: { properties: { content: { $ref: "#/$defs/placeValueTimesTenContent" } } }
+        },
+        {
+          if: {
+            required: ["do", "kind"],
+            properties: { do: { const: "write" }, kind: { const: "place_value_compare" } }
+          },
+          then: { properties: { content: { $ref: "#/$defs/placeValueCompareContent" } } }
         },
         {
           if: { properties: { do: { const: "revise" } } },
@@ -8130,6 +8137,27 @@ var v0_1_schema_default = {
         }
       }
     },
+    placeValueCompareContent: {
+      type: "object",
+      required: ["a", "b", "compared", "marked", "signed"],
+      additionalProperties: false,
+      properties: {
+        language: { enum: ["en-US", "zh-CN"] },
+        a: { type: "integer", minimum: 0, maximum: 9999999999 },
+        b: { type: "integer", minimum: 0, maximum: 9999999999 },
+        a_decimals: { type: "integer", minimum: 0, maximum: 3 },
+        b_decimals: { type: "integer", minimum: 0, maximum: 3 },
+        compared: { type: "integer", minimum: 0, maximum: 8 },
+        marked: { type: "integer", minimum: 0, maximum: 7 },
+        signed: { type: "integer", minimum: 0, maximum: 1 },
+        bindings: {
+          type: "array",
+          minItems: 1,
+          maxItems: 64,
+          items: { $ref: "#/$defs/valueBinding" }
+        }
+      }
+    },
     scene3dContent: {
       type: "object",
       required: ["objects", "camera", "fallback"],
@@ -8281,7 +8309,7 @@ var v0_1_schema_default = {
       required: ["target", "expression"],
       additionalProperties: false,
       properties: {
-        target: { type: "string", pattern: "^(?:[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*|target|a|b|finished|filled|moved|amount|counted_in|moved_once|moved_twice)$" },
+        target: { type: "string", pattern: "^(?:[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*|target|a|b|finished|filled|moved|amount|counted_in|moved_once|moved_twice|a_decimals|b_decimals|compared|marked|signed)$" },
         expression: { type: "string", minLength: 1, maxLength: 256 },
         allow_zero: { const: true },
         hide_when_undefined: { const: true },
@@ -9253,6 +9281,11 @@ function placeValueTradeDecimals(value) {
   const frac = value % 1e3;
   return !frac ? 0 : frac % 100 === 0 ? 1 : frac % 10 === 0 ? 2 : 3;
 }
+function placeValueTradeNumeralFixed(value, dec, language = "en-US") {
+  const whole = Math.floor(value / 1e3), frac = value % 1e3;
+  const wholeText = placeValueNumeral(whole * 1e3, language);
+  return dec ? `${wholeText}.${String(frac).padStart(3, "0").slice(0, dec)}` : wholeText;
+}
 var placeValueTradeUnitWord = (place, language = "en-US") => placeValueUnitName(place, language);
 var OP = { add: "+", subtract: "-" };
 var readable = (value) => typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= PLACE_VALUE_TRADE_MAX_VALUE;
@@ -9497,6 +9530,35 @@ function placeValueTradeDemoState(problem, k) {
     throw new Error(`columns finished must be 0..${problem.columns.length}`);
   return k === 0 ? placeValueTradeStart(problem) : placeValueTradeDemoSteps(problem).steps[k - 1].after;
 }
+function placeValueTradeDemoAt(problem, finished) {
+  const steps = placeValueTradeDemoSteps(problem).steps;
+  const n = problem.columns.length;
+  const v = Number.isFinite(finished) ? Math.min(n, Math.max(0, finished)) : 0;
+  const k = Math.min(n, Math.floor(v + 1e-9));
+  const before = steps.slice(0, k).reduce((sum, step) => sum + step.actions.length, 0);
+  if (k >= n)
+    return { k, j: 0, value: k, index: before };
+  const m = steps[k].actions.length;
+  const j = Math.min(m - 1, Math.max(0, Math.floor((v - k) * m + 1e-6)));
+  return { k, j, value: j === 0 ? k : k + j / m, index: before + j };
+}
+function placeValueTradeDemoValues(problem, from, to) {
+  const steps = placeValueTradeDemoSteps(problem).steps;
+  const start = placeValueTradeDemoAt(problem, from), end = placeValueTradeDemoAt(problem, to);
+  const values = [];
+  for (let k = start.k; k < Math.min(end.k + (end.j > 0 ? 1 : 0), steps.length); k += 1) {
+    const m = steps[k].actions.length;
+    for (let j = k === start.k ? start.j + 1 : 1; j <= m; j += 1) {
+      if (k === end.k && j > end.j)
+        break;
+      values.push(j === m ? k + 1 : k + j / m);
+    }
+  }
+  return values;
+}
+function placeValueTradeDemoStateAt(problem, at) {
+  return at.j === 0 ? placeValueTradeDemoState(problem, at.k) : placeValueTradeDemoSteps(problem).steps[at.k].states[at.j];
+}
 function record3(value, path, fail) {
   if (!value || typeof value !== "object" || Array.isArray(value))
     fail(path, "Expected an object");
@@ -9602,14 +9664,16 @@ function placeValueTradeState(raw) {
   const places = Array.isArray(content.places) ? content.places : [];
   const max = placeValueTradeMaxStatus(operation);
   const status = Object.fromEntries(columns.map((place) => [place, Math.min(max, Math.max(0, Math.round(Number(places.find((item) => item?.place === place)?.status) || 0)))]));
-  const finished = int(content.finished, 0, columns.length);
-  if (finished > 0) {
+  const asked = typeof content.finished === "number" && Number.isFinite(content.finished) ? Math.min(columns.length, Math.max(0, content.finished)) : 0;
+  if (asked > 0) {
     try {
-      return { ...placeValueTradeDemoState(problem, finished), finished };
+      const at = placeValueTradeDemoAt(problem, asked);
+      if (at.value > 0)
+        return { ...placeValueTradeDemoStateAt(problem, at), finished: at.value };
     } catch {
     }
   }
-  return { problem, status, finished };
+  return { problem, status, finished: Math.floor(asked + 1e-9) };
 }
 function placeValueTradeChanges(before, after) {
   return after.problem.columns.filter((place) => after.status[place] !== before.status[place]).map((place) => ({ place, field: "status", before: before.status[place], after: after.status[place] }));
@@ -9903,7 +9967,9 @@ var MAKE_TEN_WORDS = {
     cardLabel: "Making ten on two ten frames",
     howto: {
       start: "Make a ten: tap a {c} counter to fill the empty places.",
-      going: "Keep tapping {c} counters until the frame is full.",
+      // Once a counter has crossed, the line also says it can go back: hosts that draw the card's own line skip the
+      // fixed how-to, which said so (Learn #259).
+      going: "Keep tapping {c} counters until the frame is full. A counter that crossed goes back when tapped.",
       done: "The frame is a ten. Fill in the blanks.",
       shown: "The frame is a ten."
     },
@@ -9929,7 +9995,7 @@ var MAKE_TEN_WORDS = {
     cardLabel: "\u4E24\u4E2A\u5341\u683C\u6846\u51D1\u5341",
     howto: {
       start: "\u51D1\u6210\u5341\uFF1A\u70B9{c}\u7684\u5706\u7247\uFF0C\u628A\u7A7A\u4F4D\u586B\u6EE1\u3002",
-      going: "\u63A5\u7740\u70B9{c}\u7684\u5706\u7247\uFF0C\u76F4\u5230\u6846\u6EE1\u4E86\u3002",
+      going: "\u63A5\u7740\u70B9{c}\u7684\u5706\u7247\uFF0C\u76F4\u5230\u6846\u6EE1\u4E86\u3002\u79FB\u8FC7\u53BB\u7684\u5706\u7247\uFF0C\u70B9\u4E00\u4E0B\u5C31\u56DE\u53BB\u3002",
       done: "\u6846\u6EE1\u5341\u4E86\u3002\u5728\u4E0B\u9762\u586B\u7A7A\u3002",
       shown: "\u6846\u6EE1\u5341\u4E86\u3002"
     },
@@ -10160,6 +10226,17 @@ function placeValueTimesTenDemoState(problem, position) {
   const whole = Math.floor(at + 1e-9), part = at - whole;
   const moved = Math.floor(part * problem.n + 1e-9);
   return { problem, stages: Array.from({ length: problem.n }, (_, i) => Math.min(problem.g, whole + (i < moved ? 1 : 0))), demo: at };
+}
+function placeValueTimesTenDemoValues(problem, from, to) {
+  const path = placeValueTimesTenPath(problem);
+  const n = Math.max(1, problem.n);
+  const index = (value) => Math.floor(placeValueTimesTenPosition(problem, value) * n + 1e-6);
+  const values = [];
+  for (let t = index(from) + 1; t <= index(to); t += 1) {
+    const k = Math.floor(t / n), r = t - k * n;
+    values.push(r === 0 ? path[k] : path[k] + (path[k + 1] - path[k]) * r / n);
+  }
+  return values;
 }
 function countedInText(problem, value, language = "en-US") {
   const place = placeValueTimesTenPlaceOfUnit(value);
@@ -10448,11 +10525,394 @@ var placeValueTimesTenRowWidth = (k) => k * (GEO.D + GEO.G) - GEO.G + 2 * GEO.RP
 var ROW_W = placeValueTimesTenRowWidth(10);
 var WIDE = ROW_W + 2 * GEO.CP;
 
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/place-value-compare.js
+var PLACE_VALUE_COMPARE_KIND = "place_value_compare";
+var PLACE_VALUE_COMPARE_FEATURE = "plugin:math/place-value-compare@1";
+var PLACE_VALUE_COMPARE_PLUGIN_VERSION = "0.12.0";
+var PLACE_VALUE_COMPARE_LANGUAGES = PLACE_VALUE_CHART_LANGUAGES;
+var PLACE_VALUE_COMPARE_MAX_COLUMNS = 7;
+var PLACE_VALUE_COMPARE_MAX_DECIMALS = 3;
+var PLACE_VALUE_COMPARE_MAX_VALUE = PLACE_VALUE_MAX_VALUE;
+var PLACE_VALUE_COMPARE_CARD_BINDINGS = ["a", "b", "a_decimals", "b_decimals", "compared"];
+var PLACE_VALUE_COMPARE_PROBLEM_FIELDS = ["a", "b"];
+var PLACE_VALUE_COMPARE_DEMONSTRATION_FIELD = "compared";
+var PLACE_VALUE_COMPARE_TAP_FIELDS = ["marked", "signed"];
+var PLACE_VALUE_COMPARE_BINDINGS = [...PLACE_VALUE_COMPARE_CARD_BINDINGS, ...PLACE_VALUE_COMPARE_TAP_FIELDS];
+var PLACE_VALUE_COMPARE_SIGNS = [">", "=", "<"];
+var PLACE_VALUE_COMPARE_SIGN_PLACES = ["greater", "equal", "less"];
+var PLACE_VALUE_COMPARE_TAP_PLACES = Object.freeze([...PLACE_VALUE_TAP_PLACES, ...PLACE_VALUE_COMPARE_SIGN_PLACES]);
+var placeValueCompareSignAt = (index) => Number.isInteger(index) && index >= PLACE_VALUE_TAP_PLACES.length ? PLACE_VALUE_COMPARE_SIGNS[index - PLACE_VALUE_TAP_PLACES.length] : void 0;
+var PLACE_VALUE_COMPARE_TAPS = ["same", "different", "sign", "column"];
+var placeValueCompareOwnDecimals = (value) => placeValueTradeDecimals(value);
+var placeValueCompareNumeral = (value, dec, language = "en-US") => placeValueTradeNumeralFixed(value, dec, language);
+function placeValueCompareFault(a, b) {
+  for (const n of [a, b]) {
+    if (!Number.isSafeInteger(n.value) || n.value < 0 || n.value > PLACE_VALUE_COMPARE_MAX_VALUE)
+      return "unreadable";
+    if (!Number.isInteger(n.dec) || n.dec < placeValueCompareOwnDecimals(n.value) || n.dec > PLACE_VALUE_COMPARE_MAX_DECIMALS)
+      return "decimals";
+  }
+  const low = -Math.max(a.dec, b.dec);
+  const high = Math.max(placeValueTopPlace(a.value), placeValueTopPlace(b.value), 0);
+  if (high - low + 1 > PLACE_VALUE_COMPARE_MAX_COLUMNS)
+    return "too_wide";
+  if (a.value === b.value && a.dec === b.dec)
+    return "same_numeral";
+  return void 0;
+}
+function placeValueComparePairOf(a, b) {
+  const low = -Math.max(a.dec, b.dec);
+  const high = Math.max(placeValueTopPlace(a.value), placeValueTopPlace(b.value), 0);
+  const columns = [];
+  for (let place = high; place >= low; place -= 1)
+    columns.push(place);
+  const da = columns.map((place) => placeValueDigitAt(a.value, place));
+  const db = columns.map((place) => placeValueDigitAt(b.value, place));
+  const first = columns.findIndex((_, k) => da[k] !== db[k]);
+  const equal = first === -1;
+  const stop = equal ? columns.length - 1 : first;
+  const relation = equal ? "=" : da[stop] > db[stop] ? ">" : "<";
+  return { a: a.value, b: b.value, aDec: a.dec, bDec: b.dec, columns, da, db, stop, place: columns[stop] ?? 0, equal, relation };
+}
+function placeValueCompareMakePair(a, b) {
+  const fault = placeValueCompareFault(a, b);
+  return fault ? { fault } : placeValueComparePairOf(a, b);
+}
+var placeValueCompareStart = (pair) => ({ pair, marked: 0, signed: false, compared: 0 });
+var placeValueCompareDecided = (state) => !state.fault && state.pair.columns.length > 0 && state.marked === state.pair.stop + 1;
+var placeValueCompareDemonstrating = (state) => state.compared > 0;
+var placeValueCompareSigned = (state) => placeValueCompareDecided(state) && state.signed;
+var placeValueCompareComplete = (state) => !placeValueCompareDemonstrating(state) && placeValueCompareSigned(state);
+var placeValueCompareDemoEnd = (pair) => pair.stop + 2;
+function placeValueCompareMove(state, move) {
+  if (placeValueCompareDemonstrating(state))
+    return { ok: false, reason: "demonstrating" };
+  const { pair } = state;
+  if (move.tap === "sign") {
+    if (!PLACE_VALUE_COMPARE_SIGNS.includes(move.sign))
+      return { ok: false, reason: "no_sign" };
+    if (!placeValueCompareDecided(state))
+      return { ok: false, reason: "not_decided" };
+    if (state.signed)
+      return { ok: false, reason: "already_signed" };
+    if (move.sign !== pair.relation)
+      return { ok: false, reason: "not_true" };
+    return { ok: true, state: { ...state, signed: true }, anim: { kind: "sign", sign: move.sign } };
+  }
+  if (move.tap !== "same" && move.tap !== "different" && move.tap !== "column")
+    return { ok: false, reason: "no_judgement" };
+  const k = move.index;
+  if (state.fault || !Number.isInteger(k) || k < 0 || k >= pair.columns.length)
+    return { ok: false, reason: "no_place" };
+  if (placeValueCompareDecided(state))
+    return { ok: false, reason: k > pair.stop ? "after_decided" : k === pair.stop && !pair.equal ? "already_decides" : "already_same" };
+  if (move.tap === "column")
+    return { ok: false, reason: "no_judgement" };
+  if (k < state.marked)
+    return { ok: false, reason: "already_same" };
+  if (k > state.marked)
+    return { ok: false, reason: "left_unjudged" };
+  const a = pair.da[k], b = pair.db[k];
+  if (move.tap === "same" && a !== b)
+    return { ok: false, reason: "not_same" };
+  if (move.tap === "different" && a === b)
+    return { ok: false, reason: "not_different" };
+  const next = { ...state, marked: k + 1 };
+  return { ok: true, state: next, anim: { kind: move.tap === "different" ? "decide" : "same", index: k, place: pair.columns[k], a, b, done: placeValueCompareDecided(next) } };
+}
+function applyPlaceValueCompareTap(state, tap) {
+  if (placeValueCompareDemonstrating(state))
+    return { ok: false, reason: "demonstrating" };
+  if (tap.tap === "sign") {
+    const sign = placeValueCompareSignAt(tap.place);
+    return sign ? placeValueCompareMove(state, { tap: "sign", sign }) : { ok: false, reason: "no_sign" };
+  }
+  if (tap.tap !== "same" && tap.tap !== "different" && tap.tap !== "column")
+    return { ok: false, reason: "no_place" };
+  if (!Number.isInteger(tap.place) || tap.place < 0 || tap.place >= PLACE_VALUE_TAP_PLACES.length)
+    return { ok: false, reason: "no_place" };
+  const index = state.pair.columns.indexOf(placeValueTapPlace(tap.place));
+  return index < 0 ? { ok: false, reason: "no_place" } : placeValueCompareMove(state, { tap: tap.tap, index });
+}
+var placeValueCompareTapColumn = (state, tap) => tap.tap === "sign" || !Number.isInteger(tap.place) || tap.place < 0 || tap.place >= PLACE_VALUE_TAP_PLACES.length ? -1 : state.pair.columns.indexOf(placeValueTapPlace(tap.place));
+function placeValueCompareDemoSteps(pair) {
+  let state = placeValueCompareStart(pair);
+  const steps = [];
+  for (let index = 0; index <= pair.stop; index += 1) {
+    const tap = index === pair.stop && !pair.equal ? "different" : "same";
+    const result = placeValueCompareMove(state, { tap, index });
+    if (!result.ok)
+      throw new Error(`demonstration step refused: ${result.reason}`);
+    state = result.state;
+    steps.push({ index, tap, anim: result.anim, after: state });
+  }
+  const signed = placeValueCompareMove(state, { tap: "sign", sign: pair.relation });
+  if (!signed.ok)
+    throw new Error(`demonstration sign refused: ${signed.reason}`);
+  state = signed.state;
+  steps.push({ index: pair.stop + 1, tap: "sign", anim: signed.anim, after: state });
+  return { steps, final: state };
+}
+function placeValueCompareDemoState(pair, k) {
+  const end = placeValueCompareDemoEnd(pair);
+  if (!Number.isInteger(k) || k < 0 || k > end)
+    throw new Error(`compared must be 0..${end}`);
+  return { pair, marked: Math.min(k, pair.stop + 1), signed: k === end, compared: k };
+}
+function placeValueCompareComparedMeaning(pair) {
+  return `counts the columns a ${PLACE_VALUE_COMPARE_KIND} card's demonstration has judged from the left, then one more for the sign: 0 to ${placeValueCompareDemoEnd(pair)} on this pair`;
+}
+function placeValueCompareComparedNext(pair, value) {
+  const end = placeValueCompareDemoEnd(pair);
+  const k = Math.max(0, Math.floor(value));
+  if (k >= end)
+    return `the sign is chosen at ${end}, the last value`;
+  if (k === end - 1)
+    return `the next value, ${end}, chooses the sign`;
+  const place = pair.columns[k];
+  return `the next value, ${k + 1}, judges the ${placeValueColumnName(place).toLowerCase()}`;
+}
+function record6(value, path, fail) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    fail(path, "Expected an object");
+  return value;
+}
+function wholeNumber6(raw, path, low, high, fail, what) {
+  if (typeof raw !== "number" || !Number.isInteger(raw) || raw < low || raw > high)
+    fail(path, `${what} is a whole number from ${low} to ${high}`);
+  return raw;
+}
+function numberOf(content, field) {
+  const value = Number(content[field]);
+  const written = content[`${field}_decimals`];
+  return { value, dec: written === void 0 ? Number.isSafeInteger(value) && value >= 0 ? placeValueCompareOwnDecimals(value) : 0 : Number(written) };
+}
+function placeValueCompareFaultText(fault, a, b) {
+  const ok = (n) => !!n && Number.isSafeInteger(n.value) && n.value >= 0 && n.value <= PLACE_VALUE_COMPARE_MAX_VALUE && Number.isInteger(n.dec) && n.dec >= 0 && n.dec <= 3;
+  const show = (n) => placeValueCompareNumeral(n.value, Math.max(n.dec, placeValueCompareOwnDecimals(n.value)));
+  const pair = ok(a) && ok(b) ? `${show(a)} and ${show(b)}` : "This pair";
+  switch (fault) {
+    case "decimals":
+      return `${pair}: a number has at most three decimals, and is written with at least the decimals it has (0.625 writes three) (decimals)`;
+    case "too_wide":
+      return `${pair}: the two numbers need more than seven columns (the highest place to the lowest written) (too_wide)`;
+    case "same_numeral":
+      return `${pair}: the same numeral twice; there is nothing to compare (0.7 and 0.70 are a pair) (same_numeral)`;
+    case "same_pair":
+      return `${pair}: a practice pair is not the shown pair, in either order (same_pair)`;
+    default:
+      return "The numbers are whole numbers of thousandths from 0 to 9,999,999.999 (unreadable)";
+  }
+}
+function placeValueCompareContentPair(raw) {
+  const content = raw ?? {};
+  if (typeof content.a !== "number" || typeof content.b !== "number")
+    return { fault: "unreadable" };
+  return placeValueCompareMakePair(numberOf(content, "a"), numberOf(content, "b"));
+}
+function validatePlaceValueCompareContent(raw, path, fail, options = {}) {
+  const content = record6(raw, path, fail);
+  for (const key of Object.keys(content)) {
+    if (!["language", ...PLACE_VALUE_COMPARE_BINDINGS, "bindings"].includes(key))
+      fail(`${path}/${key}`, `Unknown place-value compare field '${key}'`);
+  }
+  if (content.language !== void 0 && !PLACE_VALUE_COMPARE_LANGUAGES.includes(content.language)) {
+    fail(`${path}/language`, `The card speaks ${PLACE_VALUE_COMPARE_LANGUAGES.join(" or ")}`);
+  }
+  wholeNumber6(content.a, `${path}/a`, 0, PLACE_VALUE_COMPARE_MAX_VALUE, fail, "The first number (in thousandths)");
+  wholeNumber6(content.b, `${path}/b`, 0, PLACE_VALUE_COMPARE_MAX_VALUE, fail, "The second number (in thousandths)");
+  for (const field of ["a_decimals", "b_decimals"]) {
+    if (content[field] !== void 0)
+      wholeNumber6(content[field], `${path}/${field}`, 0, PLACE_VALUE_COMPARE_MAX_DECIMALS, fail, `The decimals the ${field === "a_decimals" ? "first" : "second"} number is written with`);
+  }
+  const compared = wholeNumber6(content.compared, `${path}/compared`, 0, PLACE_VALUE_COMPARE_MAX_COLUMNS + 1, fail, "Compared (the columns the demonstration judged, then the sign)");
+  const marked = wholeNumber6(content.marked, `${path}/marked`, 0, PLACE_VALUE_COMPARE_MAX_COLUMNS, fail, "Marked (the columns the learner judged)");
+  const signed = wholeNumber6(content.signed, `${path}/signed`, 0, 1, fail, "Signed (the true sign chosen)");
+  if (options.boundValues)
+    return;
+  const a = numberOf(content, "a"), b = numberOf(content, "b");
+  const fault = placeValueCompareFault(a, b);
+  if (fault) {
+    const at = fault === "decimals" ? a.dec < placeValueCompareOwnDecimals(a.value) ? "a_decimals" : "b_decimals" : "b";
+    fail(`${path}/${at}`, placeValueCompareFaultText(fault, a, b));
+  }
+  const pair = placeValueComparePairOf(a, b);
+  const end = placeValueCompareDemoEnd(pair);
+  if (marked > pair.stop + 1) {
+    fail(`${path}/marked`, `${placeValueCompareNumeral(a.value, a.dec)} and ${placeValueCompareNumeral(b.value, b.dec)} are decided at ${pair.stop + 1} column${pair.stop ? "s" : ""} judged; ${marked} cannot be`);
+  }
+  if (signed && marked !== pair.stop + 1)
+    fail(`${path}/signed`, "The sign is chosen only once the comparing is done (marked is the deciding column plus one)");
+  if (compared > end)
+    fail(`${path}/compared`, `'compared' ${placeValueCompareComparedMeaning(pair)}, not ${compared}`);
+  if (compared > 0 && (marked !== 0 || signed !== 0))
+    fail(`${path}/compared`, "A demonstration (compared past 0) plays on an unjudged chart: marked and signed are 0");
+  if (options.start && compared !== 0)
+    fail(`${path}/compared`, `A card opens fresh: nothing compared, not ${compared}`);
+  if (options.start && marked !== 0)
+    fail(`${path}/marked`, `A card opens fresh: nothing judged, not ${marked}`);
+  if (options.start && signed !== 0)
+    fail(`${path}/signed`, "A card opens fresh: no sign chosen");
+}
+var placeValueCompareLanguage = (raw) => placeValueLanguage(raw);
+var EMPTY_PAIR = { a: 0, b: 0, aDec: 0, bDec: 0, columns: [], da: [], db: [], stop: -1, place: 0, equal: false, relation: "=" };
+function placeValueCompareState(raw) {
+  const content = raw ?? {};
+  const int = (value, low, high) => typeof value === "number" && Number.isFinite(value) ? Math.min(high, Math.max(low, Math.floor(value + 1e-9))) : low;
+  const made = placeValueCompareContentPair(content);
+  if ("fault" in made)
+    return { pair: EMPTY_PAIR, fault: made.fault, marked: 0, signed: false, compared: 0 };
+  const compared = int(content.compared, 0, placeValueCompareDemoEnd(made));
+  if (compared > 0)
+    return placeValueCompareDemoState(made, compared);
+  const marked = int(content.marked, 0, made.stop + 1);
+  return { pair: made, marked, signed: marked === made.stop + 1 && int(content.signed, 0, 1) === 1, compared: 0 };
+}
+var placeValueCompareTapValues = (state) => ({ marked: placeValueCompareDemonstrating(state) ? 0 : state.marked, signed: placeValueCompareDemonstrating(state) ? 0 : state.signed ? 1 : 0 });
+function placeValueCompareChanges(before, after) {
+  const from = placeValueCompareTapValues(before), to = placeValueCompareTapValues(after);
+  return PLACE_VALUE_COMPARE_TAP_FIELDS.filter((field) => from[field] !== to[field]).map((field) => ({ field, before: from[field], after: to[field] }));
+}
+function placeValueCompareStartFault(state) {
+  if (state.fault)
+    return placeValueCompareFaultText(state.fault);
+  if (state.compared !== 0)
+    return `A practice card starts with nothing demonstrated: compared is ${state.compared}, not 0`;
+  if (state.marked !== 0)
+    return `A practice card starts fresh: marked is ${state.marked}, not 0`;
+  if (state.signed)
+    return "A practice card starts fresh: no sign chosen";
+  return void 0;
+}
+var PLACE_VALUE_COMPARE_WORDS = {
+  "en-US": {
+    chartLabel: "Two numbers on a place-value chart, lined up by place",
+    sentenceLabel: "The two numbers, with a sign to choose between them",
+    point: "Decimal point",
+    howto: "From the left, judge each place until one is different.",
+    howtoSign: "Choose >, = or < between the two numbers below.",
+    lock: "Opens when a place differs, or every place is the same.",
+    button: { same: "Same", different: "Different" },
+    ask: (name, judgement) => `${name}: ${judgement === "same" ? "the same" : "different"}`,
+    signLabel: { ">": "is greater than", "=": "is equal to", "<": "is less than" },
+    caption: "Doesn't matter",
+    same: (name, a, b) => `${name}: ${a} and ${b}, the same.`,
+    allSame: "Every place is the same.",
+    decide: (name, a, b, more, unit2) => `${name}: ${a} and ${b}, the first place that differs. ${more} has more ${unit2}.`,
+    refusal: {
+      left_unjudged: (name, a, b, first) => `${name}: ${a} and ${b}. The ${first.toLowerCase()} haven't been compared yet.`,
+      not_judged: (name, a, b) => `${name}: ${a} and ${b}.`,
+      after_decided: (deciding, name) => `The ${deciding.toLowerCase()} decide; the ${name.toLowerCase()} come after and don't matter.`,
+      already_same: (name, a, b) => `${name}: ${a} and ${b}, the same.`,
+      already_decides: (name, a, b) => `${name}: ${a} and ${b}, the first place that differs.`,
+      not_true: (x, s, y) => `\u201C${x} ${s} ${y}\u201D is not true.`,
+      demonstrating: "This chart shows the demonstration."
+    },
+    result: (x, s, y, name, after, equal) => equal ? `\u2713 ${x} = ${y}: every place is the same.` : `\u2713 ${x} ${s} ${y}: the ${name.toLowerCase()} decide${after ? "; the places after them don't matter." : "."}`,
+    demo: {
+      same: (name, a, b) => `${name}: ${a} and ${b}, the same. Look at the next place.`,
+      decide: (name, a, b) => `${name}: ${a} and ${b}, the first place that differs, so the ${name.toLowerCase()} decide.`,
+      lastSame: (name, a, b) => `${name}: ${a} and ${b}, the same. Every place is the same.`,
+      sign: (x, s, y, name, after, equal) => equal ? `So ${x} = ${y}.` : `So ${x} ${s} ${y}.${after ? ` The places after the ${name.toLowerCase()} don't matter.` : ""}`
+    },
+    other: "That can't be done here.",
+    fixedHowTo: "From the left, tap Same or Different under each place, one place at a time, until one is different. Then choose >, = or < between the two numbers."
+  },
+  "zh-CN": {
+    chartLabel: "\u6570\u4F4D\u8868\u4E0A\u7684\u4E24\u4E2A\u6570\uFF0C\u6309\u6570\u4F4D\u5BF9\u9F50",
+    sentenceLabel: "\u4E24\u4E2A\u6570\uFF0C\u4E2D\u95F4\u9009\u4E00\u4E2A\u7B26\u53F7",
+    point: "\u5C0F\u6570\u70B9",
+    howto: "\u4ECE\u5DE6\u8FB9\u8D77\uFF0C\u4E00\u4F4D\u4E00\u4F4D\u5224\u65AD\uFF0C\u76F4\u5230\u6709\u4E00\u4F4D\u4E0D\u4E00\u6837\u3002",
+    howtoSign: "\u5728\u4E0B\u9762\u4E24\u4E2A\u6570\u4E2D\u95F4\u9009 >\u3001= \u6216 <\u3002",
+    lock: "\u627E\u5230\u4E0D\u4E00\u6837\u7684\u4E00\u4F4D\uFF0C\u6216\u6BCF\u4E00\u4F4D\u90FD\u4E00\u6837\u540E\u624D\u80FD\u9009\u3002",
+    button: { same: "\u4E00\u6837", different: "\u4E0D\u4E00\u6837" },
+    ask: (name, judgement) => `${name}\uFF1A${judgement === "same" ? "\u4E00\u6837" : "\u4E0D\u4E00\u6837"}`,
+    signLabel: { ">": "\u5927\u4E8E", "=": "\u7B49\u4E8E", "<": "\u5C0F\u4E8E" },
+    caption: "\u4E0D\u5F71\u54CD",
+    same: (name, a, b) => `${name}\uFF1A${a} \u548C ${b}\uFF0C\u4E00\u6837\u3002`,
+    allSame: "\u6BCF\u4E00\u4F4D\u90FD\u4E00\u6837\u3002",
+    decide: (name, a, b, more, unit2) => `${name}\uFF1A${a} \u548C ${b}\uFF0C\u7B2C\u4E00\u4F4D\u4E0D\u540C\u3002${more} \u7684${/^\d/u.test(unit2) ? ` ${unit2} ` : unit2}\u591A\u3002`,
+    refusal: {
+      left_unjudged: (name, a, b, first) => `${name}\uFF1A${a} \u548C ${b}\u3002${first}\u8FD8\u6CA1\u6709\u6BD4\u3002`,
+      not_judged: (name, a, b) => `${name}\uFF1A${a} \u548C ${b}\u3002`,
+      after_decided: (deciding, name) => `\u5DF2\u7ECF\u7531${deciding}\u51B3\u5B9A\u4E86\uFF1B${name}\u5728\u540E\u9762\uFF0C\u4E0D\u5F71\u54CD\u3002`,
+      already_same: (name, a, b) => `${name}\uFF1A${a} \u548C ${b}\uFF0C\u4E00\u6837\u3002`,
+      already_decides: (name, a, b) => `${name}\uFF1A${a} \u548C ${b}\uFF0C\u7B2C\u4E00\u4E2A\u4E0D\u4E00\u6837\u7684\u6570\u4F4D\u3002`,
+      not_true: (x, s, y) => `\u300C${x} ${s} ${y}\u300D\u4E0D\u6210\u7ACB\u3002`,
+      demonstrating: "\u8FD9\u662F\u6F14\u793A\u3002"
+    },
+    result: (x, s, y, name, after, equal) => equal ? `\u2713 ${x} = ${y}\uFF1A\u6BCF\u4E00\u4F4D\u90FD\u4E00\u6837\u3002` : `\u2713 ${x} ${s} ${y}\uFF1A\u7531${name}\u51B3\u5B9A${after ? "\uFF0C\u540E\u9762\u7684\u6570\u4F4D\u4E0D\u5F71\u54CD\u3002" : "\u3002"}`,
+    demo: {
+      same: (name, a, b) => `${name}\uFF1A${a} \u548C ${b}\uFF0C\u4E00\u6837\u3002\u770B\u4E0B\u4E00\u4F4D\u3002`,
+      decide: (name, a, b) => `${name}\uFF1A${a} \u548C ${b}\uFF0C\u7B2C\u4E00\u4E2A\u4E0D\u4E00\u6837\uFF0C\u6240\u4EE5\u7531${name}\u51B3\u5B9A\u3002`,
+      lastSame: (name, a, b) => `${name}\uFF1A${a} \u548C ${b}\uFF0C\u4E00\u6837\u3002\u6BCF\u4E00\u4F4D\u90FD\u4E00\u6837\u3002`,
+      sign: (x, s, y, name, after, equal) => equal ? `\u6240\u4EE5 ${x} = ${y}\u3002` : `\u6240\u4EE5 ${x} ${s} ${y}\u3002${after ? `${name}\u540E\u9762\u7684\u6570\u4F4D\u4E0D\u5F71\u54CD\u3002` : ""}`
+    },
+    other: "\u8FD9\u91CC\u4E0D\u80FD\u8FD9\u6837\u505A\u3002",
+    fixedHowTo: "\u4ECE\u5DE6\u8FB9\u8D77\uFF0C\u4E00\u4F4D\u4E00\u4F4D\u70B9\u5B83\u4E0B\u9762\u7684\u300C\u4E00\u6837\u300D\u6216\u300C\u4E0D\u4E00\u6837\u300D\uFF0C\u76F4\u5230\u6709\u4E00\u4F4D\u4E0D\u4E00\u6837\uFF1B\u7136\u540E\u5728\u4E24\u4E2A\u6570\u4E2D\u95F4\u9009 >\u3001= \u6216 <\u3002"
+  }
+};
+var wordsOf2 = (language) => PLACE_VALUE_COMPARE_WORDS[language] ?? PLACE_VALUE_COMPARE_WORDS["en-US"];
+var nameOf = (place, language) => placeValueColumnName(place, language);
+function placeValueCompareNumerals(pair, language = "en-US") {
+  return [placeValueCompareNumeral(pair.a, pair.aDec, language), placeValueCompareNumeral(pair.b, pair.bDec, language)];
+}
+var hasAfter = (pair) => pair.stop < pair.columns.length - 1;
+function placeValueCompareDoneText(pair, language = "en-US") {
+  const [x, y] = placeValueCompareNumerals(pair, language);
+  return wordsOf2(language).result(x, pair.relation, y, nameOf(pair.place, language), hasAfter(pair), pair.equal);
+}
+function placeValueCompareHowTo(raw) {
+  return wordsOf2(placeValueCompareLanguage(raw)).fixedHowTo;
+}
+function placeValueCompareRefusalText(state, tap, language = "en-US") {
+  const words2 = wordsOf2(language);
+  const result = applyPlaceValueCompareTap(state, tap);
+  if (result.ok)
+    return "";
+  const { pair } = state, reason = result.reason;
+  if (reason === "demonstrating")
+    return words2.refusal.demonstrating;
+  if (reason === "not_decided")
+    return words2.lock;
+  if (reason === "not_true" || reason === "already_signed") {
+    const sign = placeValueCompareSignAt(tap.place);
+    const [x, y] = placeValueCompareNumerals(pair, language);
+    return reason === "not_true" ? words2.refusal.not_true(x, sign, y) : placeValueCompareDoneText(pair, language);
+  }
+  const k = placeValueCompareTapColumn(state, tap);
+  if (k < 0)
+    return words2.other;
+  const name = nameOf(pair.columns[k], language), a = pair.da[k], b = pair.db[k];
+  switch (reason) {
+    case "left_unjudged":
+      return words2.refusal.left_unjudged(name, a, b, nameOf(pair.columns[state.marked], language));
+    case "not_same":
+    case "not_different":
+    case "no_judgement":
+      return words2.refusal.not_judged(name, a, b);
+    case "after_decided":
+      return words2.refusal.after_decided(nameOf(pair.place, language), name);
+    case "already_decides":
+      return words2.refusal.already_decides(name, a, b);
+    case "already_same":
+      return words2.refusal.already_same(name, a, b);
+    default:
+      return words2.other;
+  }
+}
+
 // node_modules/octos-lesson-language/dist/packages/core/src/cards.js
 function wholeForwardDemonstration(spec) {
   return Object.freeze({
     range: spec.range,
     next: spec.next,
+    stepValues: spec.stepValues ?? ((_content, from, to) => {
+      const values = [];
+      for (let value = Math.floor(from + 1e-9) + 1; value <= to + 1e-9; value += 1)
+        values.push(value);
+      return values;
+    }),
     field: spec.field,
     tapState: spec.tapState,
     shows: spec.shows,
@@ -10769,7 +11229,9 @@ var PLACE_VALUE_TRADE_DEMONSTRATION = wholeForwardDemonstration({
     const k = Math.max(0, Math.floor(value));
     const place = columns[columns.length - 1 - k];
     return place === void 0 ? `every column is finished at ${columns.length}` : `the next value, ${k + 1}, finishes the ${placeValueColumnName(place).toLowerCase()}`;
-  }
+  },
+  // One action at a time: a column of m actions passes k + 1/m, …, k + 1 (a bring-down, a trade, each break, a take).
+  stepValues: (content, from, to) => placeValueTradeDemoValues(placeValueTradeState(content).problem, from, to)
 });
 var PLACE_VALUE_TRADE_CARD = Object.freeze({
   kind: PLACE_VALUE_TRADE_KIND,
@@ -10993,6 +11455,11 @@ var PLACE_VALUE_TIMES_TEN_DEMONSTRATION = Object.freeze({
   outside(content, value) {
     const problem = timesTenProblem(content);
     return problem ? `${placeValueTimesTenCountedInMeaning(problem)}; ${value} is outside its variable's range` : TIMES_TEN_NO_PROBLEM;
+  },
+  // One row's move at a time.
+  stepValues(content, from, to) {
+    const problem = timesTenProblem(content);
+    return problem ? placeValueTimesTenDemoValues(problem, from, to) : [];
   }
 });
 var PLACE_VALUE_TIMES_TEN_CARD = Object.freeze({
@@ -11087,12 +11554,154 @@ var PLACE_VALUE_TIMES_TEN_CARD = Object.freeze({
     }
   })
 });
+var compareContentAt = (content, value) => {
+  const at = structuredClone(content);
+  delete at.bindings;
+  for (const field of PLACE_VALUE_COMPARE_BINDINGS) {
+    const v = value(field);
+    if (v !== void 0)
+      at[field] = v;
+  }
+  return at;
+};
+var comparePair = (content) => {
+  const pair = placeValueCompareContentPair(content);
+  return "fault" in pair ? void 0 : pair;
+};
+var COMPARE_NO_PAIR = `is a ${PLACE_VALUE_COMPARE_KIND} card's demonstration, but the card's numbers are not a pair it takes`;
+var COMPARE_FORWARD = wholeForwardDemonstration({
+  field: PLACE_VALUE_COMPARE_DEMONSTRATION_FIELD,
+  counts: `counts the columns a ${PLACE_VALUE_COMPARE_KIND} card's demonstration has judged from the left, then one more for the sign`,
+  tapState: "the learner's judgements or sign",
+  shows: "(compared: the columns judged from the left, then one more for the sign), and the program judges each column and chooses the sign",
+  fresh: "chart",
+  opensAtStart: true,
+  start: () => 0,
+  range: (content) => {
+    const pair = comparePair(content);
+    return { min: 0, max: pair ? placeValueCompareDemoEnd(pair) : PLACE_VALUE_COMPARE_MAX_COLUMNS + 1 };
+  },
+  next(content, value) {
+    const pair = comparePair(content);
+    return pair ? placeValueCompareComparedNext(pair, value) : COMPARE_NO_PAIR;
+  }
+});
+var PLACE_VALUE_COMPARE_DEMONSTRATION = Object.freeze({
+  ...COMPARE_FORWARD,
+  refuseStep(content, from, to) {
+    const pair = comparePair(content);
+    if (!pair)
+      return COMPARE_NO_PAIR;
+    const refusal = COMPARE_FORWARD.refuseStep(content, from, to);
+    if (refusal !== void 0)
+      return refusal;
+    const end = placeValueCompareDemoEnd(pair);
+    return to > end ? `${placeValueCompareComparedMeaning(pair)}, not ${to}; ${placeValueCompareComparedNext(pair, from)}` : void 0;
+  },
+  refuseReplay(content, value) {
+    const pair = comparePair(content);
+    if (!pair)
+      return COMPARE_NO_PAIR;
+    const refusal = COMPARE_FORWARD.refuseReplay(content, value);
+    if (refusal !== void 0)
+      return refusal;
+    return value < 0 || value > placeValueCompareDemoEnd(pair) ? `${placeValueCompareComparedMeaning(pair)}, not ${value}` : void 0;
+  },
+  outside(content, value) {
+    const pair = comparePair(content);
+    return pair ? `${placeValueCompareComparedMeaning(pair)}, not ${value}` : COMPARE_NO_PAIR;
+  }
+});
+var PLACE_VALUE_COMPARE_CARD = Object.freeze({
+  kind: PLACE_VALUE_COMPARE_KIND,
+  taps: PLACE_VALUE_COMPARE_TAPS,
+  places: PLACE_VALUE_COMPARE_TAP_PLACES,
+  cardFields: PLACE_VALUE_COMPARE_CARD_BINDINGS,
+  practiceFields: PLACE_VALUE_COMPARE_PROBLEM_FIELDS,
+  demonstration: PLACE_VALUE_COMPARE_DEMONSTRATION,
+  fieldsAtOnce: true,
+  validateContent: (raw, path, fail, options) => validatePlaceValueCompareContent(raw, path, fail, options?.start ? { start: true } : {}),
+  state: placeValueCompareState,
+  apply: (state, tap) => {
+    const result = applyPlaceValueCompareTap(state, { tap: tap.kind, place: tap.place });
+    return result.ok ? { ok: true, state: result.state } : { ok: false, reason: result.reason };
+  },
+  refusalText(reason, place, language, state) {
+    const lang = language === "zh-CN" ? "zh-CN" : "en-US";
+    const words2 = PLACE_VALUE_COMPARE_WORDS[lang];
+    if (reason === "demonstrating")
+      return words2.refusal.demonstrating;
+    if (!state)
+      return reason === "not_decided" ? words2.lock : words2.other;
+    const tap = place >= 10 ? "sign" : reason === "not_same" ? "same" : reason === "no_judgement" ? "column" : "different";
+    return placeValueCompareRefusalText(state, { tap, place }, lang) || words2.other;
+  },
+  language: placeValueCompareLanguage,
+  // The learner's fields are card-level: a change is named by the field, at the card's first place.
+  changes: (before, after) => placeValueCompareChanges(before, after).map(({ field, before: from, after: to }) => ({ place: 0, field, before: from, after: to })),
+  tapFields: () => [{ place: 0, field: "marked", min: 0, max: PLACE_VALUE_COMPARE_MAX_COLUMNS }, { place: 0, field: "signed", min: 0, max: 1 }],
+  fieldTarget: (_content, _place, field) => field,
+  contentAt: compareContentAt,
+  /** A practice chart starts fresh: a pair the card takes, nothing compared, judged or signed. */
+  validateStart(state, fail) {
+    const fault = placeValueCompareStartFault(state);
+    if (fault)
+      fail(fault);
+  },
+  facts: Object.freeze({
+    /**
+     * The true sign is chosen (the chart decided first). Judged on each tap, so the task ends on the tap that
+     * chooses it; there is no "done".
+     */
+    complete: {
+      keys: [],
+      judgedOnTap: true,
+      read: (_completion, state) => {
+        const actual = placeValueCompareComplete(state) ? 1 : 0;
+        return { actual, target: 1, succeeded: actual === 1 };
+      },
+      /**
+       * The one finished card of the task's own pair (every tap order ends on it), computed, never read from a
+       * logged pile: the task's numbers, nothing demonstrated, every column to the deciding one judged, the sign chosen.
+       */
+      donePile({ content, startValue }) {
+        const bound = boundTargets(content);
+        const number = (field) => bound.has(field) ? startValue(bound.get(field)) : content[field];
+        const own = { ...content };
+        for (const field of PLACE_VALUE_COMPARE_CARD_BINDINGS) {
+          const v = number(field);
+          if (v === void 0)
+            delete own[field];
+          else
+            own[field] = v;
+        }
+        const pair = comparePair(own);
+        if (!pair)
+          return void 0;
+        const final = placeValueCompareDemoSteps(pair).final;
+        const result = {};
+        for (const [target, alias] of bound) {
+          if (target === "compared")
+            result[alias] = 0;
+          else if (target === "marked")
+            result[alias] = final.marked;
+          else if (target === "signed")
+            result[alias] = 1;
+          else
+            result[alias] = number(target);
+        }
+        return result;
+      }
+    }
+  })
+});
 var TAP_CARD_KINDS = Object.freeze({
   [BASE_TEN_TRADE_KIND]: BASE_TEN_TRADE_CARD,
   [PLACE_VALUE_CHART_KIND]: PLACE_VALUE_CHART_CARD,
   [PLACE_VALUE_TRADE_KIND]: PLACE_VALUE_TRADE_CARD,
   [MAKE_TEN_KIND]: MAKE_TEN_CARD,
-  [PLACE_VALUE_TIMES_TEN_KIND]: PLACE_VALUE_TIMES_TEN_CARD
+  [PLACE_VALUE_TIMES_TEN_KIND]: PLACE_VALUE_TIMES_TEN_CARD,
+  [PLACE_VALUE_COMPARE_KIND]: PLACE_VALUE_COMPARE_CARD
 });
 var TAP_CARD_KIND_NAMES = Object.freeze(Object.keys(TAP_CARD_KINDS));
 var LESSON_TAP_CARD_KIND_NAMES = Object.freeze(TAP_CARD_KIND_NAMES.filter((name) => !TAP_CARD_KINDS[name].demonstration));
@@ -11153,7 +11762,8 @@ var OLL_CARD_BINDING_CAPABILITIES = Object.freeze({
   place_value_chart: PLACE_VALUE_CHART_CARD_BINDINGS,
   place_value_trade: PLACE_VALUE_TRADE_CARD_BINDINGS,
   make_ten: MAKE_TEN_CARD_BINDINGS,
-  place_value_times_ten: [...PLACE_VALUE_TIMES_TEN_CARD_BINDINGS, ...PLACE_VALUE_TIMES_TEN_ROW_FIELDS]
+  place_value_times_ten: [...PLACE_VALUE_TIMES_TEN_CARD_BINDINGS, ...PLACE_VALUE_TIMES_TEN_ROW_FIELDS],
+  place_value_compare: PLACE_VALUE_COMPARE_BINDINGS
 });
 var OLL_CANONICAL_CARD_BINDING_CAPABILITIES = Object.freeze([...new Set(Object.values(OLL_CARD_BINDING_CAPABILITIES).flat())]);
 var EMPTY_BINDING_COLLECTIONS = Object.freeze({});
@@ -11231,8 +11841,10 @@ var MATH_PLUGIN_MANIFEST = {
   // 0.8.0: the place-value chart, the `place_value_chart` card (decision 0025). 0.9.0: adding and subtracting
   // on the chart as the written method, the `place_value_trade` card (decision 0026). 0.10.0: making ten to add
   // on two ten frames, the `make_ten` card (decision 0027). 0.11.0: an amount counted in another unit, the
-  // `place_value_times_ten` card (decision 0028).
-  version: "0.11.0",
+  // `place_value_times_ten` card (decision 0028). 0.11.1: a lesson's demonstration on a tap card plays one action
+  // at a time, a step's slot each (owner, 2026-11-27; 0026 revision 2); lessons still require 0.11.0. 0.12.0:
+  // comparing two numbers by place, the `place_value_compare` card (decision 0029).
+  version: "0.12.0",
   // Every subject plugin depends on the shared tools (decision 0012).
   depends: { shared: "0.1.0" },
   ollCore: ">=0.10.0"
@@ -11282,6 +11894,9 @@ var OLL_EXECUTION_FEATURES = Object.freeze({
   // Decision 0028: the player draws and plays the place-value times-ten card (its demonstration by "counted in",
   // its row taps); a lesson that only demonstrates it needs that player too.
   "card:place_value_times_ten": "0.19.0",
+  // Decision 0029: the player draws and plays the place-value compare card (its demonstration by "compared", its
+  // judgements and its sign, its task ending on the true sign); a lesson that only demonstrates it needs that player too.
+  "card:place_value_compare": "0.20.0",
   // Decision 0025: a card-level field bound by its bare name (the chart's number); an older player cannot place it.
   "value-bindings:card-field": "0.16.0",
   // Decision 0023 amendment 1: a row of blanks answered in one go; an older player has no such question.
@@ -11322,7 +11937,7 @@ var looksLikeNumberLine = (content) => typeof content.range === "object" && cont
 var FIRST_PARTY_EXTENSIONS = Object.freeze([
   {
     plugin: { id: MATH_PLUGIN_MANIFEST.id, version: MATH_PLUGIN_MANIFEST.version },
-    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION, [FRACTION_MODEL_FEATURE]: FRACTION_MODEL_PLUGIN_VERSION, [BASE_TEN_TRADE_FEATURE]: BASE_TEN_TRADE_PLUGIN_VERSION, [BASE_TEN_TRADE_LANGUAGE_FEATURE]: BASE_TEN_TRADE_LANGUAGE_VERSION, [BASE_TEN_TRADE_SLIDER_FEATURE]: BASE_TEN_TRADE_SLIDER_VERSION, [PLACE_VALUE_CHART_FEATURE]: PLACE_VALUE_CHART_PLUGIN_VERSION, [PLACE_VALUE_TRADE_FEATURE]: PLACE_VALUE_TRADE_PLUGIN_VERSION, [MAKE_TEN_FEATURE]: MAKE_TEN_PLUGIN_VERSION, [PLACE_VALUE_TIMES_TEN_FEATURE]: PLACE_VALUE_TIMES_TEN_PLUGIN_VERSION },
+    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION, [FRACTION_MODEL_FEATURE]: FRACTION_MODEL_PLUGIN_VERSION, [BASE_TEN_TRADE_FEATURE]: BASE_TEN_TRADE_PLUGIN_VERSION, [BASE_TEN_TRADE_LANGUAGE_FEATURE]: BASE_TEN_TRADE_LANGUAGE_VERSION, [BASE_TEN_TRADE_SLIDER_FEATURE]: BASE_TEN_TRADE_SLIDER_VERSION, [PLACE_VALUE_CHART_FEATURE]: PLACE_VALUE_CHART_PLUGIN_VERSION, [PLACE_VALUE_TRADE_FEATURE]: PLACE_VALUE_TRADE_PLUGIN_VERSION, [MAKE_TEN_FEATURE]: MAKE_TEN_PLUGIN_VERSION, [PLACE_VALUE_TIMES_TEN_FEATURE]: PLACE_VALUE_TIMES_TEN_PLUGIN_VERSION, [PLACE_VALUE_COMPARE_FEATURE]: PLACE_VALUE_COMPARE_PLUGIN_VERSION },
     detect(content, kind, use, lesson) {
       if (kind === NUMBER_LINE_KIND || kind === void 0 && looksLikeNumberLine(content)) {
         use(NUMBER_LINE_FEATURE);
@@ -11346,11 +11961,13 @@ var FIRST_PARTY_EXTENSIONS = Object.freeze([
         use(MAKE_TEN_FEATURE);
       if (kind === PLACE_VALUE_TIMES_TEN_KIND)
         use(PLACE_VALUE_TIMES_TEN_FEATURE);
+      if (kind === PLACE_VALUE_COMPARE_KIND)
+        use(PLACE_VALUE_COMPARE_FEATURE);
     }
   }
 ]);
 var FIRST_PARTY_FEATURES = Object.freeze(Object.assign({}, ...FIRST_PARTY_EXTENSIONS.map((extension) => extension.features)));
-var PLUGIN_NODE_FEATURES = Object.freeze({ [NUMBER_LINE_KIND]: NUMBER_LINE_FEATURE, [FRACTION_MODEL_KIND]: FRACTION_MODEL_FEATURE, [BASE_TEN_TRADE_KIND]: BASE_TEN_TRADE_FEATURE, [PLACE_VALUE_CHART_KIND]: PLACE_VALUE_CHART_FEATURE, [PLACE_VALUE_TRADE_KIND]: PLACE_VALUE_TRADE_FEATURE, [MAKE_TEN_KIND]: MAKE_TEN_FEATURE, [PLACE_VALUE_TIMES_TEN_KIND]: PLACE_VALUE_TIMES_TEN_FEATURE });
+var PLUGIN_NODE_FEATURES = Object.freeze({ [NUMBER_LINE_KIND]: NUMBER_LINE_FEATURE, [FRACTION_MODEL_KIND]: FRACTION_MODEL_FEATURE, [BASE_TEN_TRADE_KIND]: BASE_TEN_TRADE_FEATURE, [PLACE_VALUE_CHART_KIND]: PLACE_VALUE_CHART_FEATURE, [PLACE_VALUE_TRADE_KIND]: PLACE_VALUE_TRADE_FEATURE, [MAKE_TEN_KIND]: MAKE_TEN_FEATURE, [PLACE_VALUE_TIMES_TEN_KIND]: PLACE_VALUE_TIMES_TEN_FEATURE, [PLACE_VALUE_COMPARE_KIND]: PLACE_VALUE_COMPARE_FEATURE });
 
 // node_modules/octos-lesson-language/dist/packages/core/src/index.js
 var ajv = new import__.Ajv2020({ allErrors: true, strict: false });
@@ -11363,6 +11980,11 @@ var SCENE3D_PRESET_VIEWS = {
   isometric: { yaw: 0.72, pitch: 0.55 }
 };
 var BINDABLE_NODE_KINDS = ["geometry", "plot", "scene3d", NUMBER_LINE_KIND, FRACTION_MODEL_KIND, ...TAP_CARD_KIND_NAMES];
+
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/demonstration-pace.js
+var DEMONSTRATION_STEP_MS = 2e3;
+var DEMONSTRATION_HOLD_MS = 600;
+var DEMONSTRATION_SLOT_MS = DEMONSTRATION_STEP_MS + DEMONSTRATION_HOLD_MS;
 
 // node_modules/octos-lesson-language/dist/packages/plugin-math/src/solids.js
 var POLYHEDRON_REACH = { tetrahedron: 1 / Math.sqrt(3), octahedron: 1, dodecahedron: 0.7947, icosahedron: 0.8507 };
@@ -11494,7 +12116,8 @@ var HOW_TO = Object.freeze({
   [PLACE_VALUE_CHART_KIND]: placeValueHowTo,
   [PLACE_VALUE_TRADE_KIND]: placeValueTradeHowTo,
   [MAKE_TEN_KIND]: makeTenHowTo,
-  [PLACE_VALUE_TIMES_TEN_KIND]: placeValueTimesTenHowTo
+  [PLACE_VALUE_TIMES_TEN_KIND]: placeValueTimesTenHowTo,
+  [PLACE_VALUE_COMPARE_KIND]: placeValueCompareHowTo
 });
 
 // src/selection-plot-routing.ts

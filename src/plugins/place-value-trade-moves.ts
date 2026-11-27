@@ -129,14 +129,21 @@ export function placeValueTradeMove(state: readonly number[], position: number, 
 
 /** Several animations of one card in one moment, applied in order; the states after each, or the first refusal. */
 export function placeValueTradeMoves(state: readonly number[], moves: ReadonlyArray<{ position: number; to: number }>):
-  { steps: Array<{ position: number; from: number[]; to: number[] }> } | { refused: { position: number; reason: string } } {
+  { steps: Array<{ position: number; from: number[]; to: number[] }>; ignored?: Array<{ index: number; position: number; reason: string }> } | { refused: { position: number; reason: string } } {
   const steps: Array<{ position: number; from: number[]; to: number[] }> = [];
+  const ignored: Array<{ index: number; position: number; reason: string }> = [];
   let current = [...state];
-  for (const move of moves) {
+  for (const [index, move] of moves.entries()) {
+    // The pair and the practice pair never move: an animation of one is left out (and recorded by the compiler), not
+    // refused, as the times-ten card's are (#188); a picture that shows the pair moves a copy of its own.
+    if (move.position >= TRADE_NUMBER.first && move.position < TRADE_NUMBER.finished && move.to !== current[move.position]) {
+      ignored.push({ index, position: move.position, reason: "the two numbers and the practice pair stay as written: the demonstration moves only columns finished (the card's fifth lesson number)" });
+      continue;
+    }
     const result = placeValueTradeMove(current, move.position, move.to);
     if (typeof result === "string") return { refused: { position: move.position, reason: result } };
     steps.push({ position: move.position, from: current, to: result });
     current = result;
   }
-  return { steps };
+  return { steps, ...(ignored.length ? { ignored } : {}) };
 }
