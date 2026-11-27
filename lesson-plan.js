@@ -16474,8 +16474,9 @@ var MATH_RECIPES = {
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
     // Columns finished starts at 0 whatever the outline holds (the card is drawn with no column done), so the
     // program supplies it: an outline that declares only the four numbers before it gets it (0, from 0 to the
-    // card's most columns), and a create naming only those four is bound to it. A model's own fifth is kept.
-    program_number_inputs: [{ initial: 0, min: 0, max: 6, label: "\u505A\u5B8C\u4E86\u51E0\u5217" }],
+    // card's most columns, OLL's own limit), and a create naming only those four is bound to it. A model's own
+    // fifth is kept, and bound the same way when the outline holds only the card's five numbers.
+    program_number_inputs: [{ initial: 0, min: 0, max: PLACE_VALUE_TRADE_MAX_COLUMNS, label: "\u505A\u5B8C\u4E86\u51E0\u5217" }],
     // The card starts on no fewer: an outline that declares fewer loses it at once (a section cannot add one).
     min_lesson_numbers: 5,
     parameter_names: ["operation"],
@@ -25099,37 +25100,38 @@ function defaultCoverageSection(requestPart, requestPartCount, sectionCount) {
     Math.max(1, Math.ceil(requestPart * sectionCount / requestPartCount))
   );
 }
+function lowerModelOutlineNumber(entry, index) {
+  if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
+  const number = { ...entry };
+  delete number.student_control;
+  if (typeof number.unit === "string" && !number.unit.trim()) delete number.unit;
+  if (typeof number.label === "string" && !number.label.trim()) delete number.label;
+  const written = { initial: number.initial, min: number.min, max: number.max };
+  normalizeModelNumberRange(number);
+  if (typeof number.min === "number" && typeof number.max === "number" && number.max - number.min > 1e6 && typeof written.min === "number" && typeof written.max === "number" && Math.abs(written.max - written.min) <= 1e6) {
+    throw new LessonPlanError(
+      "LESSON_PLAN_NUMBER_RANGE",
+      `$lessonPlanOutline.numbers[${index}].initial`,
+      `the starting value ${String(written.initial)} lies far outside its range ${String(written.min)} to ${String(written.max)}; check the mantissa and scale (2/3 is mantissa 666666666667 with scale 12)`
+    );
+  }
+  if (typeof number.min === "number" && Number.isFinite(number.min) && typeof number.max === "number" && Number.isFinite(number.max) && number.max > number.min) {
+    number.student_control = {
+      kind: "slider",
+      step: deriveSliderStep(number.min, number.max)
+    };
+  } else if (number.student_control !== void 0) {
+    number.student_control = { kind: "slider" };
+  }
+  return number;
+}
 function lowerModelOutline(value2, requestPartCount = 0) {
   const root2 = pruneModelNulls(value2);
   if (!root2 || typeof root2 !== "object" || Array.isArray(root2)) return root2;
   const candidate = root2;
   candidate.version = LESSON_PLAN_VERSION;
   if (Array.isArray(candidate.numbers)) {
-    candidate.numbers = candidate.numbers.map((entry, index) => {
-      if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
-      const number = { ...entry };
-      delete number.student_control;
-      if (typeof number.unit === "string" && !number.unit.trim()) delete number.unit;
-      if (typeof number.label === "string" && !number.label.trim()) delete number.label;
-      const written = { initial: number.initial, min: number.min, max: number.max };
-      normalizeModelNumberRange(number);
-      if (typeof number.min === "number" && typeof number.max === "number" && number.max - number.min > 1e6 && typeof written.min === "number" && typeof written.max === "number" && Math.abs(written.max - written.min) <= 1e6) {
-        throw new LessonPlanError(
-          "LESSON_PLAN_NUMBER_RANGE",
-          `$lessonPlanOutline.numbers[${index}].initial`,
-          `the starting value ${String(written.initial)} lies far outside its range ${String(written.min)} to ${String(written.max)}; check the mantissa and scale (2/3 is mantissa 666666666667 with scale 12)`
-        );
-      }
-      if (typeof number.min === "number" && Number.isFinite(number.min) && typeof number.max === "number" && Number.isFinite(number.max) && number.max > number.min) {
-        number.student_control = {
-          kind: "slider",
-          step: deriveSliderStep(number.min, number.max)
-        };
-      } else if (number.student_control !== void 0) {
-        number.student_control = { kind: "slider" };
-      }
-      return number;
-    });
+    candidate.numbers = candidate.numbers.map((entry, index) => lowerModelOutlineNumber(entry, index));
   }
   if (Array.isArray(candidate.request_coverage)) {
     candidate.request_coverage = candidate.request_coverage.map((entry, index) => {
@@ -25292,7 +25294,7 @@ var boardContentKeys = {
   table: ["columns", "rows"],
   image: ["resource", "alt"]
 };
-function lowerModelBoardContent(kind, value2, numberCount, numberLabels = []) {
+function lowerModelBoardContent(kind, value2, numberCount, numberLabels = [], programNumberCard) {
   if (typeof kind !== "string" || !value2 || typeof value2 !== "object" || Array.isArray(value2)) return value2;
   const content = value2;
   if (kind !== "visual") {
@@ -25325,9 +25327,10 @@ function lowerModelBoardContent(kind, value2, numberCount, numberLabels = []) {
   if (forceNoNumbers) validNumbers = [];
   const parameterNumbers = hooks?.numbers_from_parameters?.(parameters3, { numberCount, limit: numberLimit }) ?? [];
   if (parameterNumbers.length > 0) validNumbers = parameterNumbers;
-  const supplied = recipeProgramNumbers(typeof capability2 === "string" ? capability2 : void 0).length;
-  if (supplied > 0 && !forceNoNumbers && numberCount === numberLimit && validNumbers.length === numberLimit - supplied && validNumbers.every((number) => Number(number) <= numberLimit - supplied)) {
-    for (let number = numberLimit - supplied + 1; number <= numberLimit; number += 1) validNumbers.push(number);
+  const programInputs = programNumberCard !== void 0 && programNumberCard === capability2 ? recipeProgramNumbers(capability2).length : 0;
+  const bindFrom = validNumbers.length + 1;
+  if (programInputs > 0 && !forceNoNumbers && numberCount === numberLimit && bindFrom > numberLimit - programInputs && bindFrom <= numberLimit && validNumbers.every((number) => Number(number) < bindFrom)) {
+    for (let number = bindFrom; number <= numberCount; number += 1) validNumbers.push(number);
   }
   if (!forceNoNumbers && validNumbers.length === 0 && numberCount === 1 && typeof capability2 === "string" && !recipeDeclares(capability2, "numbers_in_parameters") && capability2 in LESSON_PLAN_CAPABILITIES && LESSON_PLAN_CAPABILITIES[capability2].includes("primary_control")) {
     validNumbers = [1];
@@ -25787,10 +25790,10 @@ function normalizeExecutableNumberInteractions(outlineValue, draftValues) {
   }
   return { outline, drafts, adjustments: sanitized.adjustments };
 }
-function lowerModelActionReferences(actionName, action, currentMoment, numberCount, numberLabels = []) {
+function lowerModelActionReferences(actionName, action, currentMoment, numberCount, numberLabels = [], programNumberCard) {
   const lowered = { ...action };
   if (actionName === "create" || actionName === "revise") {
-    lowered.content = lowerModelBoardContent(lowered.kind, lowered.content, numberCount, numberLabels);
+    lowered.content = lowerModelBoardContent(lowered.kind, lowered.content, numberCount, numberLabels, programNumberCard);
   }
   if (actionName === "create" && lowered.placement && typeof lowered.placement === "object" && !Array.isArray(lowered.placement)) {
     const placement = { ...lowered.placement };
@@ -26098,7 +26101,7 @@ function taughtContent(draft) {
     written: moment.actions.flatMap((action) => action.action === "create" && (action.kind === "math" || action.kind === "note") ? [action.content] : [])
   }));
 }
-function lowerModelSectionDraft(value2, outline, expectedSection, requireFixedReusableCreates = false, language, earlierCardNumbers = /* @__PURE__ */ new Set()) {
+function lowerModelSectionDraft(value2, outline, expectedSection, requireFixedReusableCreates = false, language, earlierCardNumbers = /* @__PURE__ */ new Set(), programNumberCard) {
   const programRevisions = value2 && typeof value2 === "object" ? PROGRAM_VISUAL_REVISIONS.get(value2) : void 0;
   const root2 = pruneModelNulls(value2);
   if (!root2 || typeof root2 !== "object" || Array.isArray(root2)) {
@@ -26340,7 +26343,8 @@ function lowerModelSectionDraft(value2, outline, expectedSection, requireFixedRe
               action,
               momentIndex + 1,
               outline.numbers?.length ?? 0,
-              (outline.numbers ?? []).map((number) => number.label ?? "")
+              (outline.numbers ?? []).map((number) => number.label ?? ""),
+              programNumberCard
             )
           }
         });
@@ -26367,7 +26371,8 @@ function lowerModelSectionDraft(value2, outline, expectedSection, requireFixedRe
             },
             momentIndex + 1,
             outline.numbers?.length ?? 0,
-            (outline.numbers ?? []).map((number) => number.label ?? "")
+            (outline.numbers ?? []).map((number) => number.label ?? ""),
+            programNumberCard
           )
         }
       });
@@ -26885,20 +26890,48 @@ function withdrawSectionVisual(outline, section, capability2, expectedRequestPar
     return void 0;
   }
 }
-function supplyProgramNumbers(outline, language) {
-  for (const capability2 of outlineCapabilities(outline)) {
-    const supplied = recipeProgramNumbers(capability2);
-    const declared = outline.numbers?.length ?? 0;
-    if (!supplied.length || declared === 0 || declared !== LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[capability2] - supplied.length) continue;
-    outline.numbers = [...outline.numbers, ...supplied.map(({ initial, min, max, label }) => ({
-      initial,
-      min,
-      max,
-      label: lessonText(language, label),
-      ...max > min ? { student_control: { kind: "slider", step: deriveSliderStep(min, max) } } : {}
-    }))];
-    return;
+function programNumberDefinitions(inputs, declared, language) {
+  const values = declared.map((number) => number.initial);
+  const resolve = (value2) => typeof value2 === "function" ? value2(values) : value2;
+  try {
+    const resolved = inputs.map(({ initial, min, max, label }) => ({ initial: resolve(initial), min: resolve(min), max: resolve(max), label }));
+    if (!resolved.every(({ initial, min, max }) => [initial, min, max].every((value2) => typeof value2 === "number" && Number.isFinite(value2)) && min < max && initial >= min && initial <= max)) return void 0;
+    const supplied = resolved.map(({ initial, min, max, label }, offset) => lowerModelOutlineNumber(
+      { initial, min, max, label: lessonText(language, label) },
+      declared.length + offset
+    ));
+    validateLessonPlanNumbers([...declared, ...supplied], "$lessonPlanOutline.numbers");
+    return supplied;
+  } catch {
+    return void 0;
   }
+}
+var SUPPLIED_PROGRAM_NUMBERS = /* @__PURE__ */ new WeakMap();
+var registryProgramNumbers = (capability2) => ({
+  inputs: recipeProgramNumbers(capability2),
+  limit: LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[capability2] ?? 0
+});
+function soleProgramNumberCard(outline, recipe = registryProgramNumbers) {
+  const numbered = [...outlineCapabilities(outline)].filter((capability2) => recipe(capability2).limit > 0);
+  return numbered.length === 1 && recipe(numbered[0]).inputs.length > 0 ? numbered[0] : void 0;
+}
+function supplyProgramNumbers(outline, language, recipe = registryProgramNumbers) {
+  const known = SUPPLIED_PROGRAM_NUMBERS.get(outline);
+  if (known) return known;
+  const sole = soleProgramNumberCard(outline, recipe);
+  const first = (outline.course_visuals ?? []).find((visual) => recipe(visual.capability).limit > 0)?.capability;
+  const capability2 = sole ?? (first !== void 0 && recipe(first).inputs.length > 0 ? first : void 0);
+  if (capability2 === void 0) return void 0;
+  const { inputs, limit } = recipe(capability2);
+  const declared = outline.numbers ?? [];
+  const missing = limit - declared.length;
+  if (declared.length === 0 || missing < 1 || missing > inputs.length || !sole && missing !== inputs.length) return void 0;
+  const supplied = programNumberDefinitions(inputs.slice(inputs.length - missing), declared, language);
+  if (!supplied) return void 0;
+  outline.numbers = [...declared, ...supplied];
+  const supply = { capability: capability2, first: declared.length + 1, count: supplied.length };
+  SUPPLIED_PROGRAM_NUMBERS.set(outline, supply);
+  return supply;
 }
 var OUTLINE_NUMBERS_MISSING = "LESSON_PLAN_OUTLINE_NUMBERS_MISSING";
 function outlineNumbersMissing(outline, section) {
@@ -26975,6 +27008,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   const admissionInput = input.input_modality === "voice" || input.input_modality === "text";
   let modelCalls = 0;
   let outline;
+  let programNumberCard;
   const draftAdjustments = /* @__PURE__ */ new WeakMap();
   const specializeDraft = (draft, outline2, accepted) => {
     const adjustments = (LOWERING_REMOVALS.get(draft) ?? []).map((removed) => ({
@@ -27105,7 +27139,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       ),
       fixedRequestParts.length
     );
-    supplyProgramNumbers(outline, input.language);
+    programNumberCard = supplyProgramNumbers(outline, input.language)?.capability ?? soleProgramNumberCard(outline);
     for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
     try {
       checkOutlineVisuals(outline, excludedCapabilities);
@@ -27123,7 +27157,9 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         outline,
         1,
         true,
-        input.language
+        input.language,
+        void 0,
+        programNumberCard
       );
       bootstrappedFirstSection = specializeDraft(firstSection, outline, []);
     } catch (error) {
@@ -27259,7 +27295,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   };
   const acceptOutline = async () => {
     if (!outline) throw outlineError;
-    supplyProgramNumbers(outline, input.language);
+    programNumberCard = supplyProgramNumbers(outline, input.language)?.capability ?? soleProgramNumberCard(outline);
     for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
     await options.on_outline_ready?.({
       sections: outline.sections.length,
@@ -27395,7 +27431,8 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
         section,
         true,
         input.language,
-        new Set(cardMovedNumbers(drafts.slice(0, section - 1).flatMap((draft) => draft.moments).flatMap((moment) => moment.actions)))
+        new Set(cardMovedNumbers(drafts.slice(0, section - 1).flatMap((draft) => draft.moments).flatMap((moment) => moment.actions))),
+        programNumberCard
       );
       specializeDraft(candidate, outline, drafts.slice(0, section - 1));
     } catch (error) {
@@ -27735,6 +27772,7 @@ export {
   placeValueThousandths,
   placeValueWordsWrite,
   praiseArithmetic,
+  programNumberDefinitions,
   promptSlot,
   recipeDeclares,
   recipeInitialCamera,
@@ -27743,7 +27781,10 @@ export {
   resolveLessonPlan,
   roundingPlaces,
   roundingTolerance,
+  soleProgramNumberCard,
+  supplyProgramNumbers,
   validateLessonPlan,
+  validateLessonPlanNumbers,
   validateLessonPlanOutline,
   validateNumericAnswerActivity,
   validateTypedQuestion,

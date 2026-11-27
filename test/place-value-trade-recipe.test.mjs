@@ -496,6 +496,97 @@ test("a later section's card the outline gave too few numbers is withdrawn befor
   assert.doesNotMatch(result.lesson, /"kind":"place_value_trade"/u);
 });
 
+// Coach #181 review follow-ups. A create naming the card's first four numbers is bound to the fifth when every
+// outline number is the card's (the program supplied the fifth, or the outline holds exactly the card's five);
+// an outline number beyond the card's may be another picture's, and is never bound. A create left with four is
+// retried as before: the outline holds a fifth, so a retry can name it. Only an outline that holds too few loses
+// the card at once.
+const CARD_IN_SECTION_2 = `
+  // Section 1 writes the sum; the card is planned for section 2, and section 2 creates it as section 1 would have.
+  outline.course_visuals = [{ ...outline.course_visuals[0], use_sections: [2] }];
+  outline.sections[0].reusable_items = [{ kind: "board_item", board_kind: "math" }];
+  first = { moments: [{ narration: "Here is the subtraction.", delivery: "neutral", math_creates: [{ timing: "during_speech", reusable_item: 1, content: { latex: "7352 - 2618" } }] }] };
+  const card = { ...structuredClone(drafts[0]), section: 2 };
+  card.course_visual_creates.visual_1.content.numbers = [1, 2, 3, 4];
+  reply = (request) => JSON.stringify(request.section === 2 && !JSON.parse(request.prompt).removed_picture ? card : { moments: [{ narration: "Subtract column by column.", delivery: "neutral" }] });
+`;
+
+test("a create naming four numbers is bound to the fifth the program supplied, in a later section too", () => {
+  const result = stubbedRun(`outline.numbers = outline.numbers.slice(0, 4); ${CARD_IN_SECTION_2}`);
+  assert.equal(result.error, undefined);
+  assert.deepEqual([result.rejected, result.adjustments], [[], []]);
+  assert.deepEqual(result.requests.map((request) => [request.label, request.section]), [["lesson-plan-bootstrap", undefined], ["lesson-plan-section", 2]]);
+  assert.match(result.lesson, /"kind":"place_value_trade"/u);
+  assert.deepEqual(result.numbers.at(-1), { initial: 0, min: 0, max: 6, label: "columns finished" });
+});
+
+test("an outline of the card's five numbers: a create naming four is bound to the model's own fifth, and the card is drawn", () => {
+  const full = stubbedRun("");
+  const own = (refs) => `for (const moment of first.moments) for (const create of moment.visual_creates ?? []) create.content.numbers = ${JSON.stringify(refs)};`;
+  // The shape the guidance asks for (all five in the outline), with a create naming the first four.
+  const result = stubbedRun(own([1, 2, 3, 4]));
+  assert.equal(result.error, undefined);
+  assert.deepEqual([result.rejected, result.adjustments], [[], []]);
+  assert.deepEqual(result.requests.map((request) => request.label), ["lesson-plan-bootstrap", "lesson-plan-section"]);
+  assert.equal(result.lesson, full.lesson);
+  // In a later section too.
+  const later = stubbedRun(CARD_IN_SECTION_2);
+  assert.equal(later.error, undefined);
+  assert.deepEqual([later.rejected, later.adjustments], [[], []]);
+  assert.match(later.lesson, /"kind":"place_value_trade"/u);
+});
+
+test("a create naming four numbers is not bound to an outline number beyond the card's: the section is retried, and a retry naming five draws the card", () => {
+  // The outline holds the card's five numbers and another picture's sixth; the create names four.
+  const sixth = `outline.numbers.push({ initial: 3, min: 0, max: 10, label: "another picture's number" });`;
+  // Section 1: refused for the card's numbers (not withdrawn), and the retry (the section naming 1 to 5) draws it.
+  const first = stubbedRun(`${sixth}
+    for (const moment of first.moments) for (const create of moment.visual_creates ?? []) create.content.numbers = [1, 2, 3, 4];
+  `);
+  assert.equal(first.error, undefined);
+  assert.deepEqual(first.requests.map((request) => [request.label, request.section]), [["lesson-plan-bootstrap", undefined], ["lesson-plan-section", 1], ["lesson-plan-section", 2]]);
+  assert.deepEqual([first.rejected, first.adjustments], [["LESSON_PLAN_CAPABILITY_PARAMETER"], []]);
+  assert.match(first.lesson, /"kind":"place_value_trade"/u);
+  // A later section the same way: its retry names five.
+  const later = stubbedRun(`${sixth} ${CARD_IN_SECTION_2}
+    const named = { ...structuredClone(card) };
+    named.course_visual_creates.visual_1.content.numbers = [1, 2, 3, 4, 5];
+    reply = (request) => JSON.stringify(request.attempt > 1 ? named : card);
+  `);
+  assert.equal(later.error, undefined);
+  assert.deepEqual(later.requests.map((request) => [request.label, request.section]), [["lesson-plan-bootstrap", undefined], ["lesson-plan-section", 2], ["lesson-plan-section", 2]]);
+  assert.deepEqual([later.rejected, later.adjustments], [["LESSON_PLAN_CAPABILITY_PARAMETER"], []]);
+  assert.match(later.lesson, /"kind":"place_value_trade"/u);
+  assert.equal(later.numbers.at(-1).label, "another picture's number");
+});
+
+test("PT-14's shape beside a later picture: the card's four numbers lead, the fifth is supplied and the card drawn; the picture sharing its number goes", () => {
+  // The card is the outline's first numbered picture, so its numbers lead; a place-value chart in section 2 shows
+  // lesson number 1, the card's. The card is the served question's picture: the chart is the one lost.
+  for (const refs of [[1, 2, 3, 4], [1, 2, 3, 4, 5]]) {
+    const result = stubbedRun(`
+      outline.numbers = outline.numbers.slice(0, 4);
+      for (const moment of first.moments) for (const create of moment.visual_creates ?? []) create.content.numbers = ${JSON.stringify(refs)};
+      outline.course_visuals.push({ required_features: ["place_value_parts"], use_sections: [2], relation: "supporting", related_visual: 1 });
+      const chart = { ...structuredClone(drafts[1]), course_visual_creates: { visual_2: { moment: 1, role: "supporting_visual", content: { parameters: { given: "name" }, numbers: [1] }, placement: { relation: "new_region" } } } };
+      reply = (request) => JSON.stringify(request.section === 2 && !JSON.parse(request.prompt).removed_picture ? chart : drafts[1]);
+    `);
+    assert.equal(result.error, undefined, String(refs));
+    assert.deepEqual(result.numbers.at(-1), { initial: 0, min: 0, max: 6, label: "columns finished" });
+    assert.deepEqual(result.adjustments, [{ kind: "visual_removed", section: 2, capability: "place_value_chart", reason: "visual_limits_after_retries" }]);
+    assert.match(result.lesson, /"kind":"place_value_trade"/u);
+  }
+});
+
+test("the card's most columns is OLL's own limit, not a number of Coach's", () => {
+  const supplied = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    const { PLACE_VALUE_TRADE_MAX_COLUMNS } = await import("octos-lesson-language/plugin-math");
+    console.log(JSON.stringify({ inputs: api.LESSON_PLAN_CAPABILITY_REGISTRY.place_value_trade.program_number_inputs, oll: PLACE_VALUE_TRADE_MAX_COLUMNS }));
+  `);
+  assert.deepEqual(supplied.inputs, [{ initial: 0, min: 0, max: supplied.oll, label: "做完了几列" }]);
+});
+
 test("the trial's guidance asks for the card's numbers in the outline (default requests are checked by request-hashes)", () => {
   const guidance = withTrial(`
     const api = await import(${here("../lesson-plan.js")});

@@ -48,12 +48,30 @@ export function recipeDeclares(capability: string | undefined, flag: "numbers_in
   return recipeEntry(capability)?.[flag] === true;
 }
 /**
- * The trailing number inputs the program supplies for a recipe (`program_number_inputs`): a number that always
- * starts the same way, which an outline may leave out. Empty when the recipe declares none.
+ * A value of a program-supplied number: fixed, or computed from the card's other numbers, the starting values
+ * the outline declares for the card, in the card's number order (`declared[0]` is the card's first number).
  */
-export function recipeProgramNumbers(capability: string | undefined): ReadonlyArray<{ initial: number; min: number; max: number; label: string }> {
+export type ProgramNumberValue = number | ((declared: readonly number[]) => number);
+
+/**
+ * A trailing number input the program supplies for a recipe (`program_number_inputs`): its start and range,
+ * each fixed or computed (`ProgramNumberValue`), and its label, a lesson-text key shown in the lesson's language.
+ */
+export interface ProgramNumberInput {
+  initial: ProgramNumberValue;
+  min: ProgramNumberValue;
+  max: ProgramNumberValue;
+  label: string;
+}
+
+/**
+ * The trailing number inputs the program supplies for a recipe (`program_number_inputs`): a number whose start
+ * the program knows (fixed, or computed from the card's other numbers), which an outline may leave out. Empty
+ * when the recipe declares none.
+ */
+export function recipeProgramNumbers(capability: string | undefined): ReadonlyArray<ProgramNumberInput> {
   const declared = recipeEntry(capability)?.program_number_inputs;
-  return Array.isArray(declared) ? declared as ReadonlyArray<{ initial: number; min: number; max: number; label: string }> : [];
+  return Array.isArray(declared) ? declared as ReadonlyArray<ProgramNumberInput> : [];
 }
 
 /** The fewest lesson numbers a recipe's visual can start on (`min_lesson_numbers`), or 0 when it declares none. */
@@ -761,7 +779,7 @@ function assertPart(target: TargetRecord, part: LessonPlanPartReference | undefi
   }
 }
 
-function validateLessonPlanNumbers(value: unknown, path: string): unknown[] {
+export function validateLessonPlanNumbers(value: unknown, path: string): unknown[] {
   const numbers = value === undefined ? [] : array(value, path);
   if (numbers.length > 16) fail("LESSON_PLAN_NUMBERS", path, "expected at most 16 numeric states");
   numbers.forEach((entry, index) => {
