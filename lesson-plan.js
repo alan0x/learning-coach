@@ -18558,6 +18558,258 @@ function placeValueTimesTenWordsGiveAnswer(words, practice) {
   return false;
 }
 
+// src/plugins/make-ten-moves.ts
+var MAKE_TEN_NUMBER = { first: 0, second: 1, practiceFirst: 2, practiceSecond: 3, filled: 4, moved: 5 };
+var makeTenSum = (a, b) => a + b;
+function makeTenStartFault2(values) {
+  if (values.length !== 6) {
+    return "the card takes six lesson numbers, in order: the first number, the second number, the practice pair's two numbers (another pair, for the learner), the count in the bigger number's frame (the bigger number at the start) and the count moved (0)";
+  }
+  const [a, b, pa, pb, filled, moved] = values;
+  const fault = makeTenFault(a, b);
+  if (fault) return `the question's pair: ${makeTenFaultText(fault, a, b)}`;
+  const practiceFault = makeTenFault(pa, pb);
+  if (practiceFault) return `the practice pair: ${makeTenFaultText(practiceFault, pa, pb)}`;
+  if (pa === a && pb === b || pa === b && pb === a) {
+    return "the practice pair is the learner's own: another pair than the question's (the same two numbers in the other order are the same pair), so the learner does not copy the demonstration";
+  }
+  if (filled !== makeTenFreshCount(a, b)) {
+    return `the count in the bigger number's frame starts at the bigger number, ${makeTenFreshCount(a, b)}, not ${filled}: the frames start apart, nothing moved`;
+  }
+  if (moved !== 0) return `the count moved starts at 0, not ${moved}: only the learner's taps change it`;
+  return void 0;
+}
+function makeTenStartValues(values) {
+  return values.map((value2, position) => position === MAKE_TEN_NUMBER.filled ? makeTenFreshCount(values[0], values[1]) : position === MAKE_TEN_NUMBER.moved ? 0 : value2);
+}
+function makeTenState2(start) {
+  const [a, b] = [start[0] ?? 0, start[1] ?? 0];
+  return [...start.slice(0, 4), makeTenFreshCount(a, b), 0];
+}
+function makeTenNext(a, b, filled) {
+  const big = Math.max(a, b), small = a >= b ? b : a;
+  return filled >= MAKE_TEN_PLACES ? `the ${big}'s frame holds ten at ${MAKE_TEN_PLACES}` : `the next value, ${filled + 1}, moves one of the ${small} into the ${big}'s frame`;
+}
+function makeTenMove(state, position, to) {
+  if (position < 0 || position > MAKE_TEN_NUMBER.moved) return "the card has six lesson numbers";
+  if (to === state[position]) return [...state];
+  const [a, b] = [state[0], state[1]];
+  const start = makeTenFreshCount(a, b);
+  if (position === MAKE_TEN_NUMBER.moved) return "the count moved changes only by the learner's taps: the demonstration moves the count in the bigger number's frame";
+  if (position !== MAKE_TEN_NUMBER.filled) {
+    return `the two numbers and the practice pair stay as written: the demonstration moves only the count in the bigger number's frame (the card's fifth lesson number), from ${start} up to ${MAKE_TEN_PLACES}, one counter at a time`;
+  }
+  const from = state[MAKE_TEN_NUMBER.filled];
+  if (!Number.isInteger(to) || to < start || to > MAKE_TEN_PLACES) {
+    return `the count in the bigger number's frame is a whole number from ${start} to ${MAKE_TEN_PLACES}, not ${to}; from ${from}, ${makeTenNext(a, b, from)}`;
+  }
+  if (to < from) return `the count in the bigger number's frame goes forward, never back: from ${from} it can be ${from} to ${MAKE_TEN_PLACES}; ${makeTenNext(a, b, from)}`;
+  const moved = [...state];
+  moved[MAKE_TEN_NUMBER.filled] = to;
+  return moved;
+}
+function makeTenMoves(state, moves) {
+  const steps = [];
+  const ignored = [];
+  let current = [...state];
+  for (const [index, move] of moves.entries()) {
+    if (move.position >= MAKE_TEN_NUMBER.first && move.position <= MAKE_TEN_NUMBER.practiceSecond && move.to !== current[move.position]) {
+      ignored.push({ index, position: move.position, reason: "the pair and the practice pair stay as written: the demonstration moves only the count in the bigger number's frame (the card's fifth lesson number)" });
+      continue;
+    }
+    const result = makeTenMove(current, move.position, move.to);
+    if (typeof result === "string") return { refused: { position: move.position, reason: result } };
+    steps.push({ position: move.position, from: current, to: result });
+    current = result;
+  }
+  return { steps, ...ignored.length ? { ignored } : {} };
+}
+var FULL_WIDTH4 = /[０-９＝]/gu;
+var halfWidth3 = (text5) => text5.replace(FULL_WIDTH4, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
+function makeTenWordsGiveAnswer(words, sum) {
+  for (const match of halfWidth3(String(words)).matchAll(/\d+/gu)) if (Number(match[0]) === sum) return true;
+  return false;
+}
+
+// src/plugins/place-value-trade-moves.ts
+var PLACE_VALUE_TRADE_OPERATIONS2 = ["add", "subtract"];
+var TRADE_NUMBER = { first: 0, second: 1, practiceFirst: 2, practiceSecond: 3, finished: 4 };
+var ROLES = ["first number", "second number", "practice pair's first number", "practice pair's second number"];
+function placeValueTradeThousandths(value2) {
+  const thousandths = placeValueThousandths(value2);
+  return thousandths !== void 0 && thousandths % 10 === 0 && thousandths <= 999999990 ? thousandths : void 0;
+}
+var tradeDecimal = (thousandths) => Number((thousandths / 1e3).toFixed(3));
+function placeValueTradeColumnsOf(operation, a, b) {
+  const { top_place, low_place } = placeValueTradeColumnsFor(operation, a, b);
+  return placeValueTradeColumns(top_place, low_place);
+}
+var span = (columns) => `${placeValueColumnName(columns[0]).toLowerCase()} to ${placeValueColumnName(columns.at(-1)).toLowerCase()}`;
+function placeValueTradeStartFault2(values, operation) {
+  if (!PLACE_VALUE_TRADE_OPERATIONS2.includes(operation)) return "operation is add or subtract";
+  if (values.length !== 5) {
+    return "the card takes five lesson numbers, in order: the first number, the second number, the practice pair's first and second number (another pair of the same columns, for the learner), and columns finished (0 at the start)";
+  }
+  const thousandths = values.slice(0, 4).map(placeValueTradeThousandths);
+  for (const [index, value2] of thousandths.entries()) {
+    if (value2 === void 0) return `the ${ROLES[index]} is a number from 0 to 999,999.99 with at most two decimal places (hundredths): the card's last column is the hundredths`;
+  }
+  const [a, b, pa, pb] = thousandths;
+  const op = operation;
+  const fault = placeValueTradeFault(op, a, b);
+  if (fault) return `the question's pair: ${placeValueTradeFaultText(fault, op, a, b)}`;
+  const practiceFault = placeValueTradeFault(op, pa, pb);
+  if (practiceFault) return `the practice pair: ${placeValueTradeFaultText(practiceFault, op, pa, pb)}`;
+  if (pa === a && pb === b) {
+    return "the practice pair is the learner's own: another pair than the question's (one number different is enough), so the learner does not copy the demonstration";
+  }
+  const columns = placeValueTradeColumnsOf(op, a, b);
+  const practiceColumns = placeValueTradeColumnsOf(op, pa, pb);
+  if (columns.join() !== practiceColumns.join()) {
+    return `the practice pair needs the columns from ${span(practiceColumns)} and the question's pair from ${span(columns)}: the card keeps its columns, so write a practice pair with the same places (as many whole digits and decimal places, and an answer that gains a column only when the question's does)`;
+  }
+  return void 0;
+}
+function placeValueTradeState2(start, content) {
+  return [...start.slice(0, 4), 0, content?.parameters?.operation === "subtract" ? 1 : 0];
+}
+function stateColumns(state) {
+  const operation = state.at(-1) === 1 ? "subtract" : "add";
+  const [a, b] = [state[0], state[1]].map(placeValueTradeThousandths);
+  if (a === void 0 || b === void 0 || placeValueTradeFault(operation, a, b)) return void 0;
+  return placeValueTradeColumnsOf(operation, a, b);
+}
+function placeValueTradeNext(columns, k) {
+  const place5 = columns[columns.length - 1 - k];
+  return place5 === void 0 ? `every column is finished at ${columns.length}` : `the next value, ${k + 1}, finishes the ${placeValueColumnName(place5).toLowerCase()}`;
+}
+var FULL_WIDTH5 = /[０-９．，＝]/gu;
+var halfWidth4 = (text5) => text5.replace(FULL_WIDTH5, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
+var STATES_ANSWER = /(?:=|\b(?:equals?|makes?|answer(?:\s+is)?|total(?:\s+is)?|difference(?:\s+is)?|result(?:\s+is)?|is\s+left)|等于|得数是?|答案是?|结果是?|一共是?|还剩)\s*$/iu;
+function placeValueTradeWordsGiveAnswer(words, answer, practice) {
+  const text5 = halfWidth4(String(words));
+  for (const match of text5.matchAll(/\d{1,3}(?:[,   ]\d{3})+(?:\.\d+)?|\d*\.\d+|\d+/gu)) {
+    if (placeValueThousandths(Number(match[0].replace(/[,   ]/gu, ""))) !== answer) continue;
+    if (!practice.includes(answer)) return true;
+    if (STATES_ANSWER.test(text5.slice(0, match.index))) return true;
+  }
+  return false;
+}
+function placeValueTradeMove(state, position, to) {
+  if (position < 0 || position > TRADE_NUMBER.finished) return "the card has five lesson numbers";
+  if (to === state[position]) return [...state];
+  const columns = stateColumns(state);
+  const n = columns?.length ?? 0;
+  if (position !== TRADE_NUMBER.finished) {
+    return `the two numbers and the practice pair stay as written: the demonstration moves only columns finished (the card's fifth lesson number), from 0 up to ${n}, and the card plays each column`;
+  }
+  const from = state[TRADE_NUMBER.finished];
+  const next = columns ? placeValueTradeNext(columns, from) : "";
+  if (!Number.isInteger(to) || to < 0 || to > n) {
+    return `columns finished counts the columns the demonstration has finished, counting from the right: a whole number from 0 to ${n}, not ${to}; from ${from}, ${next}`;
+  }
+  if (to < from) return `columns finished goes forward, a column or more at a time, never back: from ${from} it can be ${from} to ${n}; ${next}`;
+  const moved = [...state];
+  moved[TRADE_NUMBER.finished] = to;
+  return moved;
+}
+function placeValueTradeMoves2(state, moves) {
+  const steps = [];
+  const ignored = [];
+  let current = [...state];
+  for (const [index, move] of moves.entries()) {
+    if (move.position >= TRADE_NUMBER.first && move.position < TRADE_NUMBER.finished && move.to !== current[move.position]) {
+      ignored.push({ index, position: move.position, reason: "the two numbers and the practice pair stay as written: the demonstration moves only columns finished (the card's fifth lesson number)" });
+      continue;
+    }
+    const result = placeValueTradeMove(current, move.position, move.to);
+    if (typeof result === "string") return { refused: { position: move.position, reason: result } };
+    steps.push({ position: move.position, from: current, to: result });
+    current = result;
+  }
+  return { steps, ...ignored.length ? { ignored } : {} };
+}
+
+// src/plugins/second-card.ts
+var SECOND_CARDS = {
+  make_ten: {
+    parameters: ["example_first_addend", "example_second_addend"],
+    demonstration: 4,
+    label: "\u7B2C\u4E8C\u4E2A\u4F8B\u5B50\uFF1A\u5927\u6570\u90A3\u4E00\u6846\u91CC\u6709\u51E0\u4E2A",
+    max: 10,
+    starts: "starts where the second card's example starts: the bigger addend's count"
+  },
+  place_value_trade: {
+    parameters: ["example_first_number", "example_second_number"],
+    demonstration: 4,
+    label: "\u7B2C\u4E8C\u4E2A\u4F8B\u5B50\uFF1A\u505A\u5B8C\u4E86\u51E0\u5217",
+    max: 6,
+    starts: "starts where the second card's example starts: 0 columns finished"
+  },
+  place_value_times_ten: {
+    parameters: ["example_amount", "example_unit_asked"],
+    demonstration: 4,
+    label: "\u7B2C\u4E8C\u4E2A\u4F8B\u5B50\uFF1A\u73B0\u5728\u7528\u4EC0\u4E48\u5355\u4F4D\u5728\u6570",
+    max: 1e6,
+    starts: "starts where the second card's example starts: the example's start unit"
+  }
+};
+var isSecondCardKind = (capability2) => capability2 in SECOND_CARDS;
+function exampleOf(capability2, parameters3) {
+  if (!isSecondCardKind(capability2) || !parameters3) return void 0;
+  const [first, second] = SECOND_CARDS[capability2].parameters.map((name) => parameters3[name]);
+  if (first === void 0 && second === void 0) return void 0;
+  return [Number(first), Number(second)];
+}
+function isSecondCard(capability2, content, sections) {
+  if (!isSecondCardKind(capability2) || !exampleOf(capability2, content.parameters)) return false;
+  for (const section of sections) for (const moment of section.moments) for (const raw of moment.actions) {
+    const action = raw;
+    if (action.action !== "create" || action.kind !== "visual" || action.content?.capability !== capability2) continue;
+    return action.content !== content;
+  }
+  return false;
+}
+function exampleStart(capability2, example, first, firstParameters) {
+  const [x, y] = example;
+  if (![x, y].every((value2) => Number.isFinite(value2))) return { fault: `the second ${cardName(capability2)} writes its example's two numbers (${SECOND_CARDS[capability2].parameters.join(", ")})` };
+  const same = (a, b, c, d, ordered) => a === c && b === d || !ordered && a === d && b === c;
+  if (capability2 === "make_ten") {
+    const [a, b, pa, pb] = makeTenStartValues(first);
+    const fault = makeTenFault(x, y);
+    if (fault) return { fault: `the second make-ten card's example: ${makeTenFaultText(fault, x, y)}` };
+    if (same(x, y, a, b, false)) return { fault: `the second make-ten card's example ${x} + ${y} is the question's pair` };
+    if (same(x, y, pa, pb, false)) return { fault: `the second make-ten card's example ${x} + ${y} is the practice pair, which the learner works after class` };
+    return { start: [x, y, pa, pb, makeTenFreshCount(x, y), 0] };
+  }
+  if (capability2 === "place_value_trade") {
+    const operation = firstParameters?.operation;
+    const [a, b, pa, pb] = first;
+    if (operation !== "add" && operation !== "subtract") return { fault: "the second place-value trade card adds or subtracts as the first does" };
+    const [X2, Y2, A, B] = [x, y, a, b].map((value2) => placeValueTradeThousandths(value2));
+    if ([X2, Y2].some((value2) => value2 === void 0)) return { fault: `the second place-value trade card's example ${x}, ${y}: two numbers from 0 to 999,999.99 with at most two decimal places` };
+    const own = placeValueTradeFault(operation, X2, Y2);
+    if (own) return { fault: `the second place-value trade card's example ${x} ${operation === "add" ? "+" : "\u2212"} ${y}: ${placeValueTradeFaultText(own, operation, X2, Y2)}` };
+    if (A !== void 0 && B !== void 0 && placeValueTradeColumnsOf(operation, X2, Y2).join() !== placeValueTradeColumnsOf(operation, A, B).join()) {
+      return { fault: `the second place-value trade card's example ${x}, ${y} has other places than the question's pair ${a}, ${b}: the second card keeps the question's places (as many whole digits and decimal places, and an answer that gains a column only when the question's does)` };
+    }
+    const ordered = operation === "subtract";
+    if (same(x, y, a, b, ordered)) return { fault: `the second place-value trade card's example ${x}, ${y} is the question's pair` };
+    if (same(x, y, pa, pb, ordered)) return { fault: `the second place-value trade card's example ${x}, ${y} is the practice pair, which the learner works after class` };
+    return { start: [x, y, pa, pb, 0] };
+  }
+  const found = timesTenStartProblem(first);
+  if ("fault" in found) return { fault: `the times-ten card the lesson starts with has no problem: ${found.fault}` };
+  const [X, Y] = [placeValueThousandths(x), placeValueThousandths(y)];
+  if (X === void 0 || Y === void 0) return { fault: "the second times-ten card's example is two numbers above 0 with at most three decimal places" };
+  const problem = placeValueTimesTenPracticeProblem(found.problem, X, Y);
+  if ("fault" in problem) return { fault: `the second times-ten card's example ${x}, ${y} is not a problem of the question's kind (${problem.fault})` };
+  if (same(X, Y, found.problem.amount, found.problem.target, true)) return { fault: `the second times-ten card's example ${x}, ${y} is the question` };
+  if (same(X, Y, found.practice.amount, found.practice.target, true)) return { fault: `the second times-ten card's example ${x}, ${y} is the practice, which the learner works after class` };
+  return { start: [x, y, first[2], first[3], timesTenDecimal(problem.start)] };
+}
+var cardName = (capability2) => ({ make_ten: "make-ten card", place_value_trade: "place-value trade card", place_value_times_ten: "times-ten card" })[capability2];
+
 // src/plugins/place-value-compare-moves.ts
 var COMPARE_NUMBER = { first: 0, second: 1, practiceFirst: 2, practiceSecond: 3, compared: 4 };
 var COMPARE_MOST = PLACE_VALUE_COMPARE_MAX_COLUMNS + 1;
@@ -18639,10 +18891,10 @@ function compareMoves(state, moves) {
   }
   return { steps, ...ignored.length ? { ignored } : {} };
 }
-var FULL_WIDTH4 = /[０-９．，＜＞＝]/gu;
-var halfWidth3 = (text5) => text5.replace(FULL_WIDTH4, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
+var FULL_WIDTH6 = /[０-９．，＜＞＝]/gu;
+var halfWidth5 = (text5) => text5.replace(FULL_WIDTH6, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
 function compareWordsGiveAnswer(words, practice) {
-  const text5 = halfWidth3(String(words)).replace(/(\d),(?=\d{3})/gu, "$1");
+  const text5 = halfWidth5(String(words)).replace(/(\d),(?=\d{3})/gu, "$1");
   const x = compareNumeral({ value: practice.a, dec: practice.aDec }), y = compareNumeral({ value: practice.b, dec: practice.bDec });
   const flip = { ">": "<", "<": ">", "=": "=" };
   const between = {
@@ -18875,6 +19127,9 @@ var MATH_RECIPES = {
     // A move of the pair or the practice pair is refused with what the number is to the card (pilot 1, 2026-11-27: a move
     // left out let a card sit still under narration that moved it); left out only once the section's repairs are spent.
     wrong_number_moves: "refused",
+    // A second card of the kind on the section's own example (second-card.ts): the label of the number it moves.
+    second_card_label: SECOND_CARDS.place_value_trade.label,
+    second_card_starts: SECOND_CARDS.place_value_trade.starts,
     card_name: "place-value trade card",
     number_names: ["first number", "second number", "practice first number", "practice second number", "columns finished"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
@@ -18885,10 +19140,10 @@ var MATH_RECIPES = {
     program_number_inputs: [{ initial: 0, min: 0, max: PLACE_VALUE_TRADE_MAX_COLUMNS, label: "\u505A\u5B8C\u4E86\u51E0\u5217" }],
     // The card starts on no fewer: an outline that declares fewer loses it at once (a section cannot add one).
     min_lesson_numbers: 5,
-    parameter_names: ["operation"],
-    model_parameter_names: ["operation"],
+    parameter_names: ["operation", "example_first_number", "example_second_number"],
+    model_parameter_names: ["operation", "example_first_number", "example_second_number"],
     required_model_schema_parameters: ["operation"],
-    semantic_parameters: ["operation"],
+    semantic_parameters: ["operation", "example_first_number", "example_second_number"],
     output_kinds: ["place_value_trade"],
     // Up to nine lesson variables (two numbers, columns finished, a status per column): when a lesson holds too
     // many, the card is the picture that goes.
@@ -18897,7 +19152,7 @@ var MATH_RECIPES = {
     // fixed text says how it is used.
     student_controls: [],
     required_features: ["column_add_subtract_trades"],
-    model_guidance: "\u6570\u4F4D\u8868\u52A0\u51CF\uFF08\u7AD6\u5F0F\uFF0C\u8FDB\u4F4D\u3001\u9000\u4F4D\u5C31\u662F\u4EA4\u6362\uFF09\uFF1A\u591A\u4F4D\u6570\u52A0\u51CF\uFF08\u5230\u5341\u4E07\u4F4D\uFF09\u548C\u5C0F\u6570\u52A0\u51CF\uFF08\u5230\u767E\u5206\u4F4D\uFF09\uFF0C\u81F3\u5C11\u6709\u4E00\u4F4D\u8981\u8FDB\u4F4D\u6216\u9000\u4F4D\uFF0C\u6700\u591A\u516D\u5217\uFF08\u4ECE\u4E24\u4E2A\u6570\u6700\u4F4E\u7684\u4E00\u4F4D\u5230\u4E24\u4E2A\u6570\u548C\u5F97\u6570\u6700\u9AD8\u7684\u4E00\u4F4D\uFF09\u3002\u4E0D\u7528\u4E8E\u6446\u6570\u3001\u62C6\u6570\u3001\u6BD4\u8F83\u3001\u51D1\u6574\u3001\u4E58\u6CD5\uFF0C\u4E5F\u4E0D\u7528\u4E8E\u4F4E\u5E74\u7EA7\u7684\u51D1\u5341\uFF08\u7528\u65B9\u5757\uFF09\u3002operation \u5199 add \u6216 subtract\u3002outline \u7684 numbers \u4F9D\u6B21\u5199\u8FD9\u4E94\u4E2A\u6570\uFF08\u4E0D\u52A8\u7684\u4E5F\u8981\u5199\uFF09\uFF1A\u7B2C\u4E00\u4E2A\u6570\u3001\u7B2C\u4E8C\u4E2A\u6570\uFF08\u51CF\u6CD5\u7B2C\u4E00\u4E2A\u6570\u4E0D\u5C0F\u4E8E\u7B2C\u4E8C\u4E2A\u6570\uFF09\u3001\u7EC3\u4E60\u7684\u7B2C\u4E00\u4E2A\u6570\u3001\u7EC3\u4E60\u7684\u7B2C\u4E8C\u4E2A\u6570\u3001\u505A\u5B8C\u4E86\u51E0\u5217\u3002\u6570\u503C\u5199\u5B9E\u9645\u5927\u5C0F\uFF082.75\uFF09\uFF0C\u6700\u591A\u4E24\u4F4D\u5C0F\u6570\u3002\u7EC3\u4E60\u7684\u4E00\u5BF9\u662F\u53E6\u4E00\u5BF9\uFF08\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u514D\u5F97\u5B69\u5B50\u7167\u6284\u6F14\u793A\uFF09\uFF0C\u4E5F\u8981\u8FDB\u4F4D\u6216\u9000\u4F4D\uFF0C\u5217\u548C\u9898\u76EE\u7684\u4E00\u6837\uFF08\u540C\u6837\u591A\u7684\u6574\u6570\u4F4D\u548C\u5C0F\u6570\u4F4D\uFF0C\u9898\u76EE\u7684\u5F97\u6570\u591A\u51FA\u4E00\u4F4D\u65F6\u7EC3\u4E60\u7684\u4E5F\u591A\u51FA\u4E00\u4F4D\uFF09\u3002\u505A\u5B8C\u4E86\u51E0\u5217\u4ECE\u6700\u53F3\u8FB9\u4E00\u5217\u6570\u8D77\uFF0C\u5199 0\uFF1A\u8868\u4E00\u5F00\u59CB\u4E00\u5217\u4E5F\u6CA1\u6709\u505A\u3002\u6F14\u793A\u65F6\u628A\u5B83\u52A8\u753B\u5230 1\u30012\u2026\u2026\uFF1A\u6BCF\u5230\u4E00\u4E2A\u503C\uFF0C\u7A0B\u5E8F\u6309\u89C4\u5219\u505A\u5B8C\u53F3\u8FB9\u53C8\u4E00\u5217\uFF08\u5408\u8D77\u6765\u3001\u6EE1\u5341\u6362\u4E00\u3001\u4E0D\u591F\u62C6\u4E00\uFF09\uFF0C\u53EA\u5F80\u524D\u8D70\uFF0C\u540C\u4E00\u4E2A\u503C\u518D\u5199\u8868\u4E0D\u53D8\uFF1B\u6F14\u793A\u505A\u5B8C\u6BCF\u4E00\u5217\uFF0C\u4E00\u76F4\u5230\u5F97\u6570\uFF08\u6700\u540E\u4E00\u4E2A\u503C\u662F\u5217\u6570\uFF09\u3002\u4E24\u4E2A\u6570\u548C\u7EC3\u4E60\u7684\u6570\u4E0D\u52A8\u753B\u3002\u7EC3\u4E60\u7684\u6570\u662F\u5B69\u5B50\u8BFE\u540E\u81EA\u5DF1\u505A\u7684\uFF1A\u8BFE\u4E0A\u53EF\u4EE5\u8BF4\u201C\u8BFE\u540E\u8BD5\u8BD5\u2026\u2026\u201D\uFF0C\u4F46\u4E0D\u8BB2\u5B83\u600E\u4E48\u505A\u3001\u4E0D\u5199\u51FA\u5B83\u7684\u7B97\u5F0F\u3001\u4E0D\u8BF4\u5B83\u7684\u7B54\u6848\uFF0Coutline \u4E5F\u4E0D\u4E3A\u5B83\u5B89\u6392\u4E00\u8282\u3002\u7EC3\u4E60\uFF1A\u5BF9\u505A\u5B8C\u4E86\u51E0\u5217\u5199\u4E00\u4E2A\u6570\u503C\u76EE\u6807\u9898\uFF08\u6570\u503C\u5199\u5217\u6570\uFF09\uFF0C\u5B69\u5B50\u5728\u8868\u4E0A\u505A\u5B8C\u7EC3\u4E60\u7684\u4E00\u5BF9\uFF0C\u7A0B\u5E8F\u518D\u81EA\u5DF1\u95EE\u5F97\u6570\uFF0C\u4E0D\u53E6\u51FA\u95EE\u8FD9\u4E00\u5BF9\u5F97\u6570\u7684\u586B\u6570\u9898\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u5F97\u6570\u3002\u8868\u4E0A\u7684\u6570\u3001\u5706\u7247\u548C\u64CD\u4F5C\u8BF4\u660E\u90FD\u7531\u5361\u7247\u81EA\u5DF1\u5199\uFF1B\u8BF4\u6570\u4F4D\u7528\u540D\u5B57\uFF08\u4E2A\u4F4D\u3001\u5341\u5206\u4F4D\u3001hundreds\uFF09\uFF0C\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
+    model_guidance: "\u6570\u4F4D\u8868\u52A0\u51CF\uFF08\u7AD6\u5F0F\uFF0C\u8FDB\u4F4D\u3001\u9000\u4F4D\u5C31\u662F\u4EA4\u6362\uFF09\uFF1A\u591A\u4F4D\u6570\u52A0\u51CF\uFF08\u5230\u5341\u4E07\u4F4D\uFF09\u548C\u5C0F\u6570\u52A0\u51CF\uFF08\u5230\u767E\u5206\u4F4D\uFF09\uFF0C\u81F3\u5C11\u6709\u4E00\u4F4D\u8981\u8FDB\u4F4D\u6216\u9000\u4F4D\uFF0C\u6700\u591A\u516D\u5217\uFF08\u4ECE\u4E24\u4E2A\u6570\u6700\u4F4E\u7684\u4E00\u4F4D\u5230\u4E24\u4E2A\u6570\u548C\u5F97\u6570\u6700\u9AD8\u7684\u4E00\u4F4D\uFF09\u3002\u4E0D\u7528\u4E8E\u6446\u6570\u3001\u62C6\u6570\u3001\u6BD4\u8F83\u3001\u51D1\u6574\u3001\u4E58\u6CD5\uFF0C\u4E5F\u4E0D\u7528\u4E8E\u4F4E\u5E74\u7EA7\u7684\u51D1\u5341\uFF08\u7528\u65B9\u5757\uFF09\u3002operation \u5199 add \u6216 subtract\u3002outline \u7684 numbers \u4F9D\u6B21\u5199\u8FD9\u4E94\u4E2A\u6570\uFF08\u4E0D\u52A8\u7684\u4E5F\u8981\u5199\uFF09\uFF1A\u7B2C\u4E00\u4E2A\u6570\u3001\u7B2C\u4E8C\u4E2A\u6570\uFF08\u51CF\u6CD5\u7B2C\u4E00\u4E2A\u6570\u4E0D\u5C0F\u4E8E\u7B2C\u4E8C\u4E2A\u6570\uFF09\u3001\u7EC3\u4E60\u7684\u7B2C\u4E00\u4E2A\u6570\u3001\u7EC3\u4E60\u7684\u7B2C\u4E8C\u4E2A\u6570\u3001\u505A\u5B8C\u4E86\u51E0\u5217\u3002\u6570\u503C\u5199\u5B9E\u9645\u5927\u5C0F\uFF082.75\uFF09\uFF0C\u6700\u591A\u4E24\u4F4D\u5C0F\u6570\u3002\u7EC3\u4E60\u7684\u4E00\u5BF9\u662F\u53E6\u4E00\u5BF9\uFF08\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u514D\u5F97\u5B69\u5B50\u7167\u6284\u6F14\u793A\uFF09\uFF0C\u4E5F\u8981\u8FDB\u4F4D\u6216\u9000\u4F4D\uFF0C\u5217\u548C\u9898\u76EE\u7684\u4E00\u6837\uFF08\u540C\u6837\u591A\u7684\u6574\u6570\u4F4D\u548C\u5C0F\u6570\u4F4D\uFF0C\u9898\u76EE\u7684\u5F97\u6570\u591A\u51FA\u4E00\u4F4D\u65F6\u7EC3\u4E60\u7684\u4E5F\u591A\u51FA\u4E00\u4F4D\uFF09\u3002\u505A\u5B8C\u4E86\u51E0\u5217\u4ECE\u6700\u53F3\u8FB9\u4E00\u5217\u6570\u8D77\uFF0C\u5199 0\uFF1A\u8868\u4E00\u5F00\u59CB\u4E00\u5217\u4E5F\u6CA1\u6709\u505A\u3002\u6F14\u793A\u65F6\u628A\u5B83\u52A8\u753B\u5230 1\u30012\u2026\u2026\uFF1A\u6BCF\u5230\u4E00\u4E2A\u503C\uFF0C\u7A0B\u5E8F\u6309\u89C4\u5219\u505A\u5B8C\u53F3\u8FB9\u53C8\u4E00\u5217\uFF08\u5408\u8D77\u6765\u3001\u6EE1\u5341\u6362\u4E00\u3001\u4E0D\u591F\u62C6\u4E00\uFF09\uFF0C\u53EA\u5F80\u524D\u8D70\uFF0C\u540C\u4E00\u4E2A\u503C\u518D\u5199\u8868\u4E0D\u53D8\uFF1B\u6F14\u793A\u505A\u5B8C\u6BCF\u4E00\u5217\uFF0C\u4E00\u76F4\u5230\u5F97\u6570\uFF08\u6700\u540E\u4E00\u4E2A\u503C\u662F\u5217\u6570\uFF09\u3002\u4E24\u4E2A\u6570\u548C\u7EC3\u4E60\u7684\u6570\u4E0D\u52A8\u753B\u3002\u8981\u5728\u540E\u9762\u7684\u8282\u518D\u8BB2\u53E6\u4E00\u4E2A\u4F8B\u5B50\uFF0Coutline \u5728\u90A3\u4E00\u8282\u518D\u89C4\u5212\u4E00\u5F20\u6570\u4F4D\u8868\u52A0\u51CF\u5361\u7247\uFF08\u4E00\u8BFE\u6700\u591A\u4E24\u5F20\uFF09\uFF1B\u90A3\u4E00\u8282\u5728\u8FD9\u5F20\u5361\u7247\u7684 parameters \u91CC\u5199\u4F8B\u5B50\u7684\u4E24\u4E2A\u6570 example_first_number\u3001example_second_number\uFF08\u53E6\u4E00\u5BF9\uFF0C\u5217\u548C\u9898\u76EE\u7684\u4E00\u6837\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u4E5F\u4E0D\u662F\u7EC3\u4E60\u7684\uFF09\uFF0C\u8FD0\u7B97\u548C\u7B2C\u4E00\u5F20\u4E00\u6837\uFF0C\u7A0B\u5E8F\u7ED9\u5B83\u6F14\u793A\u7528\u7684\u6570\uFF1B\u7B2C\u4E8C\u5F20\u5361\u7247\u53EA\u6F14\u793A\uFF0C\u53E6\u4E00\u4E2A\u4F8B\u5B50\u753B\u5728\u7B2C\u4E8C\u5F20\u5361\u7247\u4E0A\uFF0C\u4E0D\u7528\u7EC3\u4E60\u7684\u6570\uFF0C\u7EC3\u4E60\u4ECD\u5728\u7B2C\u4E00\u5F20\u4E0A\u3002\u7EC3\u4E60\u7684\u6570\u662F\u5B69\u5B50\u8BFE\u540E\u81EA\u5DF1\u505A\u7684\uFF1A\u8BFE\u4E0A\u53EF\u4EE5\u8BF4\u201C\u8BFE\u540E\u8BD5\u8BD5\u2026\u2026\u201D\uFF0C\u4F46\u4E0D\u8BB2\u5B83\u600E\u4E48\u505A\u3001\u4E0D\u5199\u51FA\u5B83\u7684\u7B97\u5F0F\u3001\u4E0D\u8BF4\u5B83\u7684\u7B54\u6848\uFF0Coutline \u4E5F\u4E0D\u4E3A\u5B83\u5B89\u6392\u4E00\u8282\u3002\u7EC3\u4E60\uFF1A\u5BF9\u505A\u5B8C\u4E86\u51E0\u5217\u5199\u4E00\u4E2A\u6570\u503C\u76EE\u6807\u9898\uFF08\u6570\u503C\u5199\u5217\u6570\uFF09\uFF0C\u5B69\u5B50\u5728\u8868\u4E0A\u505A\u5B8C\u7EC3\u4E60\u7684\u4E00\u5BF9\uFF0C\u7A0B\u5E8F\u518D\u81EA\u5DF1\u95EE\u5F97\u6570\uFF0C\u4E0D\u53E6\u51FA\u95EE\u8FD9\u4E00\u5BF9\u5F97\u6570\u7684\u586B\u6570\u9898\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u5F97\u6570\u3002\u8868\u4E0A\u7684\u6570\u3001\u5706\u7247\u548C\u64CD\u4F5C\u8BF4\u660E\u90FD\u7531\u5361\u7247\u81EA\u5DF1\u5199\uFF1B\u8BF4\u6570\u4F4D\u7528\u540D\u5B57\uFF08\u4E2A\u4F4D\u3001\u5341\u5206\u4F4D\u3001hundreds\uFF09\uFF0C\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
   },
   // OLL decision 0027 (a trial): making ten to add on two ten frames (8 + 6 = 8 + 2 + 4 = 10 + 4). The model writes
   // the question's pair and a practice pair; the program supplies the count in the bigger number's frame (it starts
@@ -18913,6 +19168,9 @@ var MATH_RECIPES = {
     // A move of the pair or the practice pair is refused with what the number is to the card (pilot 1, MT-13: the first
     // addend animated to 10 was left out and the card sat still); left out only once the section's repairs are spent.
     wrong_number_moves: "refused",
+    // A second card of the kind on the section's own example (second-card.ts): the label of the number it moves.
+    second_card_label: SECOND_CARDS.make_ten.label,
+    second_card_starts: SECOND_CARDS.make_ten.starts,
     card_name: "make-ten card",
     number_names: ["first addend", "second addend", "practice first addend", "practice second addend", "count in the bigger frame", "count moved"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
@@ -18925,10 +19183,10 @@ var MATH_RECIPES = {
     ],
     // The card starts on no fewer: an outline that declares fewer loses it at once (a section cannot add one).
     min_lesson_numbers: 6,
-    parameter_names: [],
-    model_parameter_names: [],
+    parameter_names: ["example_first_addend", "example_second_addend"],
+    model_parameter_names: ["example_first_addend", "example_second_addend"],
     required_model_schema_parameters: [],
-    semantic_parameters: [],
+    semantic_parameters: ["example_first_addend", "example_second_addend"],
     output_kinds: ["make_ten"],
     // Four lesson variables (the pair, the two counts): when a lesson holds too many, the card is the picture that goes.
     binds_many_variables: true,
@@ -18936,7 +19194,7 @@ var MATH_RECIPES = {
     // fixed text says how it is used.
     student_controls: [],
     required_features: ["make_ten_to_add"],
-    model_guidance: "\u51D1\u5341\uFF08\u4E24\u4E2A\u5341\u683C\u6846\uFF09\uFF1A\u4E24\u4E2A\u4E00\u4F4D\u6570\u76F8\u52A0\u3001\u548C\u5927\u4E8E10\uFF08\u59828+6\uFF09\uFF0C\u5C0F\u6570\u5206\u51FA\u4E00\u90E8\u5206\u628A\u5927\u6570\u8865\u6210\u5341\u3002\u4E5F\u7528\u4E8E\u95EE\u201C\u5E94\u8BE5\u62C6\u54EA\u4E2A\u6570\u201D\u201C\u600E\u6837\u62C6\u7B97\u5F97\u5FEB\u201D\uFF1A\u5361\u7247\u753B\u5FEB\u7684\u62C6\u6CD5\uFF08\u62C6\u5C0F\u6570\u8865\u5927\u6570\uFF0C\u59824+9\u62C64\u88659\uFF09\uFF0C\u6162\u7684\u62C6\u6CD5\u53EA\u7528\u8BDD\u8BF4\uFF0C\u4E0D\u753B\u3002\u4E0D\u7528\u4E8E\u548C\u6B63\u597D\u662F10\u3001\u63A5\u7740\u6570\u3001\u7834\u5341\u51CF\u3001\u4E24\u4F4D\u6570\u52A0\u4E00\u4F4D\u6570\u3001\u4E09\u4E2A\u6570\u76F8\u52A0\u3002\u8FD9\u9053\u52A0\u6CD5\u7684\u753B\u9762\u662F\u8FD9\u5F20\u5361\u7247\uFF1B\u540E\u9762\u7684\u8282\u53EF\u4EE5\u518D\u7528\u6570\u8F74\u628A\u540C\u4E00\u9053\u52A0\u6CD5\u8D70\u4E00\u904D\uFF0C\u6570\u8F74\u4E0D\u4EE3\u66FF\u8FD9\u5F20\u5361\u7247\u3002outline \u7684 numbers \u4F9D\u6B21\u5199\u56DB\u4E2A\u6570\uFF1A\u9898\u76EE\u7684\u4E24\u4E2A\u6570\u3001\u7EC3\u4E60\u7684\u4E24\u4E2A\u6570\uFF08\u53E6\u4E00\u5BF9\uFF0C\u4E5F\u662F\u4E00\u4F4D\u6570\u3001\u548C\u5927\u4E8E10\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u6362\u987A\u5E8F\u4E5F\u4E0D\u7B97\uFF09\u3002\u7A0B\u5E8F\u518D\u8865\u4E24\u4E2A\u6570\uFF1A\u5927\u6570\u90A3\u4E00\u6846\u91CC\u6709\u51E0\u4E2A\uFF08\u5F00\u59CB\u5C31\u662F\u5927\u6570\uFF09\u3001\u79FB\u8FC7\u53BB\u51E0\u4E2A\uFF080\uFF09\u3002\u6F14\u793A\u65F6\u628A\u7B2C\u4E94\u4E2A\u6570\u52A8\u753B\u523010\uFF0C\u4E00\u76F4\u5230\u5927\u6570\u90A3\u4E00\u6846\u6EE1\u5341\uFF0C\u7A0B\u5E8F\u4E00\u4E2A\u4E00\u4E2A\u5730\u79FB\u5706\u7247\uFF1B\u522B\u7684\u6570\u4E0D\u52A8\u753B\u3002\u7EC3\u4E60\u7684\u6570\u662F\u5B69\u5B50\u8BFE\u540E\u81EA\u5DF1\u505A\u7684\uFF1A\u8BFE\u4E0A\u53EF\u4EE5\u8BF4\u201C\u8BFE\u540E\u8BD5\u8BD5\u2026\u2026\u201D\uFF0C\u4F46\u4E0D\u8BB2\u5B83\u600E\u4E48\u505A\u3001\u4E0D\u5199\u51FA\u5B83\u7684\u7B97\u5F0F\u3001\u4E0D\u8BF4\u5B83\u7684\u7B54\u6848\uFF0Coutline \u4E5F\u4E0D\u4E3A\u5B83\u5B89\u6392\u4E00\u8282\u3002\u7EC3\u4E60\uFF1A\u5BF9\u7B2C\u4E94\u4E2A\u6570\u5199\u4E00\u4E2A\u6570\u503C\u76EE\u6807\u9898\uFF08\u6570\u503C\u519910\uFF09\uFF0C\u5B69\u5B50\u81EA\u5DF1\u8865\u6EE1\u5341\uFF0C\u7A0B\u5E8F\u518D\u51FA\u4E00\u884C\u7A7A\uFF088+6=8+__+__=10+__=__\uFF09\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u548C\u3002\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
+    model_guidance: "\u51D1\u5341\uFF08\u4E24\u4E2A\u5341\u683C\u6846\uFF09\uFF1A\u4E24\u4E2A\u4E00\u4F4D\u6570\u76F8\u52A0\u3001\u548C\u5927\u4E8E10\uFF08\u59828+6\uFF09\uFF0C\u5C0F\u6570\u5206\u51FA\u4E00\u90E8\u5206\u628A\u5927\u6570\u8865\u6210\u5341\u3002\u4E5F\u7528\u4E8E\u95EE\u201C\u5E94\u8BE5\u62C6\u54EA\u4E2A\u6570\u201D\u201C\u600E\u6837\u62C6\u7B97\u5F97\u5FEB\u201D\uFF1A\u5361\u7247\u753B\u5FEB\u7684\u62C6\u6CD5\uFF08\u62C6\u5C0F\u6570\u8865\u5927\u6570\uFF0C\u59824+9\u62C64\u88659\uFF09\uFF0C\u6162\u7684\u62C6\u6CD5\u53EA\u7528\u8BDD\u8BF4\uFF0C\u4E0D\u753B\u3002\u4E0D\u7528\u4E8E\u548C\u6B63\u597D\u662F10\u3001\u63A5\u7740\u6570\u3001\u7834\u5341\u51CF\u3001\u4E24\u4F4D\u6570\u52A0\u4E00\u4F4D\u6570\u3001\u4E09\u4E2A\u6570\u76F8\u52A0\u3002\u8FD9\u9053\u52A0\u6CD5\u7684\u753B\u9762\u662F\u8FD9\u5F20\u5361\u7247\uFF1B\u540E\u9762\u7684\u8282\u53EF\u4EE5\u518D\u7528\u6570\u8F74\u628A\u540C\u4E00\u9053\u52A0\u6CD5\u8D70\u4E00\u904D\uFF0C\u6570\u8F74\u4E0D\u4EE3\u66FF\u8FD9\u5F20\u5361\u7247\u3002outline \u7684 numbers \u4F9D\u6B21\u5199\u56DB\u4E2A\u6570\uFF1A\u9898\u76EE\u7684\u4E24\u4E2A\u6570\u3001\u7EC3\u4E60\u7684\u4E24\u4E2A\u6570\uFF08\u53E6\u4E00\u5BF9\uFF0C\u4E5F\u662F\u4E00\u4F4D\u6570\u3001\u548C\u5927\u4E8E10\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u6362\u987A\u5E8F\u4E5F\u4E0D\u7B97\uFF09\u3002\u7A0B\u5E8F\u518D\u8865\u4E24\u4E2A\u6570\uFF1A\u5927\u6570\u90A3\u4E00\u6846\u91CC\u6709\u51E0\u4E2A\uFF08\u5F00\u59CB\u5C31\u662F\u5927\u6570\uFF09\u3001\u79FB\u8FC7\u53BB\u51E0\u4E2A\uFF080\uFF09\u3002\u6F14\u793A\u65F6\u628A\u7B2C\u4E94\u4E2A\u6570\u52A8\u753B\u523010\uFF0C\u4E00\u76F4\u5230\u5927\u6570\u90A3\u4E00\u6846\u6EE1\u5341\uFF0C\u7A0B\u5E8F\u4E00\u4E2A\u4E00\u4E2A\u5730\u79FB\u5706\u7247\uFF1B\u522B\u7684\u6570\u4E0D\u52A8\u753B\u3002\u8981\u5728\u540E\u9762\u7684\u8282\u518D\u8BB2\u53E6\u4E00\u4E2A\u4F8B\u5B50\uFF0Coutline \u5728\u90A3\u4E00\u8282\u518D\u89C4\u5212\u4E00\u5F20\u51D1\u5341\u5361\u7247\uFF08\u4E00\u8BFE\u6700\u591A\u4E24\u5F20\uFF09\uFF1B\u90A3\u4E00\u8282\u5728\u8FD9\u5F20\u5361\u7247\u7684 parameters \u91CC\u5199\u4F8B\u5B50\u7684\u4E24\u4E2A\u6570 example_first_addend\u3001example_second_addend\uFF08\u53E6\u4E00\u5BF9\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u4E5F\u4E0D\u662F\u7EC3\u4E60\u7684\uFF09\uFF0C\u7A0B\u5E8F\u7ED9\u5B83\u6F14\u793A\u7528\u7684\u6570\uFF0C\u6F14\u793A\u65F6\u628A\u90A3\u4E2A\u6570\u52A8\u753B\u523010\uFF1B\u7B2C\u4E8C\u5F20\u5361\u7247\u53EA\u6F14\u793A\uFF0C\u53E6\u4E00\u4E2A\u4F8B\u5B50\u753B\u5728\u7B2C\u4E8C\u5F20\u5361\u7247\u4E0A\uFF0C\u4E0D\u7528\u7EC3\u4E60\u7684\u6570\uFF0C\u7EC3\u4E60\u4ECD\u5728\u7B2C\u4E00\u5F20\u4E0A\u3002\u7EC3\u4E60\u7684\u6570\u662F\u5B69\u5B50\u8BFE\u540E\u81EA\u5DF1\u505A\u7684\uFF1A\u8BFE\u4E0A\u53EF\u4EE5\u8BF4\u201C\u8BFE\u540E\u8BD5\u8BD5\u2026\u2026\u201D\uFF0C\u4F46\u4E0D\u8BB2\u5B83\u600E\u4E48\u505A\u3001\u4E0D\u5199\u51FA\u5B83\u7684\u7B97\u5F0F\u3001\u4E0D\u8BF4\u5B83\u7684\u7B54\u6848\uFF0Coutline \u4E5F\u4E0D\u4E3A\u5B83\u5B89\u6392\u4E00\u8282\u3002\u7EC3\u4E60\uFF1A\u5BF9\u7B2C\u4E94\u4E2A\u6570\u5199\u4E00\u4E2A\u6570\u503C\u76EE\u6807\u9898\uFF08\u6570\u503C\u519910\uFF09\uFF0C\u5B69\u5B50\u81EA\u5DF1\u8865\u6EE1\u5341\uFF0C\u7A0B\u5E8F\u518D\u51FA\u4E00\u884C\u7A7A\uFF088+6=8+__+__=10+__=__\uFF09\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u548C\u3002\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
   },
   // OLL decision 0028 (a trial): the same amount counted in another unit on the place-value chart, a count (3 tenths =
   // ? thousandths) or a times pair (700 is ? times 70). The model writes the amount, the unit asked and a practice of
@@ -18953,6 +19211,9 @@ var MATH_RECIPES = {
     number_roles: ["problem", "problem", "practice", "practice", "demonstration"],
     // Left out since #188; refused like the other cards' since pilot 1 (2026-11-27), behind this flag ("left_out" goes back).
     wrong_number_moves: "refused",
+    // A second card of the kind on the section's own example (second-card.ts): the label of the number it moves.
+    second_card_label: SECOND_CARDS.place_value_times_ten.label,
+    second_card_starts: SECOND_CARDS.place_value_times_ten.starts,
     card_name: "times-ten card",
     number_names: ["amount", "unit asked", "practice amount", "practice unit asked", "start unit"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
@@ -18963,10 +19224,10 @@ var MATH_RECIPES = {
     program_number_inputs: [{ initial: ([amount, target]) => timesTenStartOf(amount ?? 0, target ?? 0), min: 0, max: 1e6, label: "\u73B0\u5728\u7528\u4EC0\u4E48\u5355\u4F4D\u5728\u6570" }],
     // The card starts on no fewer: an outline that declares fewer loses it at once (a section cannot add one).
     min_lesson_numbers: 5,
-    parameter_names: [],
-    model_parameter_names: [],
+    parameter_names: ["example_amount", "example_unit_asked"],
+    model_parameter_names: ["example_amount", "example_unit_asked"],
     required_model_schema_parameters: [],
-    semantic_parameters: [],
+    semantic_parameters: ["example_amount", "example_unit_asked"],
     output_kinds: ["place_value_times_ten"],
     // Up to five lesson variables (the amount, the target, counted in, one or two row sets): when a lesson holds too
     // many, the card is the picture that goes.
@@ -18975,7 +19236,7 @@ var MATH_RECIPES = {
     // text says how it is used.
     student_controls: [],
     required_features: ["count_in_another_unit"],
-    model_guidance: "\u6362\u4E00\u4E2A\u5355\u4F4D\u6765\u6570\uFF08\u6570\u4F4D\u8868\uFF1A\u5F80\u53F3\u4E00\u4F4D\u4E00\u4E2A\u62C6\u6210\u5341\u4E2A\uFF0C\u5F80\u5DE6\u4E00\u4F4D\u5341\u4E2A\u5408\u6210\u4E00\u4E2A\uFF09\uFF1A\u6570\u5355\u4F4D\uFF083\u4E2A\u5341\u5206\u4E4B\u4E00=?\u4E2A\u5343\u5206\u4E4B\u4E00\uFF1B6\u4E2A\u5343=?\u4E2A\u767E\uFF1B\u4E00\u5343\u91CC\u6709\u51E0\u4E2A\u5341\uFF09\u6216\u500D\u6570\uFF08700\u662F70\u7684\u51E0\u500D\uFF1B0.3\u662F3\u7684\u5341\u5206\u4E4B\u4E00\uFF09\u3002\u8FD9\u4E9B\u9898\u7528\u8FD9\u5F20\u5361\uFF0C\u4E0D\u7528 trade_ten_for_one\uFF08\u5B83\u53EA\u628A\u5341\u4E2A\u5408\u6210\u4E00\u4E2A\uFF09\u3002\u6570\u53EA\u6709\u4E00\u4F4D\u4E0D\u662F\u96F6\uFF085550\u91CC\u7684\u4E24\u4E2A5\u5199500\u548C50\uFF09\uFF0C\u5355\u4F4D\u6700\u591A\u9694\u4E24\u4F4D\uFF0C\u500D\u6570\u662F\u76F8\u90BB\u4E24\u4F4D\u3002\u4E0D\u7528\u4E8E\u4E00\u4E2A\u6570\u5B57\u8868\u793A\u591A\u5C11\u3001\u6BD4\u8F83\u3001\u52A0\u51CF\u3001\u4E58\u9664\u4EE510\u6216100\u3001\u9664\u4EE5\u5C0F\u6570\u3002outline \u7684 numbers \u4F9D\u6B21\u662F\u4E94\u4E2A\u89D2\u8272\uFF0C\u6BCF\u4E2A\u6570\u7684 label \u7528\u8BFE\u7684\u8BED\u8A00\u5199\u5B83\u7684\u89D2\u8272\uFF08\u5982 unit asked\u3001\u95EE\u7684\u5355\u4F4D\uFF09\uFF1Aamount \u8981\u6570\u7684\u6570\uFF08\u5199\u503C\uFF0C3\u4E2A\u5341\u5206\u4E4B\u4E00\u51990.3\uFF09\uFF1Bunit_asked \u95EE\u7684\u5355\u4F4D\uFF08\u95EE\u201C\u662F\u51E0\u4E2A\u767E\u5206\u4E4B\u4E00\u201D\u51990.01\uFF1B\u500D\u6570\u5199\u5C0F\u7684\u657070\uFF09\uFF1Bpractice_amount\u3001practice_unit_asked \u7EC3\u4E60\u7684\u4E24\u4E2A\u6570\uFF08\u540C\u4E00\u79CD\u95EE\u6CD5\uFF0C\u9694\u540C\u6837\u51E0\u4F4D\u3001\u540C\u4E00\u65B9\u5411\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF09\uFF1Bstart_unit \u8981\u6570\u7684\u6570\u73B0\u5728\u7528\u4EC0\u4E48\u5355\u4F4D\u5728\u6570\uFF08\u9898\u76EE\u8BF4\u5B83\u65F6\u7528\u7684\u5355\u4F4D\uFF09\u3002\u62C6\u5F00\u7684\u9898\uFF08\u5F80\u5C0F\u7684\u5355\u4F4D\u6570\uFF09\u548C\u500D\u6570\u4E0D\u5199 start_unit\uFF0C\u7A0B\u5E8F\u8865\u6210\u8981\u6570\u7684\u6570\u81EA\u5DF1\u90A3\u4E00\u4F4D\uFF1A7\u4E2A\u5341\u5206\u4E4B\u4E00=?\u4E2A\u767E\u5206\u4E4B\u4E00 \u51990.7\u30010.01\u3001\u7EC3\u4E60\u4E24\u4E2A\u6570\uFF1B\u4E00\u5343\u91CC\u6709\u51E0\u4E2A\u5341 \u51991000\u300110\u3001\u7EC3\u4E60\u4E24\u4E2A\u6570\u3002\u5408\u8D77\u6765\u7684\u9898\uFF08\u5F80\u5927\u7684\u5355\u4F4D\u6570\uFF09\u8981\u5199\uFF1A70\u4E2A\u767E\u5206\u4E4B\u4E00=?\u4E2A\u5341\u5206\u4E4B\u4E00 \u51990.7\u30010.1\u3001\u7EC3\u4E60\u4E24\u4E2A\u6570\u30010.01\u3002start_unit \u548C unit_asked \u662F\u4E24\u4E2A\u4E0D\u540C\u7684\u5355\u4F4D\u3002\u6F14\u793A\u53EA\u52A8\u753B start_unit\uFF08\u7B2C\u4E94\u4E2A\u6570\uFF09\uFF1A\u4ECE\u5B83\u4E00\u6B65\u4E00\u6B65\u52A8\u753B\u5230 unit_asked \u7684\u503C\uFF080.1\u30010.01\u30010.001\uFF1B\u500D\u6570\u523070\uFF09\uFF0C\u53EA\u5F80\u524D\u8D70\uFF0C\u4E00\u76F4\u5230\u95EE\u7684\u5355\u4F4D\uFF1B\u522B\u7684\u6570\u4E0D\u52A8\u753B\u3002\u7EC3\u4E60\u7684\u6570\u662F\u5B69\u5B50\u8BFE\u540E\u81EA\u5DF1\u505A\u7684\uFF1A\u8BFE\u4E0A\u53EF\u4EE5\u8BF4\u201C\u8BFE\u540E\u8BD5\u8BD5\u2026\u2026\u201D\uFF0C\u4F46\u4E0D\u8BB2\u5B83\u600E\u4E48\u505A\u3001\u4E0D\u5199\u51FA\u5B83\u7684\u7B97\u5F0F\u3001\u4E0D\u8BF4\u5B83\u7684\u7B54\u6848\uFF0Coutline \u4E5F\u4E0D\u4E3A\u5B83\u5B89\u6392\u4E00\u8282\u3002\u7EC3\u4E60\uFF1A\u5BF9\u7B2C\u4E94\u4E2A\u6570\u5199\u6570\u503C\u76EE\u6807\u9898\uFF0C\u7A0B\u5E8F\u518D\u51FA\u7B54\u6848\u90A3\u4E00\u884C\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u7B54\u6848\u3002\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
+    model_guidance: "\u6362\u4E00\u4E2A\u5355\u4F4D\u6765\u6570\uFF08\u6570\u4F4D\u8868\uFF1A\u5F80\u53F3\u4E00\u4F4D\u4E00\u4E2A\u62C6\u6210\u5341\u4E2A\uFF0C\u5F80\u5DE6\u4E00\u4F4D\u5341\u4E2A\u5408\u6210\u4E00\u4E2A\uFF09\uFF1A\u6570\u5355\u4F4D\uFF083\u4E2A\u5341\u5206\u4E4B\u4E00=?\u4E2A\u5343\u5206\u4E4B\u4E00\uFF1B6\u4E2A\u5343=?\u4E2A\u767E\uFF1B\u4E00\u5343\u91CC\u6709\u51E0\u4E2A\u5341\uFF09\u6216\u500D\u6570\uFF08700\u662F70\u7684\u51E0\u500D\uFF1B0.3\u662F3\u7684\u5341\u5206\u4E4B\u4E00\uFF09\u3002\u8FD9\u4E9B\u9898\u7528\u8FD9\u5F20\u5361\uFF0C\u4E0D\u7528 trade_ten_for_one\uFF08\u5B83\u53EA\u628A\u5341\u4E2A\u5408\u6210\u4E00\u4E2A\uFF09\u3002\u6570\u53EA\u6709\u4E00\u4F4D\u4E0D\u662F\u96F6\uFF085550\u91CC\u7684\u4E24\u4E2A5\u5199500\u548C50\uFF09\uFF0C\u5355\u4F4D\u6700\u591A\u9694\u4E24\u4F4D\uFF0C\u500D\u6570\u662F\u76F8\u90BB\u4E24\u4F4D\u3002\u4E0D\u7528\u4E8E\u4E00\u4E2A\u6570\u5B57\u8868\u793A\u591A\u5C11\u3001\u6BD4\u8F83\u3001\u52A0\u51CF\u3001\u4E58\u9664\u4EE510\u6216100\u3001\u9664\u4EE5\u5C0F\u6570\u3002outline \u7684 numbers \u4F9D\u6B21\u662F\u4E94\u4E2A\u89D2\u8272\uFF0C\u6BCF\u4E2A\u6570\u7684 label \u7528\u8BFE\u7684\u8BED\u8A00\u5199\u5B83\u7684\u89D2\u8272\uFF08\u5982 unit asked\u3001\u95EE\u7684\u5355\u4F4D\uFF09\uFF1Aamount \u8981\u6570\u7684\u6570\uFF08\u5199\u503C\uFF0C3\u4E2A\u5341\u5206\u4E4B\u4E00\u51990.3\uFF09\uFF1Bunit_asked \u95EE\u7684\u5355\u4F4D\uFF08\u95EE\u201C\u662F\u51E0\u4E2A\u767E\u5206\u4E4B\u4E00\u201D\u51990.01\uFF1B\u500D\u6570\u5199\u5C0F\u7684\u657070\uFF09\uFF1Bpractice_amount\u3001practice_unit_asked \u7EC3\u4E60\u7684\u4E24\u4E2A\u6570\uFF08\u540C\u4E00\u79CD\u95EE\u6CD5\uFF0C\u9694\u540C\u6837\u51E0\u4F4D\u3001\u540C\u4E00\u65B9\u5411\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF09\uFF1Bstart_unit \u8981\u6570\u7684\u6570\u73B0\u5728\u7528\u4EC0\u4E48\u5355\u4F4D\u5728\u6570\uFF08\u9898\u76EE\u8BF4\u5B83\u65F6\u7528\u7684\u5355\u4F4D\uFF09\u3002\u62C6\u5F00\u7684\u9898\uFF08\u5F80\u5C0F\u7684\u5355\u4F4D\u6570\uFF09\u548C\u500D\u6570\u4E0D\u5199 start_unit\uFF0C\u7A0B\u5E8F\u8865\u6210\u8981\u6570\u7684\u6570\u81EA\u5DF1\u90A3\u4E00\u4F4D\uFF1A7\u4E2A\u5341\u5206\u4E4B\u4E00=?\u4E2A\u767E\u5206\u4E4B\u4E00 \u51990.7\u30010.01\u3001\u7EC3\u4E60\u4E24\u4E2A\u6570\uFF1B\u4E00\u5343\u91CC\u6709\u51E0\u4E2A\u5341 \u51991000\u300110\u3001\u7EC3\u4E60\u4E24\u4E2A\u6570\u3002\u5408\u8D77\u6765\u7684\u9898\uFF08\u5F80\u5927\u7684\u5355\u4F4D\u6570\uFF09\u8981\u5199\uFF1A70\u4E2A\u767E\u5206\u4E4B\u4E00=?\u4E2A\u5341\u5206\u4E4B\u4E00 \u51990.7\u30010.1\u3001\u7EC3\u4E60\u4E24\u4E2A\u6570\u30010.01\u3002start_unit \u548C unit_asked \u662F\u4E24\u4E2A\u4E0D\u540C\u7684\u5355\u4F4D\u3002\u6F14\u793A\u53EA\u52A8\u753B start_unit\uFF08\u7B2C\u4E94\u4E2A\u6570\uFF09\uFF1A\u4ECE\u5B83\u4E00\u6B65\u4E00\u6B65\u52A8\u753B\u5230 unit_asked \u7684\u503C\uFF080.1\u30010.01\u30010.001\uFF1B\u500D\u6570\u523070\uFF09\uFF0C\u53EA\u5F80\u524D\u8D70\uFF0C\u4E00\u76F4\u5230\u95EE\u7684\u5355\u4F4D\uFF1B\u522B\u7684\u6570\u4E0D\u52A8\u753B\u3002\u8981\u5728\u540E\u9762\u7684\u8282\u518D\u8BB2\u53E6\u4E00\u4E2A\u4F8B\u5B50\uFF0Coutline \u5728\u90A3\u4E00\u8282\u518D\u89C4\u5212\u4E00\u5F20\u8FD9\u79CD\u5361\u7247\uFF08\u4E00\u8BFE\u6700\u591A\u4E24\u5F20\uFF09\uFF1B\u90A3\u4E00\u8282\u5728\u8FD9\u5F20\u5361\u7247\u7684 parameters \u91CC\u5199\u4F8B\u5B50\u7684\u4E24\u4E2A\u6570 example_amount\u3001example_unit_asked\uFF08\u540C\u4E00\u79CD\u95EE\u6CD5\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u4E5F\u4E0D\u662F\u7EC3\u4E60\u7684\uFF09\uFF0C\u7A0B\u5E8F\u7ED9\u5B83\u6F14\u793A\u7528\u7684\u6570\uFF1B\u7B2C\u4E8C\u5F20\u5361\u7247\u53EA\u6F14\u793A\uFF0C\u53E6\u4E00\u4E2A\u4F8B\u5B50\u753B\u5728\u7B2C\u4E8C\u5F20\u5361\u7247\u4E0A\uFF0C\u4E0D\u7528\u7EC3\u4E60\u7684\u6570\uFF0C\u7EC3\u4E60\u4ECD\u5728\u7B2C\u4E00\u5F20\u4E0A\u3002\u7EC3\u4E60\u7684\u6570\u662F\u5B69\u5B50\u8BFE\u540E\u81EA\u5DF1\u505A\u7684\uFF1A\u8BFE\u4E0A\u53EF\u4EE5\u8BF4\u201C\u8BFE\u540E\u8BD5\u8BD5\u2026\u2026\u201D\uFF0C\u4F46\u4E0D\u8BB2\u5B83\u600E\u4E48\u505A\u3001\u4E0D\u5199\u51FA\u5B83\u7684\u7B97\u5F0F\u3001\u4E0D\u8BF4\u5B83\u7684\u7B54\u6848\uFF0Coutline \u4E5F\u4E0D\u4E3A\u5B83\u5B89\u6392\u4E00\u8282\u3002\u7EC3\u4E60\uFF1A\u5BF9\u7B2C\u4E94\u4E2A\u6570\u5199\u6570\u503C\u76EE\u6807\u9898\uFF0C\u7A0B\u5E8F\u518D\u51FA\u7B54\u6848\u90A3\u4E00\u884C\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u7B54\u6848\u3002\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
   },
   // OLL decision 0029 (a trial): comparing two numbers by place, from the largest place down: two rows of one chart,
   // lined up by place; the learner judges each place from the left ("Same" or "Different", the card's own buttons),
@@ -19197,7 +19458,10 @@ var MATH_SCHEMA_PROPERTIES = {
   // What the place-value chart gives (OLL 0025): a build form, or the numeral to pull apart. The program writes the text.
   place_value_chart: { given: { enum: ["name", "expanded", "expanded_factors", "place_counts", "numeral"] } },
   // Adding or subtracting the two numbers on the place-value trade card (OLL 0026).
-  place_value_trade: { operation: { enum: ["add", "subtract"] } },
+  // A second card's example (second-card.ts): the section writes it, as numbers.
+  place_value_trade: { operation: { enum: ["add", "subtract"] }, example_first_number: { type: "number" }, example_second_number: { type: "number" } },
+  make_ten: { example_first_addend: { type: "integer" }, example_second_addend: { type: "integer" } },
+  place_value_times_ten: { example_amount: { type: "number" }, example_unit_asked: { type: "number" } },
   solid_3d: {
     // The compiler checks the fields (each solid's shape and sizes), so the schema carries no strictness keywords.
     solids: { type: "array", minItems: 1, maxItems: 2, items: { type: "object", properties: {
@@ -19674,7 +19938,14 @@ var SCHEMA_PROPERTY_ORDER = [
   // The place-value chart trial recipe (decision 0025); last, so requests without it keep their order.
   "given",
   // The place-value trade trial recipe (decision 0026); last, so requests without it keep their order.
-  "operation"
+  "operation",
+  // A second card's example (second-card.ts), on the trial cards; last, so requests without them keep their order.
+  "example_first_number",
+  "example_second_number",
+  "example_first_addend",
+  "example_second_addend",
+  "example_amount",
+  "example_unit_asked"
 ];
 function promptSlot(slot, core = "", plugins = INSTALLED_PLUGINS) {
   const text5 = core + plugins.map((plugin) => plugin.prompt_rules[slot] ?? "").join("");
@@ -19766,6 +20037,9 @@ var EN = {
   "\u4ECE\u5DE6\u5230\u53F3\u8BFB\u6A2A\u7EBF\u4E0B\u9762\u6BCF\u4E00\u5217\u7684\u5706\u7247\u4E2A\u6570\u3002": "Read how many disks each column has below the line, from left to right.",
   "\u5927\u6570\u90A3\u4E00\u6846\u91CC\u6709\u51E0\u4E2A": "in the bigger number's frame",
   "\u79FB\u8FC7\u53BB\u51E0\u4E2A": "moved across",
+  "\u7B2C\u4E8C\u4E2A\u4F8B\u5B50\uFF1A\u5927\u6570\u90A3\u4E00\u6846\u91CC\u6709\u51E0\u4E2A": "second example: in the bigger number's frame",
+  "\u7B2C\u4E8C\u4E2A\u4F8B\u5B50\uFF1A\u505A\u5B8C\u4E86\u51E0\u5217": "second example: columns finished",
+  "\u7B2C\u4E8C\u4E2A\u4F8B\u5B50\uFF1A\u73B0\u5728\u7528\u4EC0\u4E48\u5355\u4F4D\u5728\u6570": "second example: counted in",
   "\u6570\u8F74\u7684\u8D77\u70B9\uFF08\u5927\u6570\uFF09": "the line's start (the bigger number)",
   "\u8865\u6210\u5341\u7684\u4E00\u6B65": "the step that makes ten",
   "\u5269\u4E0B\u7684\u4E00\u6B65": "the step left",
@@ -21177,178 +21451,6 @@ function baseTenFacts2(start, now) {
   };
 }
 
-// src/plugins/place-value-trade-moves.ts
-var PLACE_VALUE_TRADE_OPERATIONS2 = ["add", "subtract"];
-var TRADE_NUMBER = { first: 0, second: 1, practiceFirst: 2, practiceSecond: 3, finished: 4 };
-var ROLES = ["first number", "second number", "practice pair's first number", "practice pair's second number"];
-function placeValueTradeThousandths(value2) {
-  const thousandths = placeValueThousandths(value2);
-  return thousandths !== void 0 && thousandths % 10 === 0 && thousandths <= 999999990 ? thousandths : void 0;
-}
-var tradeDecimal = (thousandths) => Number((thousandths / 1e3).toFixed(3));
-function placeValueTradeColumnsOf(operation, a, b) {
-  const { top_place, low_place } = placeValueTradeColumnsFor(operation, a, b);
-  return placeValueTradeColumns(top_place, low_place);
-}
-var span = (columns) => `${placeValueColumnName(columns[0]).toLowerCase()} to ${placeValueColumnName(columns.at(-1)).toLowerCase()}`;
-function placeValueTradeStartFault2(values, operation) {
-  if (!PLACE_VALUE_TRADE_OPERATIONS2.includes(operation)) return "operation is add or subtract";
-  if (values.length !== 5) {
-    return "the card takes five lesson numbers, in order: the first number, the second number, the practice pair's first and second number (another pair of the same columns, for the learner), and columns finished (0 at the start)";
-  }
-  const thousandths = values.slice(0, 4).map(placeValueTradeThousandths);
-  for (const [index, value2] of thousandths.entries()) {
-    if (value2 === void 0) return `the ${ROLES[index]} is a number from 0 to 999,999.99 with at most two decimal places (hundredths): the card's last column is the hundredths`;
-  }
-  const [a, b, pa, pb] = thousandths;
-  const op = operation;
-  const fault = placeValueTradeFault(op, a, b);
-  if (fault) return `the question's pair: ${placeValueTradeFaultText(fault, op, a, b)}`;
-  const practiceFault = placeValueTradeFault(op, pa, pb);
-  if (practiceFault) return `the practice pair: ${placeValueTradeFaultText(practiceFault, op, pa, pb)}`;
-  if (pa === a && pb === b) {
-    return "the practice pair is the learner's own: another pair than the question's (one number different is enough), so the learner does not copy the demonstration";
-  }
-  const columns = placeValueTradeColumnsOf(op, a, b);
-  const practiceColumns = placeValueTradeColumnsOf(op, pa, pb);
-  if (columns.join() !== practiceColumns.join()) {
-    return `the practice pair needs the columns from ${span(practiceColumns)} and the question's pair from ${span(columns)}: the card keeps its columns, so write a practice pair with the same places (as many whole digits and decimal places, and an answer that gains a column only when the question's does)`;
-  }
-  return void 0;
-}
-function placeValueTradeState2(start, content) {
-  return [...start.slice(0, 4), 0, content?.parameters?.operation === "subtract" ? 1 : 0];
-}
-function stateColumns(state) {
-  const operation = state.at(-1) === 1 ? "subtract" : "add";
-  const [a, b] = [state[0], state[1]].map(placeValueTradeThousandths);
-  if (a === void 0 || b === void 0 || placeValueTradeFault(operation, a, b)) return void 0;
-  return placeValueTradeColumnsOf(operation, a, b);
-}
-function placeValueTradeNext(columns, k) {
-  const place5 = columns[columns.length - 1 - k];
-  return place5 === void 0 ? `every column is finished at ${columns.length}` : `the next value, ${k + 1}, finishes the ${placeValueColumnName(place5).toLowerCase()}`;
-}
-var FULL_WIDTH5 = /[０-９．，＝]/gu;
-var halfWidth4 = (text5) => text5.replace(FULL_WIDTH5, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
-var STATES_ANSWER = /(?:=|\b(?:equals?|makes?|answer(?:\s+is)?|total(?:\s+is)?|difference(?:\s+is)?|result(?:\s+is)?|is\s+left)|等于|得数是?|答案是?|结果是?|一共是?|还剩)\s*$/iu;
-function placeValueTradeWordsGiveAnswer(words, answer, practice) {
-  const text5 = halfWidth4(String(words));
-  for (const match of text5.matchAll(/\d{1,3}(?:[,   ]\d{3})+(?:\.\d+)?|\d*\.\d+|\d+/gu)) {
-    if (placeValueThousandths(Number(match[0].replace(/[,   ]/gu, ""))) !== answer) continue;
-    if (!practice.includes(answer)) return true;
-    if (STATES_ANSWER.test(text5.slice(0, match.index))) return true;
-  }
-  return false;
-}
-function placeValueTradeMove(state, position, to) {
-  if (position < 0 || position > TRADE_NUMBER.finished) return "the card has five lesson numbers";
-  if (to === state[position]) return [...state];
-  const columns = stateColumns(state);
-  const n = columns?.length ?? 0;
-  if (position !== TRADE_NUMBER.finished) {
-    return `the two numbers and the practice pair stay as written: the demonstration moves only columns finished (the card's fifth lesson number), from 0 up to ${n}, and the card plays each column`;
-  }
-  const from = state[TRADE_NUMBER.finished];
-  const next = columns ? placeValueTradeNext(columns, from) : "";
-  if (!Number.isInteger(to) || to < 0 || to > n) {
-    return `columns finished counts the columns the demonstration has finished, counting from the right: a whole number from 0 to ${n}, not ${to}; from ${from}, ${next}`;
-  }
-  if (to < from) return `columns finished goes forward, a column or more at a time, never back: from ${from} it can be ${from} to ${n}; ${next}`;
-  const moved = [...state];
-  moved[TRADE_NUMBER.finished] = to;
-  return moved;
-}
-function placeValueTradeMoves2(state, moves) {
-  const steps = [];
-  const ignored = [];
-  let current = [...state];
-  for (const [index, move] of moves.entries()) {
-    if (move.position >= TRADE_NUMBER.first && move.position < TRADE_NUMBER.finished && move.to !== current[move.position]) {
-      ignored.push({ index, position: move.position, reason: "the two numbers and the practice pair stay as written: the demonstration moves only columns finished (the card's fifth lesson number)" });
-      continue;
-    }
-    const result = placeValueTradeMove(current, move.position, move.to);
-    if (typeof result === "string") return { refused: { position: move.position, reason: result } };
-    steps.push({ position: move.position, from: current, to: result });
-    current = result;
-  }
-  return { steps, ...ignored.length ? { ignored } : {} };
-}
-
-// src/plugins/make-ten-moves.ts
-var MAKE_TEN_NUMBER = { first: 0, second: 1, practiceFirst: 2, practiceSecond: 3, filled: 4, moved: 5 };
-var makeTenSum = (a, b) => a + b;
-function makeTenStartFault2(values) {
-  if (values.length !== 6) {
-    return "the card takes six lesson numbers, in order: the first number, the second number, the practice pair's two numbers (another pair, for the learner), the count in the bigger number's frame (the bigger number at the start) and the count moved (0)";
-  }
-  const [a, b, pa, pb, filled, moved] = values;
-  const fault = makeTenFault(a, b);
-  if (fault) return `the question's pair: ${makeTenFaultText(fault, a, b)}`;
-  const practiceFault = makeTenFault(pa, pb);
-  if (practiceFault) return `the practice pair: ${makeTenFaultText(practiceFault, pa, pb)}`;
-  if (pa === a && pb === b || pa === b && pb === a) {
-    return "the practice pair is the learner's own: another pair than the question's (the same two numbers in the other order are the same pair), so the learner does not copy the demonstration";
-  }
-  if (filled !== makeTenFreshCount(a, b)) {
-    return `the count in the bigger number's frame starts at the bigger number, ${makeTenFreshCount(a, b)}, not ${filled}: the frames start apart, nothing moved`;
-  }
-  if (moved !== 0) return `the count moved starts at 0, not ${moved}: only the learner's taps change it`;
-  return void 0;
-}
-function makeTenStartValues(values) {
-  return values.map((value2, position) => position === MAKE_TEN_NUMBER.filled ? makeTenFreshCount(values[0], values[1]) : position === MAKE_TEN_NUMBER.moved ? 0 : value2);
-}
-function makeTenState2(start) {
-  const [a, b] = [start[0] ?? 0, start[1] ?? 0];
-  return [...start.slice(0, 4), makeTenFreshCount(a, b), 0];
-}
-function makeTenNext(a, b, filled) {
-  const big = Math.max(a, b), small = a >= b ? b : a;
-  return filled >= MAKE_TEN_PLACES ? `the ${big}'s frame holds ten at ${MAKE_TEN_PLACES}` : `the next value, ${filled + 1}, moves one of the ${small} into the ${big}'s frame`;
-}
-function makeTenMove(state, position, to) {
-  if (position < 0 || position > MAKE_TEN_NUMBER.moved) return "the card has six lesson numbers";
-  if (to === state[position]) return [...state];
-  const [a, b] = [state[0], state[1]];
-  const start = makeTenFreshCount(a, b);
-  if (position === MAKE_TEN_NUMBER.moved) return "the count moved changes only by the learner's taps: the demonstration moves the count in the bigger number's frame";
-  if (position !== MAKE_TEN_NUMBER.filled) {
-    return `the two numbers and the practice pair stay as written: the demonstration moves only the count in the bigger number's frame (the card's fifth lesson number), from ${start} up to ${MAKE_TEN_PLACES}, one counter at a time`;
-  }
-  const from = state[MAKE_TEN_NUMBER.filled];
-  if (!Number.isInteger(to) || to < start || to > MAKE_TEN_PLACES) {
-    return `the count in the bigger number's frame is a whole number from ${start} to ${MAKE_TEN_PLACES}, not ${to}; from ${from}, ${makeTenNext(a, b, from)}`;
-  }
-  if (to < from) return `the count in the bigger number's frame goes forward, never back: from ${from} it can be ${from} to ${MAKE_TEN_PLACES}; ${makeTenNext(a, b, from)}`;
-  const moved = [...state];
-  moved[MAKE_TEN_NUMBER.filled] = to;
-  return moved;
-}
-function makeTenMoves(state, moves) {
-  const steps = [];
-  const ignored = [];
-  let current = [...state];
-  for (const [index, move] of moves.entries()) {
-    if (move.position >= MAKE_TEN_NUMBER.first && move.position <= MAKE_TEN_NUMBER.practiceSecond && move.to !== current[move.position]) {
-      ignored.push({ index, position: move.position, reason: "the pair and the practice pair stay as written: the demonstration moves only the count in the bigger number's frame (the card's fifth lesson number)" });
-      continue;
-    }
-    const result = makeTenMove(current, move.position, move.to);
-    if (typeof result === "string") return { refused: { position: move.position, reason: result } };
-    steps.push({ position: move.position, from: current, to: result });
-    current = result;
-  }
-  return { steps, ...ignored.length ? { ignored } : {} };
-}
-var FULL_WIDTH6 = /[０-９＝]/gu;
-var halfWidth5 = (text5) => text5.replace(FULL_WIDTH6, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
-function makeTenWordsGiveAnswer(words, sum) {
-  for (const match of halfWidth5(String(words)).matchAll(/\d+/gu)) if (Number(match[0]) === sum) return true;
-  return false;
-}
-
 // src/plugins/math-hooks.ts
 function separateInitialSamples(visual, plan, sectionIndex) {
   const words = plan.sections[sectionIndex].moments.map((moment) => moment.narration).join(" ");
@@ -21500,6 +21602,7 @@ var MATH_HOOKS = {
     // the model never names a control). Each number's range is its own value, and columns finished runs from 0
     // to the card's columns; the compiler checks every number and each step itself, so nothing is fitted.
     fit_numbers(content, plan) {
+      if (isSecondCard("place_value_trade", content, plan.sections)) return /* @__PURE__ */ new Map();
       const numbers = content.numbers ?? [];
       const definitions = numbers.map((number) => plan.numbers?.[number - 1]);
       if (!definitions.length || definitions.some((definition) => !definition)) return /* @__PURE__ */ new Map();
@@ -21515,6 +21618,7 @@ var MATH_HOOKS = {
       return /* @__PURE__ */ new Map();
     },
     // Columns finished moves forward from 0; the two numbers and the practice pair never move.
+    second_card: (content, sections, numbers) => secondCardState("place_value_trade", content, sections, numbers),
     number_moves: { state: placeValueTradeState2, moves: placeValueTradeMoves2 },
     // The pair, columns finished and one status a column: the more columns of adding or subtracting the pair.
     planned_variables(values) {
@@ -21529,6 +21633,7 @@ var MATH_HOOKS = {
     // model never names a control). Each number's range is its own value; the count in the bigger frame runs to 10
     // and the count moved to 4 (the program's own numbers). The compiler checks every number and each step itself.
     fit_numbers(content, plan) {
+      if (isSecondCard("make_ten", content, plan.sections)) return /* @__PURE__ */ new Map();
       const numbers = content.numbers ?? [];
       const definitions = numbers.map((number) => plan.numbers?.[number - 1]);
       if (!definitions.length || definitions.some((definition) => !definition)) return /* @__PURE__ */ new Map();
@@ -21541,6 +21646,7 @@ var MATH_HOOKS = {
       return /* @__PURE__ */ new Map();
     },
     // The count in the bigger frame moves forward from the bigger number to 10; nothing else moves.
+    second_card: (content, sections, numbers) => secondCardState("make_ten", content, sections, numbers),
     number_moves: { state: makeTenState2, moves: makeTenMoves },
     // The pair, the count in the bigger frame and the count moved.
     planned_variables: () => 4
@@ -21550,6 +21656,7 @@ var MATH_HOOKS = {
     // control). Each number's range is its own value, and counted in runs over the problem's path (as written: 0.1
     // to 0.001), as make ten's and the trade card's do; the compiler checks every number and each step itself.
     fit_numbers(content, plan) {
+      if (isSecondCard("place_value_times_ten", content, plan.sections)) return /* @__PURE__ */ new Map();
       const numbers = content.numbers ?? [];
       const definitions = numbers.map((number) => plan.numbers?.[number - 1]);
       if (!definitions.length || definitions.some((definition) => !definition)) return /* @__PURE__ */ new Map();
@@ -21566,6 +21673,7 @@ var MATH_HOOKS = {
     },
     // Counted in moves along the problem's path toward the target; nothing else moves (an animation of another
     // number is left out and recorded).
+    second_card: (content, sections, numbers) => secondCardState("place_value_times_ten", content, sections, numbers),
     number_moves: { state: placeValueTimesTenState2, moves: placeValueTimesTenMoves },
     // Numbers the card cannot start on go with the outline, before any section is written for them.
     outline_fault: timesTenOutlineFault,
@@ -21837,6 +21945,27 @@ function lowerPieces(parameters3, numberCount) {
 function requestsTwoIndependentPoints(request) {
   return /(?:两个|两)\s*(?:个)?(?:可以|可)?(?:分别|独立|各自).{0,8}(?:移动|调整).{0,4}点|(?:分别|独立|各自).{0,8}(?:移动|调整).{0,8}(?:两个点|两点)|two.{0,12}(?:independent|separate).{0,12}(?:point|sample)/i.test(request);
 }
+function secondCardState(capability2, content, sections, numbers) {
+  if (!isSecondCardKind(capability2) || !isSecondCard(capability2, content, sections)) return void 0;
+  const first = sections.flatMap((section) => section.moments.flatMap((moment) => moment.actions)).map((raw) => raw).find((action) => action.action === "create" && action.kind === "visual" && action.content?.capability === capability2)?.content;
+  if (!first) return void 0;
+  const found = exampleStart(capability2, exampleOf(capability2, content.parameters), (first.numbers ?? []).map((number) => numbers[number - 1]?.initial ?? Number.NaN), first.parameters);
+  if ("fault" in found) return void 0;
+  const merged = { ...content, parameters: { ...first.parameters ?? {}, ...content.parameters ?? {} } };
+  const hook = MATH_HOOKS[capability2].number_moves;
+  return { positions: [SECOND_CARDS[capability2].demonstration], started: [...hook.state(found.start, merged)] };
+}
+function prepareSecondCards(outline, section, language) {
+  const visuals = outline.course_visuals ?? [];
+  for (const capability2 of Object.keys(SECOND_CARDS)) {
+    const ofKind = visuals.filter((visual) => visual.capability === capability2);
+    if (ofKind.length < 2 || ofKind[1].create_section !== section || ofKind[0].create_section >= section) continue;
+    const label = lessonText(language, SECOND_CARDS[capability2].label);
+    const numbers = outline.numbers ?? [];
+    if (numbers.some((number) => number.label === label) || numbers.length >= 16) continue;
+    outline.numbers = [...numbers, { initial: 0, min: 0, max: SECOND_CARDS[capability2].max, label }];
+  }
+}
 function prepareMakeTenSteps(outline, section, language) {
   const visuals = outline.course_visuals ?? [];
   const numbers = outline.numbers ?? [];
@@ -21889,7 +22018,10 @@ function specializeTwoPointDraft(draft, outline, request) {
 }
 var MATH_PLUGIN_HOOKS = {
   prepare_outline: (outline, { request, language }) => prepareTwoPointOutline(outline, request, language),
-  prepare_section: (outline, section, { language }) => prepareMakeTenSteps(outline, section, language),
+  prepare_section: (outline, section, { language }) => {
+    prepareMakeTenSteps(outline, section, language);
+    prepareSecondCards(outline, section, language);
+  },
   specialize_draft(draft, context) {
     specializeTwoPointDraft(draft, context.outline, context.request);
     normalizePlotDraftBindings(draft, context);
@@ -22921,6 +23053,7 @@ function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
     fail3("LESSON_PLAN_COURSE_VISUAL", "$lessonPlanOutline.course_visuals", "expected at most 32 course visuals");
   }
   const firstVisualByCapability = /* @__PURE__ */ new Map();
+  const secondCardsByCapability = /* @__PURE__ */ new Set();
   courseVisuals.forEach((entry, index) => {
     const path = `$lessonPlanOutline.course_visuals[${index}]`;
     const visual = record9(entry, path);
@@ -22948,7 +23081,9 @@ function validateLessonPlanOutline(value2, expectedRequestParts = 0) {
       fail3("LESSON_PLAN_COURSE_VISUAL", `${path}.relation`, "unsupported visual relation");
     }
     const firstPosition = firstVisualByCapability.get(visualCapability);
-    if (firstPosition !== void 0 && visual.relation !== "comparison") {
+    const secondCard2 = firstPosition !== void 0 && recipeEntry(visualCapability)?.second_card_label !== void 0 && createSection > Number(courseVisuals[firstPosition - 1].create_section) && !secondCardsByCapability.has(visualCapability);
+    if (secondCard2) secondCardsByCapability.add(visualCapability);
+    if (firstPosition !== void 0 && visual.relation !== "comparison" && !secondCard2) {
       fail3(
         "LESSON_PLAN_COURSE_VISUAL",
         path,
@@ -25353,6 +25488,8 @@ function tradeRange(values, columns) {
   return max + unit4 < 10 ** (columns[0] + 4) ? { min, max: max + unit4 } : { min: min - unit4, max };
 }
 function compilePlaceValueTrade(base, content, role, placement, plan, path) {
+  const second = secondCard("place_value_trade", base, content, role, placement, plan, path);
+  if (second) return second;
   const input = parameters(content);
   allowParameterKeys(input, ["operation"], path);
   const operation = input.operation;
@@ -25371,7 +25508,7 @@ function compilePlaceValueTrade(base, content, role, placement, plan, path) {
   }
   const fault = placeValueTradeStartFault2(values, operation);
   if (fault) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault, "place_value_trade");
-  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "place_value_trade");
+  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "place_value_trade" && !isSecondCard("place_value_trade", action.content, plan.sections));
   if (first && (JSON.stringify(first.content.numbers ?? []) !== JSON.stringify(numbers) || first.content.parameters?.operation !== operation)) {
     fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `a lesson has one place-value trade card: this lesson's is on lesson numbers ${(first.content.numbers ?? []).join(", ")}`, "place_value_trade");
   }
@@ -25454,6 +25591,8 @@ var MAKE_TEN_TEXT = {
   "zh-CN": { a: "\u7B2C\u4E00\u4E2A\u6570", b: "\u7B2C\u4E8C\u4E2A\u6570", filled: "\u5927\u6570\u90A3\u4E00\u6846\u91CC\u6709\u51E0\u4E2A", moved: "\u79FB\u8FC7\u53BB\u51E0\u4E2A" }
 };
 function compileMakeTen(base, content, role, placement, plan, path) {
+  const second = secondCard("make_ten", base, content, role, placement, plan, path);
+  if (second) return second;
   allowParameterKeys(parameters(content), [], path);
   const numbers = content.numbers ?? [];
   const values = makeTenStartValues(numbers.map((number, index) => numberDefinition(plan, number, `${path}.numbers[${index}]`).initial));
@@ -25467,7 +25606,7 @@ function compileMakeTen(base, content, role, placement, plan, path) {
   }
   const fault = makeTenStartFault2(values);
   if (fault) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault, "make_ten");
-  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "make_ten");
+  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "make_ten" && !isSecondCard("make_ten", action.content, plan.sections));
   if (first && JSON.stringify(first.content.numbers ?? []) !== JSON.stringify(numbers)) {
     fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `a lesson has one make-ten card: this lesson's is on lesson numbers ${(first.content.numbers ?? []).join(", ")}`, "make_ten");
   }
@@ -25545,6 +25684,8 @@ var TIMES_TEN_TEXT = {
   "zh-CN": { amount: "\u8981\u6570\u7684\u6570", target: "\u95EE\u7684\u5355\u4F4D", counted_in: "\u73B0\u5728\u7528\u4EC0\u4E48\u5355\u4F4D\u5728\u6570", moved_once: "\u52A8\u8FC7\u4E00\u6B21\u7684\u884C", moved_twice: "\u52A8\u8FC7\u4E24\u6B21\u7684\u884C" }
 };
 function compilePlaceValueTimesTen(base, content, role, placement, plan, path) {
+  const second = secondCard("place_value_times_ten", base, content, role, placement, plan, path);
+  if (second) return second;
   allowParameterKeys(parameters(content), [], path);
   const numbers = content.numbers ?? [];
   const values = numbers.map((number, index) => numberDefinition(plan, number, `${path}.numbers[${index}]`).initial);
@@ -25559,7 +25700,7 @@ function compilePlaceValueTimesTen(base, content, role, placement, plan, path) {
   const found = timesTenStartProblem(values);
   if ("fault" in found) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, found.fault, "place_value_times_ten");
   const { problem, practice } = found;
-  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "place_value_times_ten");
+  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "place_value_times_ten" && !isSecondCard("place_value_times_ten", action.content, plan.sections));
   if (first && JSON.stringify(first.content.numbers ?? []) !== JSON.stringify(numbers)) {
     fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `a lesson has one times-ten card: this lesson's is on lesson numbers ${(first.content.numbers ?? []).join(", ")}`, "place_value_times_ten");
   }
@@ -25734,6 +25875,92 @@ function compilePlaceValueCompare(base, content, role, placement, plan, path) {
           }
         };
       }
+    }
+  };
+}
+function secondCard(capability2, base, content, role, placement, plan, path) {
+  const example = exampleOf(capability2, content.parameters);
+  const creates = plan.sections.flatMap((section, sectionAt) => section.moments.flatMap((moment) => moment.actions).flatMap((action) => action.action === "create" && action.kind === "visual" && action.content.capability === capability2 ? [{ sectionAt, content: action.content }] : []));
+  const first = creates[0];
+  if (!example && first && first.content !== content && content.numbers?.length === 1 && (first.content.numbers?.length ?? 0) > 1 && plan.numbers?.[content.numbers[0] - 1]?.label === lessonText(lessonTextLanguage(plan), SECOND_CARDS[capability2].label)) {
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${SECOND_CARDS[capability2].parameters[0]}`, `the second ${cardName(capability2)} shows an example of its own, and this create writes none (${SECOND_CARDS[capability2].parameters.join(", ")})`, capability2);
+  }
+  if (!example || !first || !isSecondCard(capability2, content, plan.sections)) {
+    if (content.parameters) for (const name of SECOND_CARDS[capability2].parameters) delete content.parameters[name];
+    return void 0;
+  }
+  const examples = creates.filter((each) => isSecondCard(capability2, each.content, plan.sections));
+  if (examples[0].content !== content && JSON.stringify(examples[0].content.parameters) !== JSON.stringify(content.parameters)) {
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${SECOND_CARDS[capability2].parameters[0]}`, `a lesson has one second ${cardName(capability2)}: this lesson's is on ${exampleOf(capability2, examples[0].content.parameters).join(" and ")}`, capability2);
+  }
+  const firstValues = (first.content.numbers ?? []).map((number) => plan.numbers?.[number - 1]?.initial ?? Number.NaN);
+  const found = exampleStart(capability2, example, firstValues, first.content.parameters);
+  if ("fault" in found) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${SECOND_CARDS[capability2].parameters[0]}`, found.fault, capability2);
+  const start = found.start;
+  const demonstration = content.numbers?.[0];
+  if (demonstration === void 0 || !plan.numbers?.[demonstration - 1]) {
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `the second ${cardName(capability2)} is drawn on the number the program gives its demonstration`, capability2);
+  }
+  const sharingAt = plan.sections.findIndex((section) => section.moments.some((moment) => moment.actions.some((action) => action.action === "create" && action.kind === "visual" && action.content.capability !== capability2 && (action.content.numbers ?? []).includes(demonstration))));
+  if (sharingAt >= 0) {
+    const sharing = plan.sections[sharingAt].moments.flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability !== capability2 && (action.content.numbers ?? []).includes(demonstration));
+    const other = sharing.content.capability;
+    const cardAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
+    failSharedTapCardNumbers(`${path}.numbers`, `lesson number ${demonstration} is the number the second ${cardName(capability2)}'s demonstration moves; the ${other} visual shows it too`, capability2, other, sharingAt, cardAt);
+  }
+  const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
+  const stem = base.replace(/[^A-Za-z0-9]+/gu, "_").toLowerCase();
+  const field = `${stem}_${capability2 === "make_ten" ? "filled" : capability2 === "place_value_trade" ? "finished" : "counted_in"}`;
+  const common = { as: base, role, place: placement, ...language === "zh-CN" ? { language } : {} };
+  let built;
+  let variable;
+  let toValue = (value2) => value2;
+  if (capability2 === "make_ten") {
+    const [a, b] = start;
+    built = buildMakeTen({ ...common, a, b, filled: { expression: field, initial: makeTenFreshCount(a, b) }, moved: 0 });
+    variable = { as: field, initial: makeTenFreshCount(a, b), min: 0, max: MAKE_TEN_PLACES, label: MAKE_TEN_TEXT[language].filled };
+  } else if (capability2 === "place_value_trade") {
+    const operation = first.content.parameters?.operation;
+    content.parameters.operation = operation;
+    const [a, b] = start.slice(0, 2).map((value2) => placeValueTradeThousandths(value2));
+    const columns = placeValueTradeColumnsOf(operation, a, b);
+    built = buildPlaceValueTrade({ ...common, operation, a, b, finished: { expression: field, initial: 0 }, places: columns.map((column) => ({ place: column, status: 0 })) });
+    variable = { as: field, initial: 0, min: 0, max: columns.length, label: PLACE_VALUE_TRADE_TEXT[language].finished };
+  } else {
+    const found2 = timesTenStartProblem(start);
+    if ("fault" in found2) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${SECOND_CARDS[capability2].parameters[0]}`, found2.fault, capability2);
+    const { problem } = found2;
+    built = buildPlaceValueTimesTen({
+      ...common,
+      amount: problem.amount,
+      target: problem.target,
+      ...problem.question === "count" ? { start: problem.start } : {},
+      counted_in: { expression: field, initial: problem.start },
+      moved_once: 0,
+      ...problem.g === 2 ? { moved_twice: 0 } : {}
+    });
+    const path2 = placeValueTimesTenPath(problem);
+    variable = { as: field, initial: problem.start, min: Math.min(...path2), max: Math.max(...path2) + (Math.min(...path2) === Math.max(...path2) ? 1 : 0), label: TIMES_TEN_TEXT[language].counted_in };
+    toValue = (value2) => placeValueThousandths(value2);
+  }
+  const position = SECOND_CARDS[capability2].demonstration;
+  return {
+    actions: built.actions,
+    whole: built.whole,
+    parts: new Map(Object.entries(built.parts)),
+    variables: [variable],
+    mover: {
+      unbound: true,
+      numbers: [demonstration],
+      positions: [position],
+      start,
+      example: true,
+      // A step moves the demonstration's number forward: the card plays it, as the first card does. Nothing else moves.
+      play(steps) {
+        return steps.filter((step) => step.position === position && step.to[position] !== step.from[position]).map((step) => ({ do: "animate", variable: field, value: toValue(step.to[position]) }));
+      },
+      // The practice is the first card's: the compiler routes a practice on this card's number there.
+      task: () => ({ drop: `the practice is on the lesson's first ${cardName(capability2)}`, reason: "practice_on_first_card" })
     }
   };
 }
@@ -26531,7 +26758,9 @@ function separateCardProblemNumbers(plan, adjustments = []) {
       return;
     }
     const map = /* @__PURE__ */ new Map();
-    content.numbers.forEach((number, position) => {
+    const places = RECIPE_HOOKS[content.capability]?.second_card?.(content, plan.sections, numbers.slice(0, outlineDefinitions.length))?.positions;
+    content.numbers.forEach((number, index) => {
+      const position = places?.[index] ?? index;
       const role = recipeNumberRole(content.capability, position);
       const held = first.get(number);
       if (!held) {
@@ -26745,11 +26974,11 @@ function compileLessonPlan(value2, options = {}) {
               actions.push(...[...visual.actions, ...visual.mover?.opening ?? []].map((action) => ({ ...action, ...actionWhen(item.timing) })));
               writtenHere.set(visual, item.timing);
               if (visual.mover && RECIPE_HOOKS[visualContent.capability]?.number_moves) {
-                const start = visual.mover.numbers.map((number) => plan.numbers[number - 1].initial);
+                const start = visual.mover.start ?? visual.mover.numbers.map((number) => plan.numbers[number - 1].initial);
                 const drawnWith = section.moments.slice(momentOffset).flatMap((each) => each.actions);
                 const state = RECIPE_HOOKS[visualContent.capability].number_moves.state(start, visualContent, drawnWith);
                 moverStates.set(visual, { start: state, now: [...state] });
-                visual.mover.numbers.forEach((number, position) => movers.set(number, { visual, capability: visualContent.capability, position }));
+                visual.mover.numbers.forEach((number, index) => movers.set(number, { visual, capability: visualContent.capability, position: visual.mover.positions?.[index] ?? index }));
                 if (visual.mover.unbound) for (const number of visual.mover.numbers) unboundNumbers.add(number);
               }
             }
@@ -26939,7 +27168,8 @@ function compileLessonPlan(value2, options = {}) {
       if (activity.kind === "number_target") {
         const firstNumber = activity.number_controls[0]?.number;
         if (!firstNumber) fail2("LESSON_PLAN_ACTIVITY", `${activityPath}.number_controls`, "number task requires controls");
-        const mover = movers.get(firstNumber);
+        const named = movers.get(firstNumber);
+        const mover = named?.visual.mover.example ? [...movers.values()].find((each) => each.capability === named.capability && !each.visual.mover.example && each.position === named.position) ?? named : named;
         if (mover) {
           const end = moverStates.get(mover.visual)?.now ?? [];
           const own = mover.visual.mover.task(mover.position, activity.value, end, [activity.prompt, ...activity.hints]);
@@ -29287,27 +29517,32 @@ function numberStateAfter(outline, drafts, afterMoment) {
       const content = action.content;
       const hook = RECIPE_HOOKS[content.capability]?.number_moves;
       if (hook && content.numbers?.length && !cards.some((card) => card.numbers.join() === content.numbers.join())) {
+        const second = RECIPE_HOOKS[content.capability]?.second_card?.(content, sections, numbers);
         const initial = content.numbers.map((number) => numbers[number - 1].initial);
-        const started = [...hook.state(initial, content, draft.moments.slice(momentAt).flatMap((each) => each.actions))];
-        initial.forEach((value2, position) => {
+        const started = second?.started ?? [...hook.state(initial, content, draft.moments.slice(momentAt).flatMap((each) => each.actions))];
+        if (!second) initial.forEach((value2, position) => {
           if (started[position] === void 0) started[position] = value2;
         });
-        cards.push({ numbers: [...content.numbers], hook, started });
-        content.numbers.forEach((number, position) => state.set(number, started[position]));
+        const positions = second?.positions ?? content.numbers.map((_number, position) => position);
+        cards.push({ numbers: [...content.numbers], positions, hook, started });
+        content.numbers.forEach((number, index) => state.set(number, started[positions[index]]));
       }
     }
     for (const number of moment.restart_numbers ?? []) {
       const card = cards.find((each) => each.numbers.includes(number));
-      if (card) card.numbers.forEach((each, position) => state.set(each, card.started[position]));
+      if (card) card.numbers.forEach((each, index) => state.set(each, card.started[card.positions[index]]));
       else state.set(number, numbers[number - 1].initial);
     }
     const drawn = afterMoment ? new Map(state) : void 0;
     for (const card of cards) {
-      const moves = moment.actions.flatMap((action) => action.action === "animate" && card.numbers.includes(action.number) ? [{ position: card.numbers.indexOf(action.number), to: action.end_value }] : []);
+      const moves = moment.actions.flatMap((action) => action.action === "animate" && card.numbers.includes(action.number) ? [{ position: card.positions[card.numbers.indexOf(action.number)], to: action.end_value }] : []);
       if (!moves.length) continue;
-      const now = [...card.numbers.map((number) => state.get(number)), ...card.started.slice(card.numbers.length)];
+      const now = [...card.started];
+      card.numbers.forEach((number, index) => {
+        now[card.positions[index]] = state.get(number);
+      });
       const result = card.hook.moves(now, moves);
-      if ("steps" in result && result.steps.length) card.numbers.forEach((number, position) => state.set(number, result.steps.at(-1).to[position]));
+      if ("steps" in result && result.steps.length) card.numbers.forEach((number, index) => state.set(number, result.steps.at(-1).to[card.positions[index]]));
     }
     for (const action of moment.actions) {
       if (action.action === "animate" && !cardNumbers.has(action.number)) state.set(action.number, action.end_value);
@@ -29477,6 +29712,12 @@ function lowerModelSectionDraft(value2, outline, expectedSection, requireFixedRe
       }
       entry.course_visual = position;
       entry.content = { capability: visual.capability, ...rawContent };
+      const secondLabel = LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability].second_card_label;
+      const earlier = (outline.course_visuals ?? []).slice(0, position - 1).some((each) => each.capability === visual.capability);
+      if (secondLabel !== void 0 && earlier) {
+        const index = (outline.numbers ?? []).findIndex((number) => number.label === lessonText(language, secondLabel));
+        if (index >= 0) entry.content.numbers = [index + 1];
+      }
       entry = withProgramCreateDefaults(entry, "visual", visual.relation);
       const entries = fixedCourseCreates.get(moment) ?? [];
       entries.push(entry);
@@ -30043,9 +30284,10 @@ function executableNumberIndexesForSection(outline, drafts, sectionNumber) {
   }
   return [...indexes].sort((left, right) => left - right);
 }
-function sectionPromptContext(outline, sectionNumber, allowedNumberIndexes, currentNumbers, earlier) {
+function sectionPromptContext(outline, sectionNumber, allowedNumberIndexes, currentNumbers, earlier, language) {
   const section = outline.sections[sectionNumber - 1];
   const allowedNumbers = new Set(allowedNumberIndexes);
+  const startsFromExample = new Map(secondCardVisuals(outline).filter((visual) => visual.create_section === sectionNumber).map((visual) => [lessonText(language, visual.label), visual.starts]));
   return {
     title: outline.title,
     goals: outline.goals,
@@ -30053,8 +30295,10 @@ function sectionPromptContext(outline, sectionNumber, allowedNumberIndexes, curr
       numbers: outline.numbers.map((number, index) => ({
         number: index + 1,
         label: number.label,
-        initial: number.initial,
-        current_value: currentNumbers.get(index + 1) ?? number.initial,
+        ...number.label !== void 0 && startsFromExample.has(number.label) ? { starts: startsFromExample.get(number.label) } : {
+          initial: number.initial,
+          current_value: currentNumbers.get(index + 1) ?? number.initial
+        },
         min: number.min,
         max: number.max,
         ...number.unit === void 0 ? {} : { unit: number.unit }
@@ -30332,6 +30576,28 @@ function plannedCardOverflow(outline, sectionOne, declared) {
     card: owner.capability,
     detail: `the lesson holds at most 16 numbers (OLL): section 1 uses ${declared} and the ${owner.capability} card planned for section ${owner.create_section} needs up to ${planned}`
   };
+}
+function secondCardVisuals(outline) {
+  const visuals = outline.course_visuals ?? [];
+  return visuals.flatMap((visual, index) => {
+    const { second_card_label: label, second_card_starts: starts } = LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability];
+    return label !== void 0 && visuals.slice(0, index).some((each) => each.capability === visual.capability) ? [{ capability: visual.capability, create_section: visual.create_section, label, starts: starts ?? "" }] : [];
+  });
+}
+function plannedSecondCardOverflow(outline, declared) {
+  const visuals = outline.course_visuals ?? [];
+  const owner = visuals.filter((visual) => RECIPE_HOOKS[visual.capability]?.planned_variables).reduce((best, visual) => !best || recipeMinLessonNumbers(visual.capability) > recipeMinLessonNumbers(best.capability) ? visual : best, void 0);
+  const limit = owner ? LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[owner.capability] ?? 0 : 0;
+  const planned = owner && owner.create_section > 1 && (outline.numbers?.length ?? 0) >= limit ? RECIPE_HOOKS[owner.capability].planned_variables(outline.numbers.slice(0, limit).map((number) => number.initial)) ?? 0 : 0;
+  let total = declared + planned;
+  return secondCardVisuals(outline).flatMap((second) => {
+    total += 1;
+    return total > 16 ? [{
+      capability: second.capability,
+      section: second.create_section,
+      detail: `the lesson holds at most 16 numbers (OLL): section 1 uses ${declared}${planned ? ` and the ${owner.capability} card planned for section ${owner.create_section} up to ${planned}` : ""}; the second ${second.capability} card needs one more`
+    }] : [];
+  });
 }
 var OUTLINE_OWNED_FAULT = "LESSON_PLAN_OUTLINE_VISUAL";
 var isOutlineOwnedFault = (error) => error instanceof LessonPlanError && error.code === OUTLINE_OWNED_FAULT;
@@ -30868,6 +31134,11 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     await options.on_outline_ready?.({
       sections: outline.sections.length,
       course_visuals: outline.course_visuals?.length ?? 0,
+      ...(() => {
+        const visuals = outline.course_visuals ?? [];
+        const second = visuals.filter((visual, index) => LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability].second_card_label !== void 0 && visuals.slice(0, index).some((each) => each.capability === visual.capability)).length;
+        return second ? { second_cards: second } : {};
+      })(),
       request_parts: fixedRequestParts.length,
       camera_observation: stableCameraObservation !== void 0
     });
@@ -30950,7 +31221,8 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
             section,
             allowedNumberIndexes,
             currentNumbers,
-            section > 1 ? earlierRecord(section) : void 0
+            section > 1 ? earlierRecord(section) : void 0,
+            input.language
           ),
           visuals_for_section: visualsForSection(section, currentNumbers),
           assigned_request_parts: assignedRequestParts(section),
@@ -31018,6 +31290,16 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   const acceptSection = async (section, initialCandidate) => {
     let candidate = initialCandidate;
     if (outline) for (const hooks of PLUGIN_HOOKS) hooks.prepare_section?.(outline, section, { language: input.language });
+    if (outline) for (const second of secondCardVisuals(outline).filter((each) => each.create_section === section)) {
+      if (!(outline.numbers ?? []).some((number) => number.label === lessonText(input.language, second.label))) {
+        await withdrawLaterSectionVisual(
+          section,
+          second.capability,
+          "planned_card_budget",
+          `the lesson holds at most 16 numbers and this outline declares ${outline.numbers?.length ?? 0}: the second ${second.capability} card's demonstration has no number of its own`
+        );
+      }
+    }
     const missing = outline ? outlineNumbersMissing(outline, section) : void 0;
     if (missing && section === 1) throw missing;
     if (missing) await withdrawLaterSectionVisual(section, missing.capability, outlineNumbersReason(missing), missing.message);
@@ -31150,6 +31432,21 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         await withdrawBeforePublishing(1, overflow.capability, withdrawn, "planned_card_budget", overflow.detail);
         candidate = void 0;
         continue;
+      }
+      if (section === 1 && outline) {
+        for (const over of plannedSecondCardOverflow(outline, prefix.lesson.lesson.variables?.length ?? 0)) {
+          await withdrawLaterSectionVisual(over.section, over.capability, "planned_card_budget", over.detail);
+        }
+      }
+      if (outline) for (const second of secondCardVisuals(outline).filter((each) => each.create_section === section)) {
+        const index = (outline.numbers ?? []).findIndex((number) => number.label === lessonText(input.language, second.label));
+        const create = candidate.moments.flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === second.capability && (action.content.numbers ?? []).includes(index + 1));
+        const walked = create && RECIPE_HOOKS[second.capability]?.second_card?.(create.content, drafts.slice(0, section), outline.numbers ?? []);
+        if (index >= 0 && walked) {
+          const start = walked.started[walked.positions[0]];
+          const number = outline.numbers[index];
+          if (start >= number.min && start <= number.max) number.initial = start;
+        }
       }
       await reportDraftAdjustments(candidate);
       noteCompiledDrops(prefix, section);
@@ -31429,6 +31726,7 @@ export {
   placeValueThousandths,
   placeValueWordsWrite,
   plannedCardOverflow,
+  plannedSecondCardOverflow,
   praiseArithmetic,
   programNumberDefinitions,
   promptSlot,

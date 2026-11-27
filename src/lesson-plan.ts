@@ -1440,6 +1440,7 @@ export function validateLessonPlanOutline(value: unknown, expectedRequestParts =
     fail("LESSON_PLAN_COURSE_VISUAL", "$lessonPlanOutline.course_visuals", "expected at most 32 course visuals");
   }
   const firstVisualByCapability = new Map<LessonPlanCapability, number>();
+  const secondCardsByCapability = new Set<LessonPlanCapability>();
   courseVisuals.forEach((entry, index) => {
     const path = `$lessonPlanOutline.course_visuals[${index}]`;
     const visual = record(entry, path);
@@ -1469,7 +1470,13 @@ export function validateLessonPlanOutline(value: unknown, expectedRequestParts =
       fail("LESSON_PLAN_COURSE_VISUAL", `${path}.relation`, "unsupported visual relation");
     }
     const firstPosition = firstVisualByCapability.get(visualCapability);
-    if (firstPosition !== undefined && visual.relation !== "comparison") {
+    // A second card of a kind that takes one (`second_card_label`): another example, in a later section than the first
+    // card, one per kind (design note "second example and copies", PR 3).
+    const secondCard = firstPosition !== undefined && recipeEntry(visualCapability)?.second_card_label !== undefined
+      && createSection > Number((courseVisuals[firstPosition - 1] as Record<string, unknown>).create_section)
+      && !secondCardsByCapability.has(visualCapability);
+    if (secondCard) secondCardsByCapability.add(visualCapability);
+    if (firstPosition !== undefined && visual.relation !== "comparison" && !secondCard) {
       fail(
         "LESSON_PLAN_COURSE_VISUAL",
         path,

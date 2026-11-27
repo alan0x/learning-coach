@@ -14,6 +14,7 @@ import { TRADE_NUMBER, placeValueTradeColumnsOf, placeValueTradeMoves, placeValu
 import { MAKE_TEN_NUMBER, makeTenMoves, makeTenState } from "./make-ten-moves.js";
 import { TIMES_TEN_NUMBER, placeValueTimesTenMoves, placeValueTimesTenState, timesTenDecimal, timesTenOutlineFault, timesTenStartProblem } from "./place-value-times-ten-moves.js";
 import { placeValueTimesTenPath } from "octos-lesson-language/plugin-math";
+import { SECOND_CARDS, exampleOf, exampleStart, isSecondCard, isSecondCardKind } from "./second-card.js";
 import { COMPARE_MOST, COMPARE_NUMBER, compareMoves, compareOutlineFault, compareState } from "./place-value-compare-moves.js";
 import { plotCurveNumbers, plotSampleNumbers, validatePlotSampleNumbers, normalizePlotDraftBindings } from "./plot-bindings.js";
 
@@ -188,6 +189,8 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
     // the model never names a control). Each number's range is its own value, and columns finished runs from 0
     // to the card's columns; the compiler checks every number and each step itself, so nothing is fitted.
     fit_numbers(content, plan) {
+      // A second card's one number is the program's own demonstration count, whose range it set (second-card.ts).
+      if (isSecondCard("place_value_trade", content, plan.sections)) return new Map();
       const numbers = content.numbers ?? [];
       const definitions = numbers.map((number) => plan.numbers?.[number - 1]);
       if (!definitions.length || definitions.some((definition) => !definition)) return new Map();
@@ -204,6 +207,7 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
       return new Map();
     },
     // Columns finished moves forward from 0; the two numbers and the practice pair never move.
+    second_card: (content, sections, numbers) => secondCardState("place_value_trade", content, sections, numbers),
     number_moves: { state: placeValueTradeState, moves: placeValueTradeMoves },
     // The pair, columns finished and one status a column: the more columns of adding or subtracting the pair.
     planned_variables(values) {
@@ -219,6 +223,8 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
     // model never names a control). Each number's range is its own value; the count in the bigger frame runs to 10
     // and the count moved to 4 (the program's own numbers). The compiler checks every number and each step itself.
     fit_numbers(content, plan) {
+      // A second card's one number is the program's own demonstration count, whose range it set (second-card.ts).
+      if (isSecondCard("make_ten", content, plan.sections)) return new Map();
       const numbers = content.numbers ?? [];
       const definitions = numbers.map((number) => plan.numbers?.[number - 1]);
       if (!definitions.length || definitions.some((definition) => !definition)) return new Map();
@@ -231,6 +237,7 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
       return new Map();
     },
     // The count in the bigger frame moves forward from the bigger number to 10; nothing else moves.
+    second_card: (content, sections, numbers) => secondCardState("make_ten", content, sections, numbers),
     number_moves: { state: makeTenState, moves: makeTenMoves },
     // The pair, the count in the bigger frame and the count moved.
     planned_variables: () => 4,
@@ -240,6 +247,8 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
     // control). Each number's range is its own value, and counted in runs over the problem's path (as written: 0.1
     // to 0.001), as make ten's and the trade card's do; the compiler checks every number and each step itself.
     fit_numbers(content, plan) {
+      // A second card's one number is the program's own demonstration count, whose range it set (second-card.ts).
+      if (isSecondCard("place_value_times_ten", content, plan.sections)) return new Map();
       const numbers = content.numbers ?? [];
       const definitions = numbers.map((number) => plan.numbers?.[number - 1]);
       if (!definitions.length || definitions.some((definition) => !definition)) return new Map();
@@ -256,6 +265,7 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
     },
     // Counted in moves along the problem's path toward the target; nothing else moves (an animation of another
     // number is left out and recorded).
+    second_card: (content, sections, numbers) => secondCardState("place_value_times_ten", content, sections, numbers),
     number_moves: { state: placeValueTimesTenState, moves: placeValueTimesTenMoves },
     // Numbers the card cannot start on go with the outline, before any section is written for them.
     outline_fault: timesTenOutlineFault,
@@ -617,6 +627,37 @@ function requestsTwoIndependentPoints(request: string): boolean {
  * makes ten and the step left (8 + 5: 8, +2, +3). Appended before that section is written, so no earlier part changes;
  * once per outline. Only when the card leads the outline's numbers (its pair is numbers 1 and 2) and the pair makes ten.
  */
+/** A second card's positions and state when drawn (`second_card`): from the lesson's first card of the kind and the example. */
+function secondCardState(capability: string, content: LessonPlanVisualContent, sections: ReadonlyArray<{ moments: ReadonlyArray<{ actions: ReadonlyArray<unknown> }> }>, numbers: ReadonlyArray<{ initial: number }>):
+  { positions: number[]; started: number[] } | undefined {
+  if (!isSecondCardKind(capability) || !isSecondCard(capability, content, sections)) return undefined;
+  const first = sections.flatMap((section) => section.moments.flatMap((moment) => moment.actions)).map((raw) => raw as { action?: string; kind?: string; content?: LessonPlanVisualContent })
+    .find((action) => action.action === "create" && action.kind === "visual" && action.content?.capability === capability)?.content;
+  if (!first) return undefined;
+  const found = exampleStart(capability, exampleOf(capability, content.parameters)!, (first.numbers ?? []).map((number) => numbers[number - 1]?.initial ?? Number.NaN), first.parameters as Record<string, unknown> | undefined);
+  if ("fault" in found) return undefined;
+  const merged = { ...content, parameters: { ...(first.parameters ?? {}), ...(content.parameters ?? {}) } } as LessonPlanVisualContent;
+  const hook = MATH_HOOKS[capability]!.number_moves!;
+  return { positions: [SECOND_CARDS[capability].demonstration], started: [...hook.state(found.start, merged)] };
+}
+
+/**
+ * A second card of a kind in `section` (a later course visual of a kind whose first is drawn earlier): the program
+ * appends the one lesson number its demonstration moves, labelled for it, before the section is written (second-card.ts).
+ * New to the lesson then, so no earlier part changes; once per outline and kind. Its start is the card's own (read over).
+ */
+function prepareSecondCards(outline: LessonPlanOutline, section: number, language?: string): void {
+  const visuals = outline.course_visuals ?? [];
+  for (const capability of Object.keys(SECOND_CARDS) as Array<keyof typeof SECOND_CARDS>) {
+    const ofKind = visuals.filter((visual) => visual.capability === capability);
+    if (ofKind.length < 2 || ofKind[1]!.create_section !== section || ofKind[0]!.create_section >= section) continue;
+    const label = lessonText(language, SECOND_CARDS[capability].label);
+    const numbers = outline.numbers ?? [];
+    if (numbers.some((number) => number.label === label) || numbers.length >= 16) continue;
+    outline.numbers = [...numbers, { initial: 0, min: 0, max: SECOND_CARDS[capability].max, label }];
+  }
+}
+
 function prepareMakeTenSteps(outline: LessonPlanOutline, section: number, language?: string): void {
   const visuals = outline.course_visuals ?? [];
   const numbers = outline.numbers ?? [];
@@ -679,7 +720,7 @@ function specializeTwoPointDraft(
 
 export const MATH_PLUGIN_HOOKS: PluginHooks = {
   prepare_outline: (outline, { request, language }) => prepareTwoPointOutline(outline, request, language),
-  prepare_section: (outline, section, { language }) => prepareMakeTenSteps(outline, section, language),
+  prepare_section: (outline, section, { language }) => { prepareMakeTenSteps(outline, section, language); prepareSecondCards(outline, section, language); },
   specialize_draft(draft, context) {
     specializeTwoPointDraft(draft, context.outline, context.request);
     normalizePlotDraftBindings(draft, context);

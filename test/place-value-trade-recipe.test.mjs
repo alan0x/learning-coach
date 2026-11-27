@@ -24,15 +24,16 @@ function withTrial(script, trial = "place_value_trade") {
   }));
 }
 
-test("place_value_trade is a trial, off by default: built, not offered, one field of its own", () => {
+test("place_value_trade is a trial, off by default: built, not offered, one field of its own and a second card's example", () => {
   assert.ok(api.TRIAL_RECIPES.includes("place_value_trade"));
   assert.equal(api.RECIPE_CATALOG_ORDER.includes("place_value_trade"), false);
   assert.equal(api.OFFERED_RECIPES.includes("place_value_trade"), false);
   assert.equal(api.LESSON_PLAN_CAPABILITY_NAMES.includes("place_value_trade"), false);
   assert.equal(api.RECIPE_PLUGIN.place_value_trade, "math");
-  assert.deepEqual(api.RECIPE_SCHEMA_PROPERTIES.place_value_trade, { operation: { enum: ["add", "subtract"] } });
-  // Last in the provider's property order, so requests without the trial keep theirs.
-  assert.equal(api.SCHEMA_PROPERTY_ORDER.at(-1), "operation");
+  assert.deepEqual(api.RECIPE_SCHEMA_PROPERTIES.place_value_trade, { operation: { enum: ["add", "subtract"] }, example_first_number: { type: "number" }, example_second_number: { type: "number" } });
+  // Last in the provider's property order, so requests without the trial keep theirs (a second card's example after it).
+  assert.ok(api.SCHEMA_PROPERTY_ORDER.indexOf("operation") > api.SCHEMA_PROPERTY_ORDER.indexOf("given"));
+  assert.ok(api.SCHEMA_PROPERTY_ORDER.indexOf("example_first_number") > api.SCHEMA_PROPERTY_ORDER.indexOf("operation"));
   const offered = withTrial(`
     const api = await import(${here("../lesson-plan.js")});
     console.log(JSON.stringify({ offered: api.OFFERED_RECIPES, names: api.LESSON_PLAN_CAPABILITY_NAMES }));

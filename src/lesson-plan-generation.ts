@@ -110,6 +110,8 @@ export interface GenerateLessonPlanOptions {
   on_outline_ready?: (event: {
     sections: number;
     course_visuals: number;
+    /** Later course visuals of a kind whose first card the outline draws earlier (a second card on its own example). */
+    second_cards?: number;
     request_parts: number;
     camera_observation: boolean;
   }) => void | Promise<void>;
@@ -1784,7 +1786,8 @@ function numberStateAfter(
   const shown = (number: number) => copies.get(number)?.number ?? number;
   const state = new Map(numbers.map((number, index) => [index + 1, number.initial]));
   // Cards that move their own numbers (the trading mat): one number's animation changes the others too.
-  const cards: Array<{ numbers: number[]; hook: NonNullable<RecipeHooks["number_moves"]>; started: number[] }> = [];
+  // `positions`: each lesson number's place in the card's state (a second card's one number is its demonstration's).
+  const cards: Array<{ numbers: number[]; positions: number[]; hook: NonNullable<RecipeHooks["number_moves"]>; started: number[] }> = [];
   // A card's numbers do not move before the card is drawn, and a card never moves its problem numbers: the compiler
   // leaves such an animation out.
   const cardNumbers = new Set(cardMovedNumbers(sections.flatMap((draft) => draft.moments).flatMap((moment) => moment.actions)));
@@ -1797,28 +1800,31 @@ function numberStateAfter(
         // The card's state when it is drawn: its lesson numbers as the card reads them there (a chart to build
         // starts empty, whatever number it is to show, unless the section drawing it never builds it), then what its
         // start adds (a hundreds column).
+        const second = RECIPE_HOOKS[content.capability]?.second_card?.(content, sections, numbers);
         const initial = content.numbers.map((number) => numbers[number - 1]!.initial);
         // A state shorter than the card's numbers (a mat whose hundreds start at 0) keeps the rest as written.
-        const started = [...hook.state(initial, content, draft.moments.slice(momentAt).flatMap((each) => each.actions))];
-        initial.forEach((value, position) => { if (started[position] === undefined) started[position] = value; });
-        cards.push({ numbers: [...content.numbers], hook, started });
-        content.numbers.forEach((number, position) => state.set(number, started[position]!));
+        const started = second?.started ?? [...hook.state(initial, content, draft.moments.slice(momentAt).flatMap((each) => each.actions))];
+        if (!second) initial.forEach((value, position) => { if (started[position] === undefined) started[position] = value; });
+        const positions = second?.positions ?? content.numbers.map((_number, position) => position);
+        cards.push({ numbers: [...content.numbers], positions, hook, started });
+        content.numbers.forEach((number, index) => state.set(number, started[positions[index]!]!));
       }
     }
     for (const number of moment.restart_numbers ?? []) {
       const card = cards.find((each) => each.numbers.includes(number));
-      if (card) card.numbers.forEach((each, position) => state.set(each, card.started[position]!));
+      if (card) card.numbers.forEach((each, index) => state.set(each, card.started[card.positions[index]!]!));
       else state.set(number, numbers[number - 1]!.initial);
     }
     const drawn = afterMoment ? new Map(state) : undefined;
     for (const card of cards) {
       const moves = moment.actions.flatMap((action) => (action.action === "animate" && card.numbers.includes(action.number)
-        ? [{ position: card.numbers.indexOf(action.number), to: action.end_value }] : []));
+        ? [{ position: card.positions[card.numbers.indexOf(action.number)]!, to: action.end_value }] : []));
       if (!moves.length) continue;
-      // The card's state: its lesson numbers first, as they stand, then what its start adds (a hundreds column).
-      const now = [...card.numbers.map((number) => state.get(number)!), ...card.started.slice(card.numbers.length)];
+      // The card's state: its lesson numbers where they stand, the rest as it started (a hundreds column).
+      const now = [...card.started];
+      card.numbers.forEach((number, index) => { now[card.positions[index]!] = state.get(number)!; });
       const result = card.hook.moves(now, moves);
-      if ("steps" in result && result.steps.length) card.numbers.forEach((number, position) => state.set(number, result.steps.at(-1)!.to[position]!));
+      if ("steps" in result && result.steps.length) card.numbers.forEach((number, index) => state.set(number, result.steps.at(-1)!.to[card.positions[index]!]!));
     }
     for (const action of moment.actions) {
       if (action.action === "animate" && !cardNumbers.has(action.number)) state.set(action.number, action.end_value);
@@ -2035,6 +2041,15 @@ function lowerModelSectionDraft(
       }
       entry.course_visual = position;
       entry.content = { capability: visual.capability, ...(rawContent as Record<string, unknown>) };
+      // A later card of a kind whose first card the outline draws earlier (a second card, on the section's own
+      // example): drawn on the one lesson number the program gave its demonstration (`prepare_section`), found by the
+      // label the program wrote, whatever numbers the create names.
+      const secondLabel = (LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability] as { second_card_label?: string }).second_card_label;
+      const earlier = (outline.course_visuals ?? []).slice(0, position - 1).some((each) => each.capability === visual.capability);
+      if (secondLabel !== undefined && earlier) {
+        const index = (outline.numbers ?? []).findIndex((number) => number.label === lessonText(language, secondLabel));
+        if (index >= 0) (entry.content as Record<string, unknown>).numbers = [index + 1];
+      }
       entry = withProgramCreateDefaults(entry, "visual", visual.relation);
       const entries = fixedCourseCreates.get(moment) ?? [];
       entries.push(entry);
@@ -2713,9 +2728,14 @@ function sectionPromptContext(
   allowedNumberIndexes: readonly number[],
   currentNumbers: Map<number, number>,
   earlier?: EarlierSectionsRecord,
+  language?: string,
 ): Record<string, unknown> {
   const section = outline.sections[sectionNumber - 1];
   const allowedNumbers = new Set(allowedNumberIndexes);
+  // The number a second card drawn in this section moves starts where the section's own example starts, which only
+  // its reply writes: it is listed with that fact, not a value (lead, #199 round 1); later sections read its start.
+  const startsFromExample = new Map(secondCardVisuals(outline).filter((visual) => visual.create_section === sectionNumber)
+    .map((visual) => [lessonText(language, visual.label), visual.starts]));
   return {
     title: outline.title,
     goals: outline.goals,
@@ -2723,8 +2743,10 @@ function sectionPromptContext(
       numbers: outline.numbers.map((number, index) => ({
         number: index + 1,
         label: number.label,
-        initial: number.initial,
-        current_value: currentNumbers.get(index + 1) ?? number.initial,
+        ...(number.label !== undefined && startsFromExample.has(number.label) ? { starts: startsFromExample.get(number.label) } : {
+          initial: number.initial,
+          current_value: currentNumbers.get(index + 1) ?? number.initial,
+        }),
         min: number.min,
         max: number.max,
         ...(number.unit === undefined ? {} : { unit: number.unit }),
@@ -3150,6 +3172,36 @@ export function plannedCardOverflow(outline: LessonPlanOutline, sectionOne: Less
     card: owner.capability,
     detail: `the lesson holds at most 16 numbers (OLL): section 1 uses ${declared} and the ${owner.capability} card planned for section ${owner.create_section} needs up to ${planned}`,
   };
+}
+
+/** The outline's second cards (a later course visual of a kind that takes one, `second_card_label`), in order. */
+function secondCardVisuals(outline: LessonPlanOutline): Array<{ capability: string; create_section: number; label: string; starts: string }> {
+  const visuals = outline.course_visuals ?? [];
+  return visuals.flatMap((visual, index) => {
+    const { second_card_label: label, second_card_starts: starts } = LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability] as { second_card_label?: string; second_card_starts?: string };
+    return label !== undefined && visuals.slice(0, index).some((each) => each.capability === visual.capability)
+      ? [{ capability: visual.capability, create_section: visual.create_section, label, starts: starts ?? "" }] : [];
+  });
+}
+
+/**
+ * The lesson's planned cards after section 1 that cannot fit beside it: when section 1 and the card the outline's
+ * numbers are written for fit OLL's 16 variables, each second card adds one (its demonstration's), and those that would
+ * go over go before anything is published (review of #199). Their capabilities and sections, with the fact.
+ */
+export function plannedSecondCardOverflow(outline: LessonPlanOutline, declared: number): Array<{ capability: string; section: number; detail: string }> {
+  const visuals = outline.course_visuals ?? [];
+  const owner = visuals.filter((visual) => RECIPE_HOOKS[visual.capability as keyof typeof RECIPE_HOOKS]?.planned_variables)
+    .reduce<typeof visuals[number] | undefined>((best, visual) => (!best || recipeMinLessonNumbers(visual.capability) > recipeMinLessonNumbers(best.capability) ? visual : best), undefined);
+  const limit = owner ? LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[owner.capability as keyof typeof LESSON_PLAN_CAPABILITY_NUMBER_LIMITS] ?? 0 : 0;
+  const planned = owner && owner.create_section > 1 && (outline.numbers?.length ?? 0) >= limit
+    ? RECIPE_HOOKS[owner.capability as keyof typeof RECIPE_HOOKS]!.planned_variables!(outline.numbers!.slice(0, limit).map((number) => number.initial)) ?? 0 : 0;
+  let total = declared + planned;
+  return secondCardVisuals(outline).flatMap((second) => {
+    total += 1;
+    return total > 16 ? [{ capability: second.capability, section: second.create_section,
+      detail: `the lesson holds at most 16 numbers (OLL): section 1 uses ${declared}${planned ? ` and the ${owner!.capability} card planned for section ${owner!.create_section} up to ${planned}` : ""}; the second ${second.capability} card needs one more` }] : [];
+  });
 }
 
 /** A fault only a new outline can fix: the outline chose the visual and the numbers it cannot show. */
@@ -3787,6 +3839,12 @@ export async function generateLessonPlanWithModel(
     await options.on_outline_ready?.({
       sections: outline.sections.length,
       course_visuals: outline.course_visuals?.length ?? 0,
+      ...(() => {
+        const visuals = outline!.course_visuals ?? [];
+        const second = visuals.filter((visual, index) => (LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability] as { second_card_label?: string }).second_card_label !== undefined
+          && visuals.slice(0, index).some((each) => each.capability === visual.capability)).length;
+        return second ? { second_cards: second } : {};
+      })(),
       request_parts: fixedRequestParts.length,
       camera_observation: stableCameraObservation !== undefined,
     });
@@ -3878,7 +3936,7 @@ export async function generateLessonPlanWithModel(
         prompt: JSON.stringify({
           course_context: compactModelContext(section === 1 ? context : laterSectionContext),
           course_and_section: sectionPromptContext(outline, section, allowedNumberIndexes, currentNumbers,
-            section > 1 ? earlierRecord(section) : undefined),
+            section > 1 ? earlierRecord(section) : undefined, input.language),
           visuals_for_section: visualsForSection(section, currentNumbers),
           assigned_request_parts: assignedRequestParts(section),
           // The note stays for later sections too: their purposes may also name the picture (review of this change).
@@ -3962,6 +4020,14 @@ export async function generateLessonPlanWithModel(
     // an outline number), so it goes now, before any section is written or retried: section 1's by a new
     // outline without it (acceptFirstSection), a later section's from the outline in place.
     if (outline) for (const hooks of PLUGIN_HOOKS) hooks.prepare_section?.(outline, section, { language: input.language });
+    // A second card whose demonstration the program could give no number (the outline holds 16 already) goes before
+    // its section is written, with the fact (review of #199, B3).
+    if (outline) for (const second of secondCardVisuals(outline).filter((each) => each.create_section === section)) {
+      if (!(outline.numbers ?? []).some((number) => number.label === lessonText(input.language, second.label))) {
+        await withdrawLaterSectionVisual(section, second.capability, "planned_card_budget",
+          `the lesson holds at most 16 numbers and this outline declares ${outline.numbers?.length ?? 0}: the second ${second.capability} card's demonstration has no number of its own`);
+      }
+    }
     const missing = outline ? outlineNumbersMissing(outline, section) : undefined;
     if (missing && section === 1) throw missing;
     if (missing) await withdrawLaterSectionVisual(section, missing.capability!, outlineNumbersReason(missing), missing.message);
@@ -4110,6 +4176,26 @@ export async function generateLessonPlanWithModel(
         await withdrawBeforePublishing(1, overflow.capability, withdrawn, "planned_card_budget", overflow.detail);
         candidate = undefined;
         continue;
+      }
+      // A second card planned for a later section that would go over the 16 variables goes now, before anything is
+      // published, with the fact; section 1 stays as written (review of #199).
+      if (section === 1 && outline) {
+        for (const over of plannedSecondCardOverflow(outline, prefix.lesson.lesson.variables?.length ?? 0)) {
+          await withdrawLaterSectionVisual(over.section, over.capability, "planned_card_budget", over.detail);
+        }
+      }
+      // A second card drawn in this section: its demonstration number now starts where the card does (the example is
+      // known once the section is accepted), so later sections are told the value the card shows (review of #199).
+      if (outline) for (const second of secondCardVisuals(outline).filter((each) => each.create_section === section)) {
+        const index = (outline.numbers ?? []).findIndex((number) => number.label === lessonText(input.language, second.label));
+        const create = candidate.moments.flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual"
+          && (action.content as LessonPlanVisualContent).capability === second.capability && ((action.content as LessonPlanVisualContent).numbers ?? []).includes(index + 1));
+        const walked = create && RECIPE_HOOKS[second.capability]?.second_card?.(create.content as LessonPlanVisualContent, drafts.slice(0, section), outline.numbers ?? []);
+        if (index >= 0 && walked) {
+          const start = walked.started[walked.positions[0]!]!;
+          const number = outline.numbers![index]!;
+          if (start >= number.min && start <= number.max) number.initial = start;
+        }
       }
       await reportDraftAdjustments(candidate);
       noteCompiledDrops(prefix, section);

@@ -132,6 +132,8 @@ export const SCHEMA_PROPERTY_ORDER = [
   "given",
   // The place-value trade trial recipe (decision 0026); last, so requests without it keep their order.
   "operation",
+  // A second card's example (second-card.ts), on the trial cards; last, so requests without them keep their order.
+  "example_first_number", "example_second_number", "example_first_addend", "example_second_addend", "example_amount", "example_unit_asked",
 ] as const;
 
 /** One prompt bullet: its core text and the installed plugins' sentences, or "" when empty. */

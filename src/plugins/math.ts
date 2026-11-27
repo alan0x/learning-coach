@@ -6,6 +6,7 @@ import { MATH_PLUGIN_MANIFEST, MATH_SUBJECT_DESCRIPTION, MAKE_TEN_MAX_MOVED, MAK
 import type { CoachSubjectPlugin } from "./types.js";
 import { PLOT_MARKS } from "./plot-mark-names.js";
 import { timesTenStartOf } from "./place-value-times-ten-moves.js";
+import { SECOND_CARDS } from "./second-card.js";
 import { COMPARE_MOST } from "./place-value-compare-moves.js";
 
 // Counts a recipe draws, as whole numbers from min to max. The compiler fits slider ranges to them and
@@ -235,6 +236,9 @@ export const MATH_RECIPES = {
     // A move of the pair or the practice pair is refused with what the number is to the card (pilot 1, 2026-11-27: a move
     // left out let a card sit still under narration that moved it); left out only once the section's repairs are spent.
     wrong_number_moves: "refused",
+    // A second card of the kind on the section's own example (second-card.ts): the label of the number it moves.
+    second_card_label: SECOND_CARDS.place_value_trade.label,
+    second_card_starts: SECOND_CARDS.place_value_trade.starts,
     card_name: "place-value trade card",
     number_names: ["first number", "second number", "practice first number", "practice second number", "columns finished"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
@@ -245,10 +249,10 @@ export const MATH_RECIPES = {
     program_number_inputs: [{ initial: 0, min: 0, max: PLACE_VALUE_TRADE_MAX_COLUMNS, label: "做完了几列" }],
     // The card starts on no fewer: an outline that declares fewer loses it at once (a section cannot add one).
     min_lesson_numbers: 5,
-    parameter_names: ["operation"],
-    model_parameter_names: ["operation"],
+    parameter_names: ["operation", "example_first_number", "example_second_number"],
+    model_parameter_names: ["operation", "example_first_number", "example_second_number"],
     required_model_schema_parameters: ["operation"],
-    semantic_parameters: ["operation"],
+    semantic_parameters: ["operation", "example_first_number", "example_second_number"],
     output_kinds: ["place_value_trade"],
     // Up to nine lesson variables (two numbers, columns finished, a status per column): when a lesson holds too
     // many, the card is the picture that goes.
@@ -257,7 +261,7 @@ export const MATH_RECIPES = {
     // fixed text says how it is used.
     student_controls: [],
     required_features: ["column_add_subtract_trades"],
-    model_guidance: "数位表加减（竖式，进位、退位就是交换）：多位数加减（到十万位）和小数加减（到百分位），至少有一位要进位或退位，最多六列（从两个数最低的一位到两个数和得数最高的一位）。不用于摆数、拆数、比较、凑整、乘法，也不用于低年级的凑十（用方块）。operation 写 add 或 subtract。outline 的 numbers 依次写这五个数（不动的也要写）：第一个数、第二个数（减法第一个数不小于第二个数）、练习的第一个数、练习的第二个数、做完了几列。数值写实际大小（2.75），最多两位小数。练习的一对是另一对（不是题目的，免得孩子照抄演示），也要进位或退位，列和题目的一样（同样多的整数位和小数位，题目的得数多出一位时练习的也多出一位）。做完了几列从最右边一列数起，写 0：表一开始一列也没有做。演示时把它动画到 1、2……：每到一个值，程序按规则做完右边又一列（合起来、满十换一、不够拆一），只往前走，同一个值再写表不变；演示做完每一列，一直到得数（最后一个值是列数）。两个数和练习的数不动画。练习的数是孩子课后自己做的：课上可以说“课后试试……”，但不讲它怎么做、不写出它的算式、不说它的答案，outline 也不为它安排一节。练习：对做完了几列写一个数值目标题（数值写列数），孩子在表上做完练习的一对，程序再自己问得数，不另出问这一对得数的填数题；题目和提示不写练习的得数。表上的数、圆片和操作说明都由卡片自己写；说数位用名字（个位、十分位、hundreds），不说怎么点卡片",
+    model_guidance: "数位表加减（竖式，进位、退位就是交换）：多位数加减（到十万位）和小数加减（到百分位），至少有一位要进位或退位，最多六列（从两个数最低的一位到两个数和得数最高的一位）。不用于摆数、拆数、比较、凑整、乘法，也不用于低年级的凑十（用方块）。operation 写 add 或 subtract。outline 的 numbers 依次写这五个数（不动的也要写）：第一个数、第二个数（减法第一个数不小于第二个数）、练习的第一个数、练习的第二个数、做完了几列。数值写实际大小（2.75），最多两位小数。练习的一对是另一对（不是题目的，免得孩子照抄演示），也要进位或退位，列和题目的一样（同样多的整数位和小数位，题目的得数多出一位时练习的也多出一位）。做完了几列从最右边一列数起，写 0：表一开始一列也没有做。演示时把它动画到 1、2……：每到一个值，程序按规则做完右边又一列（合起来、满十换一、不够拆一），只往前走，同一个值再写表不变；演示做完每一列，一直到得数（最后一个值是列数）。两个数和练习的数不动画。要在后面的节再讲另一个例子，outline 在那一节再规划一张数位表加减卡片（一课最多两张）；那一节在这张卡片的 parameters 里写例子的两个数 example_first_number、example_second_number（另一对，列和题目的一样，不是题目的，也不是练习的），运算和第一张一样，程序给它演示用的数；第二张卡片只演示，另一个例子画在第二张卡片上，不用练习的数，练习仍在第一张上。练习的数是孩子课后自己做的：课上可以说“课后试试……”，但不讲它怎么做、不写出它的算式、不说它的答案，outline 也不为它安排一节。练习：对做完了几列写一个数值目标题（数值写列数），孩子在表上做完练习的一对，程序再自己问得数，不另出问这一对得数的填数题；题目和提示不写练习的得数。表上的数、圆片和操作说明都由卡片自己写；说数位用名字（个位、十分位、hundreds），不说怎么点卡片",
   },
   // OLL decision 0027 (a trial): making ten to add on two ten frames (8 + 6 = 8 + 2 + 4 = 10 + 4). The model writes
   // the question's pair and a practice pair; the program supplies the count in the bigger number's frame (it starts
@@ -273,6 +277,9 @@ export const MATH_RECIPES = {
     // A move of the pair or the practice pair is refused with what the number is to the card (pilot 1, MT-13: the first
     // addend animated to 10 was left out and the card sat still); left out only once the section's repairs are spent.
     wrong_number_moves: "refused",
+    // A second card of the kind on the section's own example (second-card.ts): the label of the number it moves.
+    second_card_label: SECOND_CARDS.make_ten.label,
+    second_card_starts: SECOND_CARDS.make_ten.starts,
     card_name: "make-ten card",
     number_names: ["first addend", "second addend", "practice first addend", "practice second addend", "count in the bigger frame", "count moved"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
@@ -285,10 +292,10 @@ export const MATH_RECIPES = {
     ],
     // The card starts on no fewer: an outline that declares fewer loses it at once (a section cannot add one).
     min_lesson_numbers: 6,
-    parameter_names: [],
-    model_parameter_names: [],
+    parameter_names: ["example_first_addend", "example_second_addend"],
+    model_parameter_names: ["example_first_addend", "example_second_addend"],
     required_model_schema_parameters: [],
-    semantic_parameters: [],
+    semantic_parameters: ["example_first_addend", "example_second_addend"],
     output_kinds: ["make_ten"],
     // Four lesson variables (the pair, the two counts): when a lesson holds too many, the card is the picture that goes.
     binds_many_variables: true,
@@ -296,7 +303,7 @@ export const MATH_RECIPES = {
     // fixed text says how it is used.
     student_controls: [],
     required_features: ["make_ten_to_add"],
-    model_guidance: "凑十（两个十格框）：两个一位数相加、和大于10（如8+6），小数分出一部分把大数补成十。也用于问“应该拆哪个数”“怎样拆算得快”：卡片画快的拆法（拆小数补大数，如4+9拆4补9），慢的拆法只用话说，不画。不用于和正好是10、接着数、破十减、两位数加一位数、三个数相加。这道加法的画面是这张卡片；后面的节可以再用数轴把同一道加法走一遍，数轴不代替这张卡片。outline 的 numbers 依次写四个数：题目的两个数、练习的两个数（另一对，也是一位数、和大于10，不是题目的，换顺序也不算）。程序再补两个数：大数那一框里有几个（开始就是大数）、移过去几个（0）。演示时把第五个数动画到10，一直到大数那一框满十，程序一个一个地移圆片；别的数不动画。练习的数是孩子课后自己做的：课上可以说“课后试试……”，但不讲它怎么做、不写出它的算式、不说它的答案，outline 也不为它安排一节。练习：对第五个数写一个数值目标题（数值写10），孩子自己补满十，程序再出一行空（8+6=8+__+__=10+__=__）；题目和提示不写练习的和。不说怎么点卡片",
+    model_guidance: "凑十（两个十格框）：两个一位数相加、和大于10（如8+6），小数分出一部分把大数补成十。也用于问“应该拆哪个数”“怎样拆算得快”：卡片画快的拆法（拆小数补大数，如4+9拆4补9），慢的拆法只用话说，不画。不用于和正好是10、接着数、破十减、两位数加一位数、三个数相加。这道加法的画面是这张卡片；后面的节可以再用数轴把同一道加法走一遍，数轴不代替这张卡片。outline 的 numbers 依次写四个数：题目的两个数、练习的两个数（另一对，也是一位数、和大于10，不是题目的，换顺序也不算）。程序再补两个数：大数那一框里有几个（开始就是大数）、移过去几个（0）。演示时把第五个数动画到10，一直到大数那一框满十，程序一个一个地移圆片；别的数不动画。要在后面的节再讲另一个例子，outline 在那一节再规划一张凑十卡片（一课最多两张）；那一节在这张卡片的 parameters 里写例子的两个数 example_first_addend、example_second_addend（另一对，不是题目的，也不是练习的），程序给它演示用的数，演示时把那个数动画到10；第二张卡片只演示，另一个例子画在第二张卡片上，不用练习的数，练习仍在第一张上。练习的数是孩子课后自己做的：课上可以说“课后试试……”，但不讲它怎么做、不写出它的算式、不说它的答案，outline 也不为它安排一节。练习：对第五个数写一个数值目标题（数值写10），孩子自己补满十，程序再出一行空（8+6=8+__+__=10+__=__）；题目和提示不写练习的和。不说怎么点卡片",
   },
   // OLL decision 0028 (a trial): the same amount counted in another unit on the place-value chart, a count (3 tenths =
   // ? thousandths) or a times pair (700 is ? times 70). The model writes the amount, the unit asked and a practice of
@@ -313,6 +320,9 @@ export const MATH_RECIPES = {
     number_roles: ["problem", "problem", "practice", "practice", "demonstration"],
     // Left out since #188; refused like the other cards' since pilot 1 (2026-11-27), behind this flag ("left_out" goes back).
     wrong_number_moves: "refused",
+    // A second card of the kind on the section's own example (second-card.ts): the label of the number it moves.
+    second_card_label: SECOND_CARDS.place_value_times_ten.label,
+    second_card_starts: SECOND_CARDS.place_value_times_ten.starts,
     card_name: "times-ten card",
     number_names: ["amount", "unit asked", "practice amount", "practice unit asked", "start unit"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
@@ -323,10 +333,10 @@ export const MATH_RECIPES = {
     program_number_inputs: [{ initial: ([amount, target]: readonly number[]) => timesTenStartOf(amount ?? 0, target ?? 0), min: 0, max: 1_000_000, label: "现在用什么单位在数" }],
     // The card starts on no fewer: an outline that declares fewer loses it at once (a section cannot add one).
     min_lesson_numbers: 5,
-    parameter_names: [],
-    model_parameter_names: [],
+    parameter_names: ["example_amount", "example_unit_asked"],
+    model_parameter_names: ["example_amount", "example_unit_asked"],
     required_model_schema_parameters: [],
-    semantic_parameters: [],
+    semantic_parameters: ["example_amount", "example_unit_asked"],
     output_kinds: ["place_value_times_ten"],
     // Up to five lesson variables (the amount, the target, counted in, one or two row sets): when a lesson holds too
     // many, the card is the picture that goes.
@@ -335,7 +345,7 @@ export const MATH_RECIPES = {
     // text says how it is used.
     student_controls: [],
     required_features: ["count_in_another_unit"],
-    model_guidance: "换一个单位来数（数位表：往右一位一个拆成十个，往左一位十个合成一个）：数单位（3个十分之一=?个千分之一；6个千=?个百；一千里有几个十）或倍数（700是70的几倍；0.3是3的十分之一）。这些题用这张卡，不用 trade_ten_for_one（它只把十个合成一个）。数只有一位不是零（5550里的两个5写500和50），单位最多隔两位，倍数是相邻两位。不用于一个数字表示多少、比较、加减、乘除以10或100、除以小数。outline 的 numbers 依次是五个角色，每个数的 label 用课的语言写它的角色（如 unit asked、问的单位）：amount 要数的数（写值，3个十分之一写0.3）；unit_asked 问的单位（问“是几个百分之一”写0.01；倍数写小的数70）；practice_amount、practice_unit_asked 练习的两个数（同一种问法，隔同样几位、同一方向，不是题目的）；start_unit 要数的数现在用什么单位在数（题目说它时用的单位）。拆开的题（往小的单位数）和倍数不写 start_unit，程序补成要数的数自己那一位：7个十分之一=?个百分之一 写0.7、0.01、练习两个数；一千里有几个十 写1000、10、练习两个数。合起来的题（往大的单位数）要写：70个百分之一=?个十分之一 写0.7、0.1、练习两个数、0.01。start_unit 和 unit_asked 是两个不同的单位。演示只动画 start_unit（第五个数）：从它一步一步动画到 unit_asked 的值（0.1、0.01、0.001；倍数到70），只往前走，一直到问的单位；别的数不动画。练习的数是孩子课后自己做的：课上可以说“课后试试……”，但不讲它怎么做、不写出它的算式、不说它的答案，outline 也不为它安排一节。练习：对第五个数写数值目标题，程序再出答案那一行；题目和提示不写练习的答案。不说怎么点卡片",
+    model_guidance: "换一个单位来数（数位表：往右一位一个拆成十个，往左一位十个合成一个）：数单位（3个十分之一=?个千分之一；6个千=?个百；一千里有几个十）或倍数（700是70的几倍；0.3是3的十分之一）。这些题用这张卡，不用 trade_ten_for_one（它只把十个合成一个）。数只有一位不是零（5550里的两个5写500和50），单位最多隔两位，倍数是相邻两位。不用于一个数字表示多少、比较、加减、乘除以10或100、除以小数。outline 的 numbers 依次是五个角色，每个数的 label 用课的语言写它的角色（如 unit asked、问的单位）：amount 要数的数（写值，3个十分之一写0.3）；unit_asked 问的单位（问“是几个百分之一”写0.01；倍数写小的数70）；practice_amount、practice_unit_asked 练习的两个数（同一种问法，隔同样几位、同一方向，不是题目的）；start_unit 要数的数现在用什么单位在数（题目说它时用的单位）。拆开的题（往小的单位数）和倍数不写 start_unit，程序补成要数的数自己那一位：7个十分之一=?个百分之一 写0.7、0.01、练习两个数；一千里有几个十 写1000、10、练习两个数。合起来的题（往大的单位数）要写：70个百分之一=?个十分之一 写0.7、0.1、练习两个数、0.01。start_unit 和 unit_asked 是两个不同的单位。演示只动画 start_unit（第五个数）：从它一步一步动画到 unit_asked 的值（0.1、0.01、0.001；倍数到70），只往前走，一直到问的单位；别的数不动画。要在后面的节再讲另一个例子，outline 在那一节再规划一张这种卡片（一课最多两张）；那一节在这张卡片的 parameters 里写例子的两个数 example_amount、example_unit_asked（同一种问法，不是题目的，也不是练习的），程序给它演示用的数；第二张卡片只演示，另一个例子画在第二张卡片上，不用练习的数，练习仍在第一张上。练习的数是孩子课后自己做的：课上可以说“课后试试……”，但不讲它怎么做、不写出它的算式、不说它的答案，outline 也不为它安排一节。练习：对第五个数写数值目标题，程序再出答案那一行；题目和提示不写练习的答案。不说怎么点卡片",
   },
   // OLL decision 0029 (a trial): comparing two numbers by place, from the largest place down: two rows of one chart,
   // lined up by place; the learner judges each place from the left ("Same" or "Different", the card's own buttons),
@@ -561,7 +571,10 @@ const MATH_SCHEMA_PROPERTIES = {
   // What the place-value chart gives (OLL 0025): a build form, or the numeral to pull apart. The program writes the text.
   place_value_chart: { given: { enum: ["name", "expanded", "expanded_factors", "place_counts", "numeral"] } },
   // Adding or subtracting the two numbers on the place-value trade card (OLL 0026).
-  place_value_trade: { operation: { enum: ["add", "subtract"] } },
+  // A second card's example (second-card.ts): the section writes it, as numbers.
+  place_value_trade: { operation: { enum: ["add", "subtract"] }, example_first_number: { type: "number" }, example_second_number: { type: "number" } },
+  make_ten: { example_first_addend: { type: "integer" }, example_second_addend: { type: "integer" } },
+  place_value_times_ten: { example_amount: { type: "number" }, example_unit_asked: { type: "number" } },
   solid_3d: {
     // The compiler checks the fields (each solid's shape and sizes), so the schema carries no strictness keywords.
     solids: { type: "array", minItems: 1, maxItems: 2, items: { type: "object", properties: {

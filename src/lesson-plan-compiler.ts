@@ -573,7 +573,11 @@ export function separateCardProblemNumbers(plan: Pick<LessonPlan, "numbers" | "s
       return;
     }
     const map = new Map<number, number>();
-    content.numbers.forEach((number, position) => {
+    // A card drawn on fewer numbers than its kind takes (a second card: the one its demonstration moves) reads each
+    // number's role at its place in the kind's order (review of #199, B2: its number is the demonstration's).
+    const places = RECIPE_HOOKS[content.capability]?.second_card?.(content, plan.sections, numbers.slice(0, outlineDefinitions.length))?.positions;
+    content.numbers.forEach((number, index) => {
+      const position = places?.[index] ?? index;
       const role = recipeNumberRole(content.capability, position);
       const held = first.get(number);
       if (!held) { first.set(number, { picture, role }); return; }
@@ -829,11 +833,11 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
               actions.push(...[...visual.actions, ...(visual.mover?.opening ?? [])].map((action) => ({ ...action, ...actionWhen(item.timing) })));
               writtenHere.set(visual, item.timing);
               if (visual.mover && RECIPE_HOOKS[visualContent.capability]?.number_moves) {
-                const start = visual.mover.numbers.map((number) => plan.numbers![number - 1]!.initial);
+                const start = visual.mover.start ?? visual.mover.numbers.map((number) => plan.numbers![number - 1]!.initial);
                 const drawnWith = section.moments.slice(momentOffset).flatMap((each) => each.actions);
                 const state = RECIPE_HOOKS[visualContent.capability]!.number_moves!.state(start, visualContent, drawnWith);
                 moverStates.set(visual, { start: state, now: [...state] });
-                visual.mover.numbers.forEach((number, position) => movers.set(number, { visual, capability: visualContent.capability, position }));
+                visual.mover.numbers.forEach((number, index) => movers.set(number, { visual, capability: visualContent.capability, position: visual.mover!.positions?.[index] ?? index }));
                 if (visual.mover.unbound) for (const number of visual.mover.numbers) unboundNumbers.add(number);
               }
             }
@@ -1038,7 +1042,11 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
       if (activity.kind === "number_target") {
         const firstNumber = activity.number_controls[0]?.number;
         if (!firstNumber) fail("LESSON_PLAN_ACTIVITY", `${activityPath}.number_controls`, "number task requires controls");
-        const mover = movers.get(firstNumber);
+        // A practice on a second card's number is the first card's: the second card is a demonstration only.
+        const named = movers.get(firstNumber);
+        const mover = named?.visual.mover!.example
+          ? [...movers.values()].find((each) => each.capability === named.capability && !each.visual.mover!.example && each.position === named.position) ?? named
+          : named;
         if (mover) {
           // The card's own task: "bring this number to a value" is done on the card, by its rules.
           // The mat's state when the lesson ends: every section's moves have been played by now.
