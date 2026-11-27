@@ -25,6 +25,7 @@ import {
   type ProgramNumberValue,
   type LessonPlanReusableItem,
   type LessonPlanAction,
+  type LessonPlanBoardContent,
   type LessonPlanMathExpression,
   type LessonPlanMathToken,
   type LessonPlanReference,
@@ -162,7 +163,7 @@ const OUTLINE_SYSTEM_PROMPT = [
   promptSlot("outline.visual_choice"),
   `- numbers 只写有教学作用的共享数值、范围和初值，顺序依 visual_recipes 的 numbers；控件与步长由程序生成。`,
   `- request_coverage 依 request_parts 顺序覆盖：可实现写 teach+章节。只是要求的互动或画面形式做不到（如可自由拖动顶点的任意三角形），但数学内容能用已有画面讲对时，写 teach 并换成可实现的画面，在第一节旁白里用一句话说明换成了什么；只有数学内容本身无法正确呈现时才写 unsupported、空章节及原因，禁止错误替代。`,
-  `- 按独立教学目标和学习进程分节，不按主题数或画面数分节。每节只承担一个完成后可验证的目标；连续推导及须同步观察的画面留在同一节的多个 moment。简单问题能围绕一个目标讲清时用 1 节；若须分别建立直觉、纠错或解释原理、推导或演示、应用、检查掌握中的多个目标，拆成 2–4 节。不要为凑节数重复开场、定义或总结，也不要把本应独立的推导、应用和检查全塞进一节。为什么须推导，怎么算须步骤与检验，是什么须直觉与边界。不猜年级；close 只总结。`,
+  `- 按独立教学目标和学习进程分节，不按主题数或画面数分节。每节只承担一个完成后可验证的目标；连续推导及须同步观察的画面留在同一节的多个 moment。简单问题能围绕一个目标讲清时用 1 节；若须分别建立直觉、纠错或解释原理、推导或演示、应用、检查掌握中的多个目标，拆成 2–4 节。不要为凑节数重复开场、定义或总结，也不要把本应独立的推导、应用和检查全塞进一节。每节都要带来新的东西：新的例子、新的步骤，或学生课后自己动手；后面的节不重讲前面已经展示过的内容，没有新东西的节不要规划。为什么须推导，怎么算须步骤与检验，是什么须直觉与边界。不猜年级；close 只总结。`,
   `只返回符合响应 Schema 的 JSON。`,
 ].filter(Boolean).join("\n");
 
@@ -216,6 +217,10 @@ const PRACTICE_SYSTEM_PROMPT = `学生刚学完 lesson.taught 里的这一节课
 - 这节讲了能算出确定数值的内容（计算、换算、读数、代入求值）时写 1–2 道，否则返回空数组。题目只考这节讲过的方法，用课中没算过的新数，难度和课中例子相当。
 - ${ANSWER_ACTIVITY_RULE}
 只返回符合响应 Schema 的 JSON。`;
+
+// Later sections see what the earlier sections actually did (`earlierSectionsRecord`), not only their purposes
+// (owner, 2026-11-27: a second section retold the first).
+const LATER_SECTION_RECORD_RULE = `course_and_section.previous_sections[].taught 是前面各节实际讲过的内容（旁白、板书、画面及数值变化），learner_turn 是已留的课后练习，pictures_now 是画面此刻显示的数值。本节要带来新的东西：新的例子、新的步骤，或学生课后自己动手；不重讲前面已展示过的内容，不重复已留过的练习。`;
 
 const LATER_SECTION_EXPERIENCE_RULE = `这节课可能沿用了老师在第一节提起的一段自己的经历作为情境。如果 outline 写明沿用，就按 outline 继续这个情境，不再提新的经历，不补充新的地点、人物或经历，也不说成是和学生一起经历的；outline 没写就不提。`;
 
@@ -813,6 +818,8 @@ function sanitizeNonessentialVisuals(
     number?: number;
     reason: string;
   }>;
+  /** Each kept reusable slot's new place, keyed "section:old slot" (a removed picture's later slots move up). */
+  reusable_item_map: ReadonlyMap<string, number>;
 } {
   const outline = structuredClone(outlineValue);
   const drafts = structuredClone(draftValues);
@@ -1181,7 +1188,7 @@ function sanitizeNonessentialVisuals(
       outline.close.focus = [{ source: "reusable", section, item }];
     }
   }
-  return { outline, drafts, adjustments };
+  return { outline, drafts, adjustments, reusable_item_map: reusableItemMap };
 }
 
 /**
@@ -1298,7 +1305,7 @@ function normalizeExecutableNumberInteractions(
     });
     if (section.student_activities.length === 0) delete section.student_activities;
   }
-  return { outline, drafts, adjustments: sanitized.adjustments };
+  return { outline, drafts, adjustments: sanitized.adjustments, reusable_item_map: sanitized.reusable_item_map };
 }
 
 function lowerModelActionReferences(
@@ -1721,6 +1728,150 @@ function practiceCard(draft: LessonPlanSectionDraft): Record<string, unknown> | 
     }
   });
   return questionCard ?? lastCard;
+}
+
+/**
+ * The lesson numbers' values after the given (accepted) sections play, teacher animation only: optional student
+ * practice is not run while later sections play. `afterMoment` sees each moment's values once its cards are drawn
+ * and its restarts made (`drawn`), and after its animations (`after`).
+ */
+function numberStateAfter(
+  outline: LessonPlanOutline,
+  drafts: readonly LessonPlanSectionDraft[],
+  afterMoment?: (draftAt: number, momentAt: number, drawn: ReadonlyMap<number, number>, after: ReadonlyMap<number, number>) => void,
+): Map<number, number> {
+  const state = new Map((outline.numbers ?? []).map((number, index) => [index + 1, number.initial]));
+  // Cards that move their own numbers (the trading mat): one number's animation changes the others too.
+  const cards: Array<{ numbers: number[]; hook: NonNullable<RecipeHooks["number_moves"]>; started: number[] }> = [];
+  // A card's numbers do not move before the card is drawn: the compiler leaves such an animation out.
+  const cardNumbers = new Set(cardMovedNumbers(drafts.flatMap((draft) => draft.moments).flatMap((moment) => moment.actions)));
+  for (const [draftAt, draft] of drafts.entries()) for (const [momentAt, moment] of draft.moments.entries()) {
+    for (const action of moment.actions) {
+      if (action.action !== "create" || action.kind !== "visual") continue;
+      const content = action.content as LessonPlanVisualContent;
+      const hook = RECIPE_HOOKS[content.capability]?.number_moves;
+      if (hook && content.numbers?.length && !cards.some((card) => card.numbers.join() === content.numbers!.join())) {
+        // The card's state when it is drawn: its lesson numbers as the card reads them there (a chart to build
+        // starts empty, whatever number it is to show), then what its start adds (a hundreds column).
+        const initial = content.numbers.map((number) => outline.numbers![number - 1].initial);
+        // A state shorter than the card's numbers (a mat whose hundreds start at 0) keeps the rest as written.
+        const started = [...hook.state(initial, content)];
+        initial.forEach((value, position) => { if (started[position] === undefined) started[position] = value; });
+        cards.push({ numbers: [...content.numbers], hook, started });
+        content.numbers.forEach((number, position) => state.set(number, started[position]!));
+      }
+    }
+    for (const number of moment.restart_numbers ?? []) {
+      const card = cards.find((each) => each.numbers.includes(number));
+      if (card) card.numbers.forEach((each, position) => state.set(each, card.started[position]!));
+      else state.set(number, outline.numbers![number - 1].initial);
+    }
+    const drawn = afterMoment ? new Map(state) : undefined;
+    for (const card of cards) {
+      const moves = moment.actions.flatMap((action) => (action.action === "animate" && card.numbers.includes(action.number)
+        ? [{ position: card.numbers.indexOf(action.number), to: action.end_value }] : []));
+      if (!moves.length) continue;
+      // The card's state: its lesson numbers first, as they stand, then what its start adds (a hundreds column).
+      const now = [...card.numbers.map((number) => state.get(number)!), ...card.started.slice(card.numbers.length)];
+      const result = card.hook.moves(now, moves);
+      if ("steps" in result && result.steps.length) card.numbers.forEach((number, position) => state.set(number, result.steps.at(-1)!.to[position]!));
+    }
+    for (const action of moment.actions) {
+      if (action.action === "animate" && !cardNumbers.has(action.number)) state.set(action.number, action.end_value);
+    }
+    afterMoment?.(draftAt, momentAt, drawn!, state);
+  }
+  return state;
+}
+
+/** A formula, note, list or table as the board shows it; undefined for a picture or an image. */
+function boardText(content: LessonPlanBoardContent): string | undefined {
+  if ("latex" in content) return content.latex;
+  if ("text" in content) return content.text;
+  if ("items" in content) return [content.title, ...content.items].join("; ");
+  if ("columns" in content) return [content.columns, ...content.rows].map((row) => row.join(" | ")).join("; ");
+  return undefined;
+}
+
+/** What the earlier sections did, for a later section's request (`previous_sections[].taught`, `pictures_now`). */
+interface EarlierSectionsRecord {
+  sections: Array<{ taught: Array<Record<string, unknown>>; learner_turn?: Array<Record<string, unknown>> }>;
+  pictures_now: Array<Record<string, unknown>>;
+}
+
+/**
+ * What the accepted earlier sections actually did, as information for a later section (owner, 2026-11-27: a later
+ * section retold the first, as its request carried only the outline's one-line purposes). Per moment: the narration,
+ * the formulas and notes written, the pictures drawn with the lesson numbers they show, the numbers restarted and
+ * where the moves took them; then the learner's after-lesson turn, and where each picture's numbers stand now. It is
+ * read from the sections as their playable prefix compiled them (`prefixSections`), after the program's adjustments: a
+ * move left out, a picture taken out (by the prefix's clean-up, or from the outline, its section written again without
+ * it) or an activity dropped is not there. `dropped` names, by section, the activities the compiler then dropped
+ * (their places in the compiled sections). The number walk is the one `current_value` comes from.
+ */
+function earlierSectionsRecord(
+  outline: LessonPlanOutline,
+  drafts: readonly LessonPlanSectionDraft[],
+  dropped: (section: number) => ReadonlySet<number> | undefined,
+  /** The compiled sections' reusable slots ("section:old slot" to new slot), as `prefixSections` renumbered them. */
+  slots: ReadonlyMap<string, number>,
+): EarlierSectionsRecord {
+  // The outline's picture, by the slot the section wrote it in: the prefix's clean-up renumbers the slots after a
+  // picture it takes out (review of #191, B1), and the outline keeps the slots as written.
+  const writtenSlot = new Map([...slots].map(([key, slot]) => [`${key.split(":")[0]}:${slot}`, Number(key.split(":")[1])]));
+  const courseVisual = (section: number, action: LessonPlanAction) => {
+    if (action.action !== "create" || action.kind !== "visual" || !Number.isInteger(action.reusable_item)) return 0;
+    const capability = (action.content as LessonPlanVisualContent).capability;
+    const slot = writtenSlot.get(`${section}:${action.reusable_item}`) ?? action.reusable_item;
+    return (outline.course_visuals ?? []).findIndex((visual) => visual.create_section === section
+      && visual.reusable_item === slot && visual.capability === capability) + 1;
+  };
+  const values = (numbers: readonly number[] | undefined, state: ReadonlyMap<number, number>) =>
+    (numbers ?? []).map((number) => ({ number, value: state.get(number) }));
+  const sections: EarlierSectionsRecord["sections"] = drafts.map(() => ({ taught: [] }));
+  const pictures: Array<{ visual: number; capability: string; numbers?: number[] }> = [];
+  const end = numberStateAfter(outline, drafts, (draftAt, momentAt, drawn, after) => {
+    const moment = drafts[draftAt]!.moments[momentAt]!;
+    const wrote: string[] = [];
+    const drew: Array<Record<string, unknown>> = [];
+    for (const action of moment.actions) {
+      if ((action.action !== "create" && action.action !== "revise")) continue;
+      if (action.kind !== "visual") {
+        const text = boardText(action.content);
+        if (text) wrote.push(text);
+        continue;
+      }
+      const content = action.content as LessonPlanVisualContent;
+      const visual = courseVisual(draftAt + 1, action);
+      if (action.action === "create") pictures.push({ visual, capability: content.capability, ...(content.numbers ? { numbers: content.numbers } : {}) });
+      drew.push({
+        ...(visual ? { course_visual: visual } : {}),
+        capability: content.capability,
+        ...(action.action === "revise" ? { revised: true } : {}),
+        ...(content.numbers?.length ? { numbers: values(content.numbers, drawn) } : {}),
+      });
+    }
+    const moved = [...after].filter(([number, value]) => drawn.get(number) !== value).map(([number, to]) => ({ number, to }));
+    sections[draftAt]!.taught.push({
+      ...(moment.narration ? { narration: moment.narration } : {}),
+      ...(wrote.length ? { wrote } : {}),
+      ...(drew.length ? { drew } : {}),
+      ...(moment.restart_numbers?.length ? { restarted: moment.restart_numbers } : {}),
+      ...(moved.length ? { moved } : {}),
+    });
+  });
+  drafts.forEach((draft, draftAt) => {
+    const kept = (draft.student_activities ?? []).filter((_activity, index) => !dropped(draftAt + 1)?.has(index));
+    if (kept.length) sections[draftAt]!.learner_turn = kept.map((activity) => ({ kind: activity.kind, prompt: activity.prompt }));
+  });
+  return {
+    sections,
+    pictures_now: pictures.map((picture) => ({
+      ...(picture.visual ? { course_visual: picture.visual } : {}),
+      capability: picture.capability,
+      ...(picture.numbers?.length ? { numbers: values(picture.numbers, end) } : {}),
+    })),
+  };
 }
 
 /** What a section taught, as the practice request reads it. */
@@ -2509,6 +2660,7 @@ function sectionPromptContext(
   sectionNumber: number,
   allowedNumberIndexes: readonly number[],
   currentNumbers: Map<number, number>,
+  earlier?: EarlierSectionsRecord,
 ): Record<string, unknown> {
   const section = outline.sections[sectionNumber - 1];
   const allowedNumbers = new Set(allowedNumberIndexes);
@@ -2541,7 +2693,9 @@ function sectionPromptContext(
         item: itemIndex + 1,
         ...item,
       })),
+      ...earlier?.sections[index],
     })),
+    ...(earlier?.pictures_now.length ? { pictures_now: earlier.pictures_now } : {}),
   };
 }
 
@@ -2582,6 +2736,19 @@ function prefixPlan(
   drafts: LessonPlanSectionDraft[],
   options: CompileLessonPlanOptions | undefined,
 ): LessonPlan {
+  const normalized = prefixSections(outline, drafts, options);
+  return assembleLessonPlan(normalized.outline, normalized.drafts, options);
+}
+
+/**
+ * A playable prefix's outline and sections as it compiles them: after the program's clean-up of pictures, duplicate
+ * cards and number interactions that cannot run (`normalizeExecutableNumberInteractions`).
+ */
+function prefixSections(
+  outline: LessonPlanOutline,
+  drafts: LessonPlanSectionDraft[],
+  options: CompileLessonPlanOptions | undefined,
+): ReturnType<typeof normalizeExecutableNumberInteractions> {
   const sectionCount = drafts.length;
   let focus: { source: "reusable"; section: number; item: number } | undefined;
   for (let section = sectionCount; section >= 1 && !focus; section -= 1) {
@@ -2611,8 +2778,7 @@ function prefixPlan(
     sections: structuredClone(outline.sections.slice(0, sectionCount)),
     close: { summary: lessonText(options?.language, "课程内容仍在继续生成。"), focus: [focus] },
   };
-  const normalized = normalizeExecutableNumberInteractions(prefixOutline, drafts);
-  return assembleLessonPlan(normalized.outline, normalized.drafts, options);
+  return normalizeExecutableNumberInteractions(prefixOutline, drafts);
 }
 
 /**
@@ -3325,6 +3491,21 @@ export async function generateLessonPlanWithModel(
   return undefined;
   };
   const drafts: LessonPlanSectionDraft[] = [];
+  // Activities the compiler dropped from each accepted section (a card's task with nothing left to do), by their
+  // place in the section as the prefix compiled it: the latest playable prefix decides, as a later section can end
+  // a card's task.
+  const compileDroppedActivities = new WeakMap<LessonPlanSectionDraft, Set<number>>();
+  const noteCompiledDrops = (compiled: CompiledLessonPlan, sections: number) => {
+    for (const draft of drafts.slice(0, sections)) compileDroppedActivities.delete(draft);
+    for (const adjustment of compiled.program_adjustments) {
+      const task = adjustment.kind === "activity_removed" ? /-task-(\d+)$/u.exec(adjustment.task) : null;
+      const draft = task ? drafts[adjustment.section - 1] : undefined;
+      if (!draft) continue;
+      const dropped = compileDroppedActivities.get(draft) ?? new Set<number>();
+      dropped.add(Number(task![1]) - 1);
+      compileDroppedActivities.set(draft, dropped);
+    }
+  };
   // Where a compile fault in `section` points, read in the very plan that compile saw (so no index can shift): the
   // action at the fault's path, when it is a visual's create (the picture's own check) or an animation (a move the
   // picture refuses), with the section it is in and the picture's capability and numbers. Undefined otherwise.
@@ -3520,48 +3701,7 @@ export async function generateLessonPlanWithModel(
 
   // Teacher animation state only: optional student practice is not run while
   // subsequent sections play. Retries must never include the rejected draft.
-  const currentNumbersBefore = (section: number): Map<number, number> => {
-    const state = new Map((outline.numbers ?? []).map((number, index) => [index + 1, number.initial]));
-    // Cards that move their own numbers (the trading mat): one number's animation changes the others too.
-    const cards: Array<{ numbers: number[]; hook: NonNullable<RecipeHooks["number_moves"]>; started: number[] }> = [];
-    // A card's numbers do not move before the card is drawn: the compiler leaves such an animation out.
-    const cardNumbers = new Set(cardMovedNumbers(drafts.slice(0, section - 1).flatMap((draft) => draft.moments).flatMap((moment) => moment.actions)));
-    for (const draft of drafts.slice(0, section - 1)) for (const moment of draft.moments) {
-      for (const action of moment.actions) {
-        if (action.action !== "create" || action.kind !== "visual") continue;
-        const content = action.content as LessonPlanVisualContent;
-        const hook = RECIPE_HOOKS[content.capability]?.number_moves;
-        if (hook && content.numbers?.length && !cards.some((card) => card.numbers.join() === content.numbers!.join())) {
-          // The card's state when it is drawn: its lesson numbers as the card reads them there (a chart to build
-          // starts empty, whatever number it is to show), then what its start adds (a hundreds column).
-          const initial = content.numbers.map((number) => outline.numbers![number - 1].initial);
-          // A state shorter than the card's numbers (a mat whose hundreds start at 0) keeps the rest as written.
-          const started = [...hook.state(initial, content)];
-          initial.forEach((value, position) => { if (started[position] === undefined) started[position] = value; });
-          cards.push({ numbers: [...content.numbers], hook, started });
-          content.numbers.forEach((number, position) => state.set(number, started[position]!));
-        }
-      }
-      for (const number of moment.restart_numbers ?? []) {
-        const card = cards.find((each) => each.numbers.includes(number));
-        if (card) card.numbers.forEach((each, position) => state.set(each, card.started[position]!));
-        else state.set(number, outline.numbers![number - 1].initial);
-      }
-      for (const card of cards) {
-        const moves = moment.actions.flatMap((action) => (action.action === "animate" && card.numbers.includes(action.number)
-          ? [{ position: card.numbers.indexOf(action.number), to: action.end_value }] : []));
-        if (!moves.length) continue;
-        // The card's state: its lesson numbers first, as they stand, then what its start adds (a hundreds column).
-        const now = [...card.numbers.map((number) => state.get(number)!), ...card.started.slice(card.numbers.length)];
-        const result = card.hook.moves(now, moves);
-        if ("steps" in result && result.steps.length) card.numbers.forEach((number, position) => state.set(number, result.steps.at(-1)!.to[position]!));
-      }
-      for (const action of moment.actions) {
-        if (action.action === "animate" && !cardNumbers.has(action.number)) state.set(action.number, action.end_value);
-      }
-    }
-    return state;
-  };
+  const currentNumbersBefore = (section: number): Map<number, number> => numberStateAfter(outline, drafts.slice(0, section - 1));
   const visualsForSection = (section: number, state: Map<number, number>) => (outline.course_visuals ?? []).flatMap((visual, index) => {
     if (!visual.use_sections.includes(section)) return [];
     // Two comparisons can share a capability while having different recipes,
@@ -3600,6 +3740,10 @@ export async function generateLessonPlanWithModel(
   // A first section written here (the bootstrap's was rejected or not written)
   // still gets everything the planning call had.
   const laterSectionContext = { ...context, current_lesson: null, teacher_experiences: null };
+  const earlierRecord = (section: number) => {
+    const compiled = prefixSections(outline, drafts.slice(0, section - 1), options.compile);
+    return earlierSectionsRecord(outline, compiled.drafts, (earlier) => compileDroppedActivities.get(drafts[earlier - 1]!), compiled.reusable_item_map);
+  };
   const generateSection = async (section: number): Promise<LessonPlanSectionDraft> => {
     const attempt = (sectionAttempts.get(section) ?? 0) + 1;
     sectionAttempts.set(section, attempt);
@@ -3614,12 +3758,14 @@ export async function generateLessonPlanWithModel(
         section,
         attempt,
         turn_id: input.turn_id,
-        system_prompt: section === 1 || typeof context.teacher_experiences !== "string"
-          ? withContextRules(SECTION_SYSTEM_PROMPT, section === 1 ? context : laterSectionContext)
-          : `${withContextRules(SECTION_SYSTEM_PROMPT, laterSectionContext)}\n\n${LATER_SECTION_EXPERIENCE_RULE}`,
+        system_prompt: section === 1
+          ? withContextRules(SECTION_SYSTEM_PROMPT, context)
+          : [withContextRules(SECTION_SYSTEM_PROMPT, laterSectionContext), LATER_SECTION_RECORD_RULE,
+            ...(typeof context.teacher_experiences === "string" ? [LATER_SECTION_EXPERIENCE_RULE] : [])].join("\n\n"),
         prompt: JSON.stringify({
           course_context: compactModelContext(section === 1 ? context : laterSectionContext),
-          course_and_section: sectionPromptContext(outline, section, allowedNumberIndexes, currentNumbers),
+          course_and_section: sectionPromptContext(outline, section, allowedNumberIndexes, currentNumbers,
+            section > 1 ? earlierRecord(section) : undefined),
           visuals_for_section: visualsForSection(section, currentNumbers),
           assigned_request_parts: assignedRequestParts(section),
           // The note stays for later sections too: their purposes may also name the picture (review of this change).
@@ -3779,6 +3925,7 @@ export async function generateLessonPlanWithModel(
               sectionErrors.delete(section);
               for (const left of leftOutMoves) await options.on_program_adjustment?.({ kind: "plot_view_adjusted", section, reason: "animation_left_out", ...left });
               await reportDraftAdjustments(drafts[section - 1]!);
+              noteCompiledDrops(kept, section);
               await options.on_playable_prefix?.({ completed_sections: section, compiled: kept });
               return;
             }
@@ -3816,6 +3963,7 @@ export async function generateLessonPlanWithModel(
         continue;
       }
       await reportDraftAdjustments(candidate);
+      noteCompiledDrops(prefix, section);
       await options.on_playable_prefix?.({ completed_sections: section, compiled: prefix });
       return;
     }
