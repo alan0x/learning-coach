@@ -9,11 +9,14 @@
 //   `forbid` for a near miss.
 // - Checks (objective; owner, 2026-11-24): a near miss that draws a times-ten card FAILS (0028 §9); a served case
 //   that draws none fails (named when it draws the chart, the trade card, the mat or a number line instead); the
-//   card's amount and target are the question's (a times pair in either order), and its shape is (count or times;
-//   a count's start unit); the problem is one the card takes; the card speaks the lesson's language; it opens
-//   fresh ("counted in" at its start unit, never 0; no row moved); every task on the card has a goal the learner
+//   card's amount and target are the question's (a question may name a times pair in either order; the card writes it
+//   larger first, as OLL takes it), and its shape is (count or times; a count's start unit); the problem is one the
+//   card takes; the card speaks the lesson's language; it opens
+//   fresh ("counted in" at its start unit, never 0; no row moved); the demonstration moves "counted in" only along
+//   its path, forward; every task on the card has a goal the learner
 //   can reach: its `complete` fact by taps, on a practice of the card's shape (the same question, direction and
-//   places apart) that is not the lesson's own, starting fresh at its own start unit; and the typed task right
+//   places apart; a times pair larger first) that is not the lesson's own (compared as problems, so not the lesson's
+//   pair the other way round), its start setting every field the card binds, starting fresh at its own start unit; and the typed task right
 //   after a task on the card asks that practice's own answers (a row of blanks exactly: a count's count; a times
 //   pair's renamed count, then 10), or one typed answer that is one of them.
 // - Notes (what the lesson chose to teach; the owner judges lessons): one card; whether the demonstration reaches
