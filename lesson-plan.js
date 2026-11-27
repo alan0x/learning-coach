@@ -29593,7 +29593,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
             await options.on_rejected_part?.({ label: "lesson-plan-section", section: 1, attempt: sectionAttempts.get(1) ?? 1, error: rejectionDetails(error) });
           }
         );
-        if (!numbersMissing) sectionAttempts.set(1, maxAttempts - 1);
+        sectionAttempts.set(1, maxAttempts - 1);
         return acceptFirstSection();
       }
       if (!(isOutlineOwnedFault(error) || spentOnPicture) || outlineRestarts >= 2) throw error;

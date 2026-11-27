@@ -38,6 +38,7 @@ const run = (body) => JSON.parse(execFileSync(process.execPath, ["--input-type=m
       });
       log.sections = generated.outline.sections.length;
       log.drafts = generated.drafts.length;
+      log.numbers = generated.outline.numbers?.length ?? 0;
       log.steps = generated.lesson.steps.length;
       log.close = generated.lesson.close;
       const oll = await import("octos-lesson-language");
@@ -56,7 +57,7 @@ const run = (body) => JSON.parse(execFileSync(process.execPath, ["--input-type=m
 const sectionPrompt = (log, label, nth = 0) => JSON.parse(log.prompts.filter((_prompt, index) => log.requests[index] === label)[nth]);
 
 /** PF-03's shape: section 1 draws the trading mat; section 2 trades on it, to `end` loose ones (26 can go to 16 or 6). */
-const matLesson = (end) => run(`
+const matLesson = (end, lineInSectionTwo = false) => run(`
   const plan = sp.samplePlan("rectangle_unit_square_array");
   plan.numbers = [{ initial: 26, min: 0, max: 59, label: "loose ones" }, { initial: 9, min: 0, max: 34, label: "tens" }];
   const first = plan.sections[0].moments[0];
@@ -66,6 +67,13 @@ const matLesson = (end) => run(`
   delete plan.sections[0].student_activities;
   plan.sections[1].moments = [{ narration: "Ten ones make a ten.", actions: [animate(1, ${end})] }];
   delete plan.sections[1].student_activities;
+  if (${lineInSectionTwo}) {
+    // A third lesson number only section 2 uses, on a number line section 2 draws.
+    plan.numbers.push({ initial: 0.5, min: 0, max: 1, label: "a point", student_control: { kind: "slider", step: 0.05 } });
+    const line = sp.samplePlan("number_line").sections[0].moments[0].actions.find((action) => action.action === "create");
+    plan.sections[1].reusable_items = [{ kind: "board_item", board_kind: "visual", capability: "number_line" }];
+    plan.sections[1].moments.unshift({ narration: "A number line.", actions: [{ ...structuredClone(line), content: { ...structuredClone(line.content), numbers: [3] }, placement: { relation: "new_region" }, reusable_item: 1 }] });
+  }
   const stage = staged(plan);
   const log = await generate((request) => request.label === "lesson-plan-bootstrap" ? bootstrap(request, stage) : JSON.stringify(stage.drafts[request.section - 1]),
     "I have 9 tens and 26 ones. What number is that?");
@@ -320,4 +328,45 @@ test("endOutlineBefore: a part only the removed sections taught is recorded as n
   assert.deepEqual(result.shorter.close, { summary: "Review.", focus: [{ source: "reusable", section: 1, item: 1 }] });
   assert.equal(result.related, null);
   assert.equal(result.first, null);
+});
+
+test("a lesson ended early compiles with a lesson number only the removed sections used (review of #189)", () => {
+  const passing = matLesson(6, true);
+  const failing = matLesson(7, true);
+  assert.equal(passing.error, undefined, JSON.stringify(passing.error));
+  assert.ok(passing.written.includes("number_line"), JSON.stringify(passing.written));
+  assert.equal(failing.error, undefined, JSON.stringify(failing.error));
+  assert.deepEqual([failing.sections, failing.steps, failing.numbers], [1, 1, 3]);
+  assert.deepEqual(failing.adjustments.filter(([kind]) => kind === "sections_removed"), [["sections_removed", 2, "base_ten_trade", "visual_limits_after_retries", "left_out"]]);
+  assert.equal(failing.written.includes("number_line"), false);
+  assert.equal(failing.oll_valid, true);
+});
+
+test("PF-09 on a card the outline gave too few numbers: section 1 is written exactly once more (review of #189)", () => {
+  // Two restarts spent (the mat, then the chart, on their own limits), then a third outline whose card starts on five
+  // numbers and declares three: the card goes at once, and section 1 gets one call, not a new repair budget.
+  const result = run(`
+    const one = (plan) => { plan.sections = [plan.sections[0]]; plan.close = { summary: "Review.", focus: [{ source: "reusable", section: 1, item: 1 }] }; return plan; };
+    const mat = one(sp.samplePlan("base_ten_trade"));
+    mat.numbers[1] = { initial: 33, min: 0, max: 40, label: "tens" };
+    const chart = one(sp.placeValuePlan({ number: 300, practice: 73, given: "numeral" }));
+    const card = staged(one(sp.timesTenPlan({ amount: 0.3, target: 0.001, practice: [5, 0.01] })));
+    card.outline.numbers = card.outline.numbers.slice(0, 3);
+    const stages = [staged(mat), staged(chart), card];
+    let stage = 0;
+    const log = await generate((request) => {
+      if (request.label === "lesson-plan-bootstrap") return bootstrap(request, stages[0]);
+      if (request.label === "lesson-plan-outline") { stage += 1; return JSON.stringify(stages[stage].outline); }
+      // Written without the card, this stub still writes it: the one call faults.
+      return JSON.stringify(stages[stage].drafts[0]);
+    }, "Why does 300 hold 30 tens?");
+    console.log(JSON.stringify(log));
+  `);
+  assert.deepEqual(result.adjustments.filter(([kind]) => kind === "visual_removed"), [
+    ["visual_removed", 1, "base_ten_trade", "visual_limits_after_retries"],
+    ["visual_removed", 1, "place_value_chart", "visual_limits_after_retries"],
+    ["visual_removed", 1, "place_value_times_ten", "outline_numbers_missing"],
+  ]);
+  assert.deepEqual(result.requests.slice(result.requests.lastIndexOf("lesson-plan-outline")), ["lesson-plan-outline", "lesson-plan-section1"]);
+  assert.ok(result.error, "the stub's one call faults, and no further call is made");
 });
