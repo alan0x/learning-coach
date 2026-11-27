@@ -29,6 +29,7 @@ const EN: Readonly<Record<string, string>> = {
   "从左到右读横线下面每一列的圆片个数。": "Read how many disks each column has below the line, from left to right.",
   "y 截距": "y-intercept", "x 截距": "x-intercept", "对称轴": "Axis of symmetry", "定义域": "Domain", "值域": "Range",
   "A点的x坐标": "x-coordinate of point A", "B点的x坐标": "x-coordinate of point B",
+  "做完了几列": "columns finished",
   "我没能稳定读清这次手写选区，请重新框选，或者把公式写大一些再试一次。": "I could not read the selected handwriting reliably. Select it again, or write the formula larger and try again.",
   "我没能稳定读取这次摄像头画面，请把题目或物体放到画面中央后再试一次。": "I could not read this camera image reliably. Place the question or object in the centre and try again.",
   "目前还不能完整生成这节课：{{v0}}": "This lesson cannot be generated in full yet: {{v0}}",

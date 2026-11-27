@@ -47,6 +47,20 @@ export function recipeInitialCamera(capability: string | undefined): { yaw: numb
 export function recipeDeclares(capability: string | undefined, flag: "numbers_in_parameters" | "ranges_fixed_once_shown" | "revised_by_program" | "binds_many_variables"): boolean {
   return recipeEntry(capability)?.[flag] === true;
 }
+/**
+ * The trailing number inputs the program supplies for a recipe (`program_number_inputs`): a number that always
+ * starts the same way, which an outline may leave out. Empty when the recipe declares none.
+ */
+export function recipeProgramNumbers(capability: string | undefined): ReadonlyArray<{ initial: number; min: number; max: number; label: string }> {
+  const declared = recipeEntry(capability)?.program_number_inputs;
+  return Array.isArray(declared) ? declared as ReadonlyArray<{ initial: number; min: number; max: number; label: string }> : [];
+}
+
+/** The fewest lesson numbers a recipe's visual can start on (`min_lesson_numbers`), or 0 when it declares none. */
+export function recipeMinLessonNumbers(capability: string | undefined): number {
+  const declared = recipeEntry(capability)?.min_lesson_numbers;
+  return typeof declared === "number" && Number.isInteger(declared) && declared > 0 ? declared : 0;
+}
 export const LESSON_PLAN_VISUAL_FEATURES = [...new Set(
   LESSON_PLAN_CAPABILITY_NAMES.flatMap((name) => [...LESSON_PLAN_CAPABILITY_REGISTRY[name].required_features]),
 )] as LessonPlanVisualFeature[];

@@ -3,6 +3,8 @@ import {
   isNumberLineCapability,
   recipeDeclares,
   recipeInitialCamera,
+  recipeMinLessonNumbers,
+  recipeProgramNumbers,
   LESSON_PLAN_CAPABILITY_NAMES,
   LESSON_PLAN_CAPABILITY_NUMBER_LIMITS,
   LESSON_PLAN_CAPABILITY_REGISTRY,
@@ -682,6 +684,13 @@ function lowerModelBoardContent(kind: unknown, value: unknown, numberCount: numb
   if (forceNoNumbers) validNumbers = [];
   const parameterNumbers = hooks?.numbers_from_parameters?.(parameters, { numberCount, limit: numberLimit }) ?? [];
   if (parameterNumbers.length > 0) validNumbers = parameterNumbers;
+  // A card whose trailing numbers the program supplies (recipe `program_number_inputs`), in an outline that holds
+  // exactly the card's numbers: a create naming only the numbers before them is bound to the rest.
+  const supplied = recipeProgramNumbers(typeof capability === "string" ? capability : undefined).length;
+  if (supplied > 0 && !forceNoNumbers && numberCount === numberLimit
+    && validNumbers.length === numberLimit - supplied && validNumbers.every((number) => Number(number) <= numberLimit - supplied)) {
+    for (let number = numberLimit - supplied + 1; number <= numberLimit; number += 1) validNumbers.push(number);
+  }
   if (!forceNoNumbers
     && validNumbers.length === 0
     && numberCount === 1
@@ -2641,6 +2650,38 @@ export function withdrawSectionVisual(
   }
 }
 
+/**
+ * Appends the numbers a chosen card's recipe supplies itself (`program_number_inputs`: the trade card's columns
+ * finished, which always starts at 0) when the outline declares exactly the card's other numbers. An outline that
+ * declares them too keeps its own; one that declares any other count is left alone. Runs again on an outline it
+ * has already prepared without change.
+ */
+function supplyProgramNumbers(outline: LessonPlanOutline, language?: string): void {
+  for (const capability of outlineCapabilities(outline)) {
+    const supplied = recipeProgramNumbers(capability);
+    const declared = outline.numbers?.length ?? 0;
+    if (!supplied.length || declared === 0 || declared !== LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[capability] - supplied.length) continue;
+    outline.numbers = [...outline.numbers!, ...supplied.map(({ initial, min, max, label }) => ({
+      initial, min, max, label: lessonText(language, label),
+      ...(max > min ? { student_control: { kind: "slider" as const, step: deriveSliderStep(min, max) } } : {}),
+    }))];
+    return;
+  }
+}
+
+/** A card no section can draw: its recipe starts on more lesson numbers (`min_lesson_numbers`) than the outline declares. */
+const OUTLINE_NUMBERS_MISSING = "LESSON_PLAN_OUTLINE_NUMBERS_MISSING";
+function outlineNumbersMissing(outline: LessonPlanOutline, section: number): LessonPlanError | undefined {
+  const declared = outline.numbers?.length ?? 0;
+  for (const [index, visual] of (outline.course_visuals ?? []).entries()) {
+    const needed = recipeMinLessonNumbers(visual.capability);
+    if (visual.create_section !== section || declared >= needed) continue;
+    return new LessonPlanError(OUTLINE_NUMBERS_MISSING, `$lessonPlanOutline.course_visuals[${index}]`,
+      `the ${visual.capability} visual starts on ${needed} lesson numbers and the outline declares ${declared}; a section cannot add one`, visual.capability);
+  }
+  return undefined;
+}
+
 /** A fault only a new outline can fix: the outline chose the visual and the numbers it cannot show. */
 const OUTLINE_OWNED_FAULT = "LESSON_PLAN_OUTLINE_VISUAL";
 const isOutlineOwnedFault = (error: unknown) => error instanceof LessonPlanError && error.code === OUTLINE_OWNED_FAULT;
@@ -2878,6 +2919,7 @@ export async function generateLessonPlanWithModel(
       ),
       fixedRequestParts.length,
     );
+    supplyProgramNumbers(outline, input.language);
     for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
     try {
       checkOutlineVisuals(outline, excludedCapabilities);
@@ -3059,6 +3101,7 @@ export async function generateLessonPlanWithModel(
   // plugin preparation, the outline-ready report, and the check for content it cannot present.
   const acceptOutline = async (): Promise<LessonPlanGenerationResult | undefined> => {
     if (!outline) throw outlineError;
+    supplyProgramNumbers(outline, input.language);
     for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
     await options.on_outline_ready?.({
       sections: outline.sections.length,
@@ -3261,11 +3304,32 @@ export async function generateLessonPlanWithModel(
   };
 
   const drafts: LessonPlanSectionDraft[] = [];
+  // A later section's picture is taken out of the outline, and the section is written without it, told why.
+  const withdrawLaterSectionVisual = async (section: number, capability: string, reason: string, detail: string, reported?: () => Promise<void>): Promise<boolean> => {
+    const withdrawn = section > 1 && !withdrawnNotes.has(section) && outline
+      ? withdrawSectionVisual(outline, section, capability, fixedRequestParts.length)
+      : undefined;
+    if (!withdrawn) return false;
+    // The outline's purposes and strategies were written around the picture and still name it.
+    withdrawnNotes.set(section, `A picture this lesson was planned around in section ${section} (${LESSON_PLAN_CAPABILITY_REGISTRY[capability as keyof typeof LESSON_PLAN_CAPABILITIES]?.required_features.join(", ") ?? capability}) could not show the lesson's numbers and has been taken out of the lesson. Write this section without it: do not mention it or anything it would have drawn, and do not invite the learner to use it. Teach with the pictures in visuals_for_section, written math and words.`);
+    outline = withdrawn;
+    await reported?.();
+    await options.on_program_adjustment?.({
+      kind: "visual_removed", section, capability: capability as keyof typeof LESSON_PLAN_CAPABILITIES, reason, detail,
+    });
+    return true;
+  };
   const acceptSection = async (
     section: number,
     initialCandidate?: LessonPlanSectionDraft,
   ): Promise<void> => {
     let candidate = initialCandidate;
+    // A card the outline gave too few lesson numbers is lost whatever the section writes (a section cannot add
+    // an outline number), so it goes now, before any section is written or retried: section 1's by a new
+    // outline without it (acceptFirstSection), a later section's from the outline in place.
+    const missing = outline ? outlineNumbersMissing(outline, section) : undefined;
+    if (missing && section === 1) throw missing;
+    if (missing) await withdrawLaterSectionVisual(section, missing.capability!, "outline_numbers_missing", missing.message);
     while (true) {
       candidate ??= await generateSection(section);
       await dropUncheckedAnswerActivities(candidate, section);
@@ -3283,20 +3347,11 @@ export async function generateLessonPlanWithModel(
           // that picture, outside the repair budget, so the lesson keeps its published sections. Section 1
           // is handled by acceptFirstSection, which asks for a new outline without it.
           const capability = error instanceof LessonPlanError ? error.capability : undefined;
-          const withdrawn = section > 1 && capability && !withdrawnNotes.has(section) && outline
-            ? withdrawSectionVisual(outline, section, capability, fixedRequestParts.length)
-            : undefined;
+          const withdrawn = capability !== undefined && await withdrawLaterSectionVisual(
+            section, capability, "visual_limits_after_retries", error instanceof Error ? error.message : String(error),
+            async () => { await options.on_rejected_part?.({ label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error) }); },
+          );
           if (!withdrawn) throw error;
-          // The outline's purposes and strategies were written around the picture and still name it.
-          withdrawnNotes.set(section, `A picture this lesson was planned around in section ${section} (${LESSON_PLAN_CAPABILITY_REGISTRY[capability as keyof typeof LESSON_PLAN_CAPABILITIES]?.required_features.join(", ") ?? capability}) could not show the lesson's numbers and has been taken out of the lesson. Write this section without it: do not mention it or anything it would have drawn, and do not invite the learner to use it. Teach with the pictures in visuals_for_section, written math and words.`);
-          outline = withdrawn;
-          await options.on_rejected_part?.({
-            label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error),
-          });
-          await options.on_program_adjustment?.({
-            kind: "visual_removed", section, capability: capability as keyof typeof LESSON_PLAN_CAPABILITIES,
-            reason: "visual_limits_after_retries", detail: error instanceof Error ? error.message : String(error),
-          });
           sectionErrors.delete(section);
           sectionAttempts.set(section, maxAttempts - 1);
           candidate = undefined;
@@ -3325,6 +3380,7 @@ export async function generateLessonPlanWithModel(
   // lesson back for a new outline, asked without that visual, instead of failing at section 1.
   // Section 1's repairs spent on a picture's own limits (the error names the recipe) do the same: a lesson
   // that wanted two trading mats to compare 263 and 236 is planned again without the mat (BT-31, check 3).
+  // A card the outline gave too few lesson numbers goes the same way at once, before section 1 is written.
   // At most two restarts, so a request can lose a number line and then a mat, never more.
   let outlineRestarts = 0;
   const acceptFirstSection = async (): Promise<LessonPlanGenerationResult | undefined> => {
@@ -3333,15 +3389,16 @@ export async function generateLessonPlanWithModel(
       return undefined;
     } catch (error) {
       const capability = error instanceof LessonPlanError ? error.capability : undefined;
+      const numbersMissing = error instanceof LessonPlanError && error.code === OUTLINE_NUMBERS_MISSING;
       const spentOnPicture = capability !== undefined && !excludedCapabilities.has(capability)
-        && (sectionAttempts.get(1) ?? 0) >= maxAttempts;
+        && (numbersMissing || (sectionAttempts.get(1) ?? 0) >= maxAttempts);
       if (!(isOutlineOwnedFault(error) || spentOnPicture) || outlineRestarts >= 2) throw error;
       outlineRestarts += 1;
       await options.on_rejected_part?.({ label: "lesson-plan-section", section: 1, attempt: sectionAttempts.get(1) ?? 1, error: rejectionDetails(error) });
       if (spentOnPicture) {
         await options.on_program_adjustment?.({
           kind: "visual_removed", section: 1, capability: capability as keyof typeof LESSON_PLAN_CAPABILITIES,
-          reason: "visual_limits_after_retries", detail: error instanceof Error ? error.message : String(error),
+          reason: numbersMissing ? "outline_numbers_missing" : "visual_limits_after_retries", detail: error instanceof Error ? error.message : String(error),
         });
       }
       if (outline) excludeFaulting(outline, error);

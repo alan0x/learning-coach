@@ -213,6 +213,12 @@ export const MATH_RECIPES = {
     parts: ["whole"],
     number_inputs: ["first", "second", "practice_first", "practice_second", "columns_finished"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
+    // Columns finished starts at 0 whatever the outline holds (the card is drawn with no column done), so the
+    // program supplies it: an outline that declares only the four numbers before it gets it (0, from 0 to the
+    // card's most columns), and a create naming only those four is bound to it. A model's own fifth is kept.
+    program_number_inputs: [{ initial: 0, min: 0, max: 6, label: "做完了几列" }],
+    // The card starts on no fewer: an outline that declares fewer loses it at once (a section cannot add one).
+    min_lesson_numbers: 5,
     parameter_names: ["operation"],
     model_parameter_names: ["operation"],
     required_model_schema_parameters: ["operation"],
@@ -225,7 +231,7 @@ export const MATH_RECIPES = {
     // fixed text says how it is used.
     student_controls: [],
     required_features: ["column_add_subtract_trades"],
-    model_guidance: "数位表加减（竖式，进位、退位就是交换）：多位数加减（到十万位）和小数加减（到百分位），至少有一位要进位或退位，最多六列（从两个数最低的一位到两个数和得数最高的一位）。不用于摆数、拆数、比较、凑整、乘法，也不用于低年级的凑十（用方块）。operation 写 add 或 subtract。数值依次是：第一个数、第二个数（减法第一个数不小于第二个数）、练习的第一个数、练习的第二个数、做完了几列。数值写实际大小（2.75），最多两位小数。练习的一对是另一对（不是题目的，免得孩子照抄演示），也要进位或退位，列和题目的一样（同样多的整数位和小数位，题目的得数多出一位时练习的也多出一位）。做完了几列从最右边一列数起，写 0：表一开始一列也没有做。演示时把它动画到 1、2……：每到一个值，程序按规则做完右边又一列（合起来、满十换一、不够拆一），只往前走，同一个值再写表不变；可以只演示几列。两个数和练习的数不动画。练习：对做完了几列写一个数值目标题（数值写列数），孩子在表上做完练习的一对，程序再自己问得数，不另出问这一对得数的填数题；题目和提示不写练习的得数。表上的数、圆片和操作说明都由卡片自己写；说数位用名字（个位、十分位、hundreds），不说怎么点卡片",
+    model_guidance: "数位表加减（竖式，进位、退位就是交换）：多位数加减（到十万位）和小数加减（到百分位），至少有一位要进位或退位，最多六列（从两个数最低的一位到两个数和得数最高的一位）。不用于摆数、拆数、比较、凑整、乘法，也不用于低年级的凑十（用方块）。operation 写 add 或 subtract。outline 的 numbers 依次写这五个数（不动的也要写）：第一个数、第二个数（减法第一个数不小于第二个数）、练习的第一个数、练习的第二个数、做完了几列。数值写实际大小（2.75），最多两位小数。练习的一对是另一对（不是题目的，免得孩子照抄演示），也要进位或退位，列和题目的一样（同样多的整数位和小数位，题目的得数多出一位时练习的也多出一位）。做完了几列从最右边一列数起，写 0：表一开始一列也没有做。演示时把它动画到 1、2……：每到一个值，程序按规则做完右边又一列（合起来、满十换一、不够拆一），只往前走，同一个值再写表不变；可以只演示几列。两个数和练习的数不动画。练习：对做完了几列写一个数值目标题（数值写列数），孩子在表上做完练习的一对，程序再自己问得数，不另出问这一对得数的填数题；题目和提示不写练习的得数。表上的数、圆片和操作说明都由卡片自己写；说数位用名字（个位、十分位、hundreds），不说怎么点卡片",
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
