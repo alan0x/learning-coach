@@ -283,7 +283,9 @@ test("too many lesson variables cost the card, not the lesson (binds_many_variab
     const { placeValueTradePlan } = await import(${here("./sample-plans.mjs")});
     // Six columns bind nine variables; eight more lesson numbers make seventeen.
     const plan = placeValueTradePlan({ operation: "subtract", numbers: [9000, 2345.67], practice: [8000, 3456.78] });
+    // Each extra number is shown on a number line of its own: a lesson number no picture uses is not declared.
     for (let i = 0; i < 8; i += 1) plan.numbers.push({ initial: i, min: 0, max: 10, label: "extra " + i });
+    plan.sections[0].moments.push({ narration: "More numbers.", actions: [6, 7, 8, 9, 10, 11, 12, 13].map((number) => ({ action: "create", kind: "visual", role: "supporting_visual", content: { capability: "number_line", parameters: {}, numbers: [number] }, placement: { relation: "new_region" } })) });
     try { api.compileAndValidateLessonPlan(plan, { language: "en-US" }); console.log(JSON.stringify({ compiled: true })); }
     catch (error) { console.log(JSON.stringify({ code: error.code, capability: error.capability, path: error.path })); }
   `);
