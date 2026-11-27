@@ -16,6 +16,11 @@ const UNIT_SQUARES_PER_SIDE = { min: 1, max: 8 } as const;
 // judged against it: a view already this close counts as reached before the learner moves.
 const SCENE_FIRST_CAMERA = { yaw: 0.72, pitch: 0.55, zoom: 1 } as const;
 
+// The place-value chart's guidance in two parts, so the cards offered beside it can narrow what it is not for
+// (`model_guidance_with`) while its text alone stays byte-identical.
+const PLACE_VALUE_CHART_GUIDANCE_HEAD = "数位表：照读法、展开式或每一位有几个摆出一个数，或把一个数按数位一位一位拆开（到百万位和千分位）。不用于比较两个数、十个这一位是左边一位的一个、在表上加减、凑整";
+const PLACE_VALUE_CHART_GUIDANCE_TAIL = "，也不用于低年级的十个一换一个十（用方块）。数值依次是题目的数和练习的数（另一个数，不是题目的，免得孩子照抄演示），数值写这个数本身（如 0.309），不写 0：表一开始是空的，由程序摆，写实际大小（26.075），最多三位小数。given 是卡片上给出的：摆数写 name（读法）、expanded（值的和，如 4,000 + 50）、expanded_factors（如 4 × 1,000 + 5 × 10）或 place_counts（如 8个千、6个十和3个一）；拆数写 numeral，拆的数有小数时整数部分英文课不超过三位、中文课不超过四位。只有一位不是零的数（4000、0.05）不用 expanded，也不拆。带乘号的小数写法（3 × (1/10)）只用于英文五年级的小数题或题目自己这样写；中文课用 place_counts（3个0.1、9个0.01和2个0.001）或值的和（0.3 + 0.09 + 0.002）。卡片上的读法、展开式和数字都由程序写。摆数演示时把题目的数动画到表上现在的值：从 0 起，每一步摆上一位或几位，通常从最高位起（60408：先到 60000，再到 60400，最后 60408）；后面的节再写这个数，表不变。拆数演示时把题目的数动画到表上还剩的：每一步拿出一位或几位，如 60408 先到 408，再到 8，最后到 0。练习：对题目的数写一个数值目标题（数值写练习的数），孩子在表上摆出或拆开练习的数；摆数题的题目和提示不写练习的数（卡片上已经给出它的读法或展开式）；拆完以后程序出一行空，写每一部分是多少。说数位用名字（千位、十分位、hundreds），不说怎么点卡片";
+
 export const MATH_RECIPES = {
   function_plot: {
     parts: ["whole", "primary_curve", "moving_point", "primary_control"],
@@ -207,7 +212,10 @@ export const MATH_RECIPES = {
     // No control: the learner works the chart by its own taps (+, a disk, take out); the model never names one.
     student_controls: [],
     required_features: ["place_value_parts"],
-    model_guidance: "数位表：照读法、展开式或每一位有几个摆出一个数，或把一个数按数位一位一位拆开（到百万位和千分位）。不用于比较两个数、十个这一位是左边一位的一个、在表上加减、凑整，也不用于低年级的十个一换一个十（用方块）。数值依次是题目的数和练习的数（另一个数，不是题目的，免得孩子照抄演示），数值写这个数本身（如 0.309），不写 0：表一开始是空的，由程序摆，写实际大小（26.075），最多三位小数。given 是卡片上给出的：摆数写 name（读法）、expanded（值的和，如 4,000 + 50）、expanded_factors（如 4 × 1,000 + 5 × 10）或 place_counts（如 8个千、6个十和3个一）；拆数写 numeral，拆的数有小数时整数部分英文课不超过三位、中文课不超过四位。只有一位不是零的数（4000、0.05）不用 expanded，也不拆。带乘号的小数写法（3 × (1/10)）只用于英文五年级的小数题或题目自己这样写；中文课用 place_counts（3个0.1、9个0.01和2个0.001）或值的和（0.3 + 0.09 + 0.002）。卡片上的读法、展开式和数字都由程序写。摆数演示时把题目的数动画到表上现在的值：从 0 起，每一步摆上一位或几位，通常从最高位起（60408：先到 60000，再到 60400，最后 60408）；后面的节再写这个数，表不变。拆数演示时把题目的数动画到表上还剩的：每一步拿出一位或几位，如 60408 先到 408，再到 8，最后到 0。练习：对题目的数写一个数值目标题（数值写练习的数），孩子在表上摆出或拆开练习的数；摆数题的题目和提示不写练习的数（卡片上已经给出它的读法或展开式）；拆完以后程序出一行空，写每一部分是多少。说数位用名字（千位、十分位、hundreds），不说怎么点卡片",
+    model_guidance: `${PLACE_VALUE_CHART_GUIDANCE_HEAD}${PLACE_VALUE_CHART_GUIDANCE_TAIL}`,
+    // Beside the times-ten card (a trial, OLL 0028), the chart does not take counting the same amount in another unit
+    // (PF-01: "how many tens in one thousand" fell back to an empty chart). Without the trial its text is unchanged.
+    model_guidance_with: { place_value_times_ten: `${PLACE_VALUE_CHART_GUIDANCE_HEAD}、同一个数换一个单位来数（一千里有几个十；3个十分之一=?个千分之一）${PLACE_VALUE_CHART_GUIDANCE_TAIL}` },
   },
   // OLL decision 0026 (a trial): adding and subtracting on the place-value chart, drawn as the written column
   // method, each carry or borrow a trade. The model writes the operation, the question's pair, a practice pair of
@@ -419,6 +427,9 @@ export const MATH_RECIPES = {
     student_controls: ["slider"],
     required_features: ["number_line", "number_steps"],
     model_guidance: "数轴分步：两到三步的加减（数轴加减是一步），如凑十、先整十再个位、上下移动；数值依次是起点和各步移动量（两步写两个），落点和终点由程序算；往回走的一步不讲一格一格",
+    // Beside the make-ten card (a trial, OLL 0027) the line does not claim making ten with two one-digit numbers
+    // (MT-07: "4 + 9, which number should I split?" drew the line in 2 of 2 runs). Without the trial its text is unchanged.
+    model_guidance_with: { make_ten: "数轴分步：两到三步的加减（数轴加减是一步），如先整十再个位、上下移动、两位数加一位数先凑整十（38+5）；不用于两个一位数相加的凑十（4+9、8+6，也包括问拆哪个数）；数值依次是起点和各步移动量（两步写两个），落点和终点由程序算；往回走的一步不讲一格一格" },
   },
 } as const;
 
