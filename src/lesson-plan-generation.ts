@@ -3529,17 +3529,18 @@ export async function generateLessonPlanWithModel(
     const cards: Array<{ numbers: number[]; hook: NonNullable<RecipeHooks["number_moves"]>; started: number[] }> = [];
     // A card's numbers do not move before the card is drawn: the compiler leaves such an animation out.
     const cardNumbers = new Set(cardMovedNumbers(drafts.slice(0, section - 1).flatMap((draft) => draft.moments).flatMap((moment) => moment.actions)));
-    for (const draft of drafts.slice(0, section - 1)) for (const moment of draft.moments) {
+    for (const draft of drafts.slice(0, section - 1)) for (const [momentIndex, moment] of draft.moments.entries()) {
       for (const action of moment.actions) {
         if (action.action !== "create" || action.kind !== "visual") continue;
         const content = action.content as LessonPlanVisualContent;
         const hook = RECIPE_HOOKS[content.capability]?.number_moves;
         if (hook && content.numbers?.length && !cards.some((card) => card.numbers.join() === content.numbers!.join())) {
           // The card's state when it is drawn: its lesson numbers as the card reads them there (a chart to build
-          // starts empty, whatever number it is to show), then what its start adds (a hundreds column).
+          // starts empty, whatever number it is to show, unless the section drawing it never builds it), then what its
+          // start adds (a hundreds column).
           const initial = content.numbers.map((number) => outline.numbers![number - 1].initial);
           // A state shorter than the card's numbers (a mat whose hundreds start at 0) keeps the rest as written.
-          const started = [...hook.state(initial, content)];
+          const started = [...hook.state(initial, content, draft.moments.slice(momentIndex).flatMap((each) => each.actions))];
           initial.forEach((value, position) => { if (started[position] === undefined) started[position] = value; });
           cards.push({ numbers: [...content.numbers], hook, started });
           content.numbers.forEach((number, position) => state.set(number, started[position]!));

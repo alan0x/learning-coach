@@ -44,7 +44,8 @@ export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
     const number = Math.round(values[0]! * 1000);
     const { top_place, decimals } = placeValueColumnsFor(values.map((value) => Math.round(value * 1000)), chartLanguage);
     const build = given !== "numeral";
-    // The chart reads its number as the value on it: 0 when a chart to build is drawn, the number when one to pull apart is.
+    // The chart reads its number as the value on it: 0 when a chart to build is drawn, the number when one to pull apart
+    // is, or one to build that its own section never builds (the state the section is written from, `state`, says which).
     const now = Math.round((state.get(lessonNumbers[0]!) ?? (build ? 0 : values[0]!)) * 1000);
     return { facts: {
       numbers: lessonNumbers,
