@@ -1,0 +1,47 @@
+{
+ "note": "Making ten to add: blueprint for need K2N-19 of the frozen K-12 component map (Grades K-2 early number), 2026-11-27. One row per idea, from the Common Core standards: 1.OA.C.6 (add within 20 using strategies such as making ten, '8 + 6 = 8 + 2 + 4 = 10 + 4 = 14'), with 1.OA.B.3 (properties as strategies: order, and grouping) and 1.OA.D.7 (the equal sign: both sides the same amount) as they serve that strategy; 2.OA.B.2 (fluency within 20) rests on it. Each row's teacher picture says what a good teacher draws, written without reference to any card or component. Neighbours, not this need: partners of ten on one ten frame (K2N-11); teen numbers as ten and some ones (K2N-12); three addends, joining two that make ten first (K2N-15); turning the order round as a fact (K2N-16); counting on (K2N-18); down through ten to subtract (K2N-20); near doubles (K2N-21); trading ten ones for a ten and naming tens and ones (K2N-23); adding two-digit numbers with blocks (K2N-25). Cases (development and scoring) are written from these rows, worded as learners, parents and teachers ask, in English and Chinese. Never taken from the question set.",
+ "rows": [
+  {
+   "id": "M1",
+   "idea": "Making ten when the first addend is near ten: the second addend gives part of itself to fill the first one's ten",
+   "standards": ["1.OA.C.6"],
+   "grades": "1",
+   "teacher_picture": "Two ten frames side by side: 8 red counters in the first (one empty row-end pair of places), 6 blue in the second. Two blue counters move across into the first frame's empty places; the first frame is full: a ten. The second keeps 4. Under it the chain 8 + 6 = 8 + 2 + 4 = 10 + 4 = 14, with the 6 drawn splitting into 2 and 4. In Chinese: 凑十法, 看大数、拆小数."
+  },
+  {
+   "id": "M2",
+   "idea": "Nine plus a number: one counter fills the ten",
+   "standards": ["1.OA.C.6"],
+   "grades": "1",
+   "teacher_picture": "9 + 5 on two ten frames: one empty place in the first; one counter of the 5 moves across; 10 and 4 left: 14. Then 9 + 7, 9 + 8: always one moves, so 9 + n is ten and one less than n. The chain 9 + 5 = 9 + 1 + 4 = 10 + 4 = 14."
+  },
+  {
+   "id": "M3",
+   "idea": "The bigger addend comes second: fill the bigger one's ten from the smaller one",
+   "standards": ["1.OA.C.6", "1.OA.B.3"],
+   "grades": "1",
+   "teacher_picture": "3 + 8 on two ten frames: the 8's frame has two empty places, so two of the 3 move across, leaving 1: 1 + 10 = 11. Filling the 3's frame instead would take seven of the 8; both give 11, but filling the bigger number's ten takes fewer moves. Written 3 + 8 = 1 + 2 + 8 = 1 + 10 = 11."
+  },
+  {
+   "id": "M4",
+   "idea": "Middle-sized addends: more counters cross, and doubles that pass ten",
+   "standards": ["1.OA.C.6"],
+   "grades": "1",
+   "teacher_picture": "6 + 5: four of the 5 move to fill the 6's frame, one is left: 10 + 1 = 11. 7 + 7: three move, four are left: 7 + 3 + 4 = 10 + 4 = 14. The second frame empties nearly or partly; the total never changes, only where the counters sit."
+  },
+  {
+   "id": "M5",
+   "idea": "A story problem within 20 solved by making ten",
+   "standards": ["1.OA.C.6", "1.OA.A.1"],
+   "grades": "1",
+   "teacher_picture": "'8 stickers on the page, 5 more on the sheet: how many?' as 8 counters and 5 counters in two frames; two of the 5 fill the first frame; ten and 3: 13. The answer written as a number sentence, 8 + 5 = 13, with the making-ten chain beside it."
+  },
+  {
+   "id": "M6",
+   "idea": "Why the total does not change: the chain of equal signs, and the mistake of adding the ten without taking it away",
+   "standards": ["1.OA.C.6", "1.OA.D.7", "1.OA.B.3"],
+   "grades": "1",
+   "teacher_picture": "8 + 6 and 10 + 4 as the same fourteen counters before and after the move: nothing was added or lost, only moved, so each equal sign in 8 + 6 = 8 + 2 + 4 = 10 + 4 is true. The common mistake '8 + 6 = 10 + 6 = 16' shown as forgetting that the 2 came out of the 6."
+  }
+ ]
+}
