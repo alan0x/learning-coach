@@ -11,7 +11,7 @@ import {
 } from "octos-lesson-language/plugin-math";
 import { TRADE_NUMBER, placeValueTradeColumnsOf, placeValueTradeStartFault, placeValueTradeThousandths, tradeDecimal } from "./place-value-trade-moves.js";
 import { MAKE_TEN_PLACES, makeTenFrame, makeTenFreshCount, makeTenProblemOf, makeTenStepSentences, makeTenToTen } from "octos-lesson-language/plugin-math";
-import { MAKE_TEN_NUMBER, makeTenNext, makeTenStartFault } from "./make-ten-moves.js";
+import { MAKE_TEN_NUMBER, makeTenNext, makeTenStartFault, makeTenStartValues } from "./make-ten-moves.js";
 
 export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
   // The trading mat in its own terms (owner, 2026-11-24): where practice starts, the amount no trade changes,
@@ -110,7 +110,7 @@ export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
   make_ten: ({ established, numbers, state, language }) => {
     if (!numbers || !established?.numbers?.length) return {};
     const lessonNumbers = established.numbers;
-    const values = lessonNumbers.map((number) => Number(numbers[number - 1]?.initial ?? 0));
+    const values = makeTenStartValues(lessonNumbers.map((number) => Number(numbers[number - 1]?.initial ?? 0)));
     if (makeTenStartFault(values)) return {};
     const cardLanguage = /^en(?:-|$)/iu.test(language ?? "") ? "en-US" : "zh-CN";
     const [a, b, pa, pb] = values as [number, number, number, number];

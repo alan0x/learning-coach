@@ -136,6 +136,42 @@ test("the demonstration plays in the model's own moments: each value of the coun
   assert.deepEqual(ranges, { a: [3, 1, 9], b: [8, 1, 9], filled: [8, 0, 10], moved: [0, 0, 4] });
 });
 
+test("a demonstration in the card's own moment plays no earlier than the card is written (review of #184)", () => {
+  const result = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    const { makeTenPlan, placeValueTradePlan } = await import(${here("./sample-plans.mjs")});
+    const { judgeMakeTen } = await import(${here("../scripts/make-ten-judge.mjs")});
+    const out = {};
+    const item = { id: "MT-01", expect: { need: "K2N-19", numbers: ["8", "6"] } };
+    // [name, the create's timing, the animate's timing, restart_numbers in the create's moment]
+    for (const [name, create, animate, restart] of [["after-during", "after_speech", "during_speech"], ["none-before", undefined, "before_speech"],
+      ["same", undefined, "during_speech"], ["restart", undefined, "during_speech", [5]]]) {
+      const plan = makeTenPlan({ numbers: [8, 6], practice: [7, 5], steps: [] });
+      const moment = plan.sections[0].moments[0];
+      if (create) moment.actions[0].timing = create; else delete moment.actions[0].timing;
+      moment.actions.push({ action: "animate", number: 5, end_value: 10, duration_intent: "brief", timing: animate });
+      if (restart) moment.restart_numbers = restart;
+      try {
+        const compiled = api.compileAndValidateLessonPlan(plan, { language: "en-US" });
+        const beat = compiled.lesson.steps[0].beats[0];
+        out[name] = { beat: beat.actions.map((action) => action.do + "@" + (action.when ?? "during_speech")), start: beat.start ?? null, pass: judgeMakeTen(item, compiled.lesson).pass };
+      } catch (error) { out[name] = { code: error.code, capability: error.capability, message: error.message }; }
+    }
+    // The trade card's create moment with a replayed number (it predates make_ten): ignored, the card opens fresh.
+    const trade = placeValueTradePlan({ operation: "add", numbers: [3486, 2739], practice: [4658, 1573] });
+    trade.sections[0].moments[0].restart_numbers = [5];
+    try { out.trade = { start: api.compileAndValidateLessonPlan(trade, { language: "en-US" }).lesson.steps[0].beats[0].start ?? null }; }
+    catch (error) { out.trade = { code: error.code, capability: error.capability, message: error.message }; }
+    console.log(JSON.stringify(out));
+  `, "make_ten,place_value_trade");
+  assert.deepEqual(result["after-during"], { beat: ["write@after_speech", "focus@after_speech", "animate@after_speech"], start: null, pass: true });
+  assert.deepEqual(result["none-before"], { beat: ["write@during_speech", "focus@after_speech", "animate@during_speech"], start: null, pass: true });
+  assert.deepEqual(result.same.pass, true);
+  // A replay of the card's own number in the moment that draws it: nothing to restart, the card opens fresh.
+  assert.deepEqual(result.restart, { beat: ["write@during_speech", "focus@after_speech", "animate@during_speech"], start: null, pass: true });
+  assert.deepEqual(result.trade, { start: null });
+});
+
 test("the practice is the learner's own pair, made ten by taps; then the row of four blanks the card's pair gives", () => {
   const result = withTrial(compileScript([
     ["en", { numbers: [8, 6], practice: [7, 5] }, "en-US"],
@@ -165,6 +201,8 @@ test("the practice is the learner's own pair, made ten by taps; then the row of 
   assert.deepEqual(row.hints, ["Read the full frame first, then the other one."]);
   const [, zhRow] = result.zh.lesson.lesson.tasks;
   assert.deepEqual([zhRow.prompt, zhRow.completion.parts.filter((part) => part.blank).map((part) => part.blank.answer), zhRow.completion.parts[3].blank.label], ["写成算式。", ["1", "2", "1", "11"], "凑成十"]);
+  // The hint follows the row's order: with the bigger number second (3 + 8 = 1 + 2 + 8), the ones left come first.
+  assert.deepEqual(zhRow.hints, ["先读另一框剩下的，再读满十的那一框。"]);
   for (const id of ["leak", "leak-hint"]) {
     assert.deepEqual(result[id].lesson.lesson.tasks, undefined, id);
     assert.deepEqual(result[id].adjustments.map((adjustment) => [adjustment.kind, adjustment.reason]), [["activity_removed", "practice_answer_in_words"]], id);
@@ -197,7 +235,7 @@ test("refusals name their reason and the card, so only the picture can be lost; 
     assert.notEqual(result[id].error, "LESSON_PLAN_OLL_SEMANTIC", id);
     assert.equal(result[id].capability, "make_ten", id);
   }
-  // A count the model declared wrongly is refused with the card's tag too.
+  // A count the model declared otherwise is read over, never refused: the card opens fresh (review of #184).
   const declared = withTrial(`
     const api = await import(${here("../lesson-plan.js")});
     const { makeTenPlan } = await import(${here("./sample-plans.mjs")});
@@ -205,15 +243,16 @@ test("refusals name their reason and the card, so only the picture can be lost; 
     for (const [position, value] of [[4, 0], [4, 10], [5, 2]]) {
       const plan = makeTenPlan({ numbers: [8, 6], practice: [7, 5] });
       plan.numbers[position].initial = value;
-      try { api.compileAndValidateLessonPlan(plan, { language: "en-US" }); out[position + ":" + value] = { compiled: true }; }
-      catch (error) { out[position + ":" + value] = { code: error.code, capability: error.capability, message: error.message }; }
+      plan.numbers[position].max = Math.max(plan.numbers[position].max, value);
+      try {
+        const compiled = api.compileAndValidateLessonPlan(plan, { language: "en-US" });
+        const card = compiled.lesson.steps[0].beats[0].actions[0].content;
+        out[position + ":" + value] = { card: [card.filled, card.moved], beats: compiled.lesson.steps[0].beats.map((beat) => beat.actions.map((action) => action.do === "animate" ? action.value : action.do)) };
+      } catch (error) { out[position + ":" + value] = { code: error.code, capability: error.capability, message: error.message }; }
     }
     console.log(JSON.stringify(out));
   `);
-  assert.match(declared["4:0"].message, /starts at the bigger number, 8, not 0/);
-  assert.match(declared["4:10"].message, /starts at the bigger number, 8, not 10/);
-  assert.match(declared["5:2"].message, /the count moved starts at 0, not 2/);
-  for (const each of Object.values(declared)) assert.equal(each.capability, "make_ten");
+  for (const [id, each] of Object.entries(declared)) assert.deepEqual(each, { card: [8, 0], beats: [["write", "focus"], [10]] }, id);
 });
 
 test("a moment that animates the pair or the count moved is refused with the card's tag, never at OLL", () => {

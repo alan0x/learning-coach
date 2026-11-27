@@ -19,7 +19,7 @@ import { PLACE_VALUE_GIVENS, placeValuePlain, placeValueStepPlaces, placeValueSt
 import {
   PLACE_VALUE_TRADE_OPERATIONS, TRADE_NUMBER, placeValueTradeColumnsOf, placeValueTradeStartFault, placeValueTradeThousandths, placeValueTradeWordsGiveAnswer,
 } from "./place-value-trade-moves.js";
-import { MAKE_TEN_NUMBER, makeTenStartFault, makeTenSum, makeTenWordsGiveAnswer } from "./make-ten-moves.js";
+import { MAKE_TEN_NUMBER, makeTenStartFault, makeTenStartValues, makeTenSum, makeTenWordsGiveAnswer } from "./make-ten-moves.js";
 import { plotCurveNumbers, plotSampleNumbers } from "./plot-bindings.js";
 import { planPlotView, type PlotView } from "../plot-view-planner.js";
 import { parseModelFormula } from "./math-formulas.js";
@@ -2135,7 +2135,9 @@ function compileMakeTen(
 ): CompiledVisual {
   allowParameterKeys(parameters(content), [], path);
   const numbers = content.numbers ?? [];
-  const values = numbers.map((number, index) => numberDefinition(plan, number, `${path}.numbers[${index}]`).initial);
+  // The two counts start where the pair puts them whatever the outline declared for them (the program's own
+  // numbers): the card is built fresh, so a declared start is read over, never refused (review of #184).
+  const values = makeTenStartValues(numbers.map((number, index) => numberDefinition(plan, number, `${path}.numbers[${index}]`).initial));
   // The card's numbers are its own: they change only by its rules, so another visual cannot also show them.
   const sharesNumbers = (action: LessonPlan["sections"][number]["moments"][number]["actions"][number]) => action.action === "create"
     && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability !== "make_ten"
@@ -2210,7 +2212,8 @@ function compileMakeTen(
           },
           then: [{
             prompt: compileText(plan, "写成算式。"),
-            hints: [compileText(plan, "先读满十的那一框，再读另一框。")],
+            // The row reads in the order the pair is written: the bigger number first, its full frame first.
+            hints: [compileText(plan, pa >= pb ? "先读满十的那一框，再读另一框。" : "先读另一框剩下的，再读满十的那一框。")],
             anchor: base,
             allowed_operations: [{ kind: "row_entry" }],
             completion: { kind: "numeric_row", parts: makeTenRow(pa, pb, language) },

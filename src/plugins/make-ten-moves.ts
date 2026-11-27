@@ -36,6 +36,14 @@ export function makeTenStartFault(values: readonly number[]): string | undefined
   return undefined;
 }
 
+/**
+ * The card's six lesson numbers as the program reads them: the four the model wrote, and the two counts where the
+ * pair puts them (the bigger number, 0), whatever was declared for them. A number the card does not have stays missing.
+ */
+export function makeTenStartValues(values: readonly number[]): number[] {
+  return values.map((value, position) => (position === MAKE_TEN_NUMBER.filled ? makeTenFreshCount(values[0]!, values[1]!) : position === MAKE_TEN_NUMBER.moved ? 0 : value));
+}
+
 /** The card's state when it is drawn: its six lesson numbers as it reads them (fresh: filled at the bigger number, moved 0). */
 export function makeTenState(start: readonly number[]): number[] {
   const [a, b] = [start[0] ?? 0, start[1] ?? 0];

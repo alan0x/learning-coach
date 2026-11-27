@@ -619,6 +619,9 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
       // played where the first of them stands. Worked out at that first animation, so a card drawn earlier
       // in the same moment can move in it.
       const moved = new Set<CompiledVisual>();
+      // A card written in this moment, and the phase of its write: its moves play no earlier than it (OLL plays
+      // before, during and after speech in turn), so a demonstration never moves a card before it is drawn (#184).
+      const writtenHere = new Map<CompiledVisual, unknown>();
       // An animation left out because its card is drawn in a later section (below).
       let leftOut = false;
       const playMoves = (visual: CompiledVisual, capability: LessonPlanVisualContent["capability"]): AuthoringAction[] => {
@@ -633,7 +636,10 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
           fail("LESSON_PLAN_NUMBER_NOT_DRAWABLE", `${momentPath}.actions[${at.offset}].end_value`, result.refused.reason, capability);
         }
         state.now = result.steps.at(-1)?.to ?? state.now;
-        const when = actionWhen(animations[0]!.timing);
+        const PHASES = ["before_speech", "during_speech", "after_speech"];
+        const phase = (timing: unknown) => PHASES.indexOf(String(timing ?? "during_speech"));
+        const written = writtenHere.has(visual) ? writtenHere.get(visual) : undefined;
+        const when = actionWhen(writtenHere.has(visual) && phase(written) > phase(animations[0]!.timing) ? written ?? "during_speech" : animations[0]!.timing);
         // What the moment can still hold: OLL's 24 actions in a beat, less what it has and what is to come.
         const first = animations[0]!.offset;
         const room = 24 - actions.length - moment.actions.slice(first + 1).filter((item) => !(item.action === "animate" && movers.get(item.number)?.visual === visual)).length;
@@ -678,6 +684,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
               reusableVisuals.set(identity, visual);
               for (const variable of visual.variables ?? []) if (!visualVariables.has(variable.as)) visualVariables.set(variable.as, variable);
               actions.push(...visual.actions.map((action) => ({ ...action, ...actionWhen(item.timing) })));
+              writtenHere.set(visual, item.timing);
               if (visual.mover && RECIPE_HOOKS[visualContent.capability]?.number_moves) {
                 const start = visual.mover.numbers.map((number) => plan.numbers![number - 1]!.initial);
                 const state = RECIPE_HOOKS[visualContent.capability]!.number_moves!.state(start, visualContent);
@@ -792,6 +799,15 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
       if (actions.length === 0 && leftOut) actions.push({ do: "expression", expression: "neutral", when: "after_speech" } as AuthoringAction);
       if (actions.length === 0) {
         fail("LESSON_PLAN_COMPILER_EMPTY_BEAT", `${momentPath}.actions`, "OLL requires at least one action per moment");
+      }
+      // A replayed number of a card written in this moment: the card opens fresh anyway, so the replay has nothing
+      // to restart there (a number no variable carries would refuse the lesson at OLL).
+      for (const number of moment.restart_numbers ?? []) {
+        const mover = movers.get(number);
+        if (mover && writtenHere.has(mover.visual)) {
+          for (const other of mover.visual.mover!.numbers) replayed.delete(variableAlias(other));
+          for (const variable of mover.visual.variables ?? []) replayed.delete(variable.as);
+        }
       }
       includeWrittenCardsInFocus(actions);
       beats.push({

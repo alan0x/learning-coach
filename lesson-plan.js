@@ -17800,6 +17800,7 @@ var EN = {
   "\u79FB\u8FC7\u53BB\u51E0\u4E2A": "moved across",
   "\u5199\u6210\u7B97\u5F0F\u3002": "Write it as a number sentence.",
   "\u5148\u8BFB\u6EE1\u5341\u7684\u90A3\u4E00\u6846\uFF0C\u518D\u8BFB\u53E6\u4E00\u6846\u3002": "Read the full frame first, then the other one.",
+  "\u5148\u8BFB\u53E6\u4E00\u6846\u5269\u4E0B\u7684\uFF0C\u518D\u8BFB\u6EE1\u5341\u7684\u90A3\u4E00\u6846\u3002": "Read what is left in the other frame first, then the full frame.",
   "y \u622A\u8DDD": "y-intercept",
   "x \u622A\u8DDD": "x-intercept",
   "\u5BF9\u79F0\u8F74": "Axis of symmetry",
@@ -19406,6 +19407,9 @@ function makeTenStartFault2(values) {
   }
   if (moved !== 0) return `the count moved starts at 0, not ${moved}: only the learner's taps change it`;
   return void 0;
+}
+function makeTenStartValues(values) {
+  return values.map((value2, position) => position === MAKE_TEN_NUMBER.filled ? makeTenFreshCount(values[0], values[1]) : position === MAKE_TEN_NUMBER.moved ? 0 : value2);
 }
 function makeTenState2(start) {
   const [a, b] = [start[0] ?? 0, start[1] ?? 0];
@@ -23462,7 +23466,7 @@ var MAKE_TEN_TEXT = {
 function compileMakeTen(base, content, role, placement, plan, path) {
   allowParameterKeys(parameters(content), [], path);
   const numbers = content.numbers ?? [];
-  const values = numbers.map((number, index) => numberDefinition(plan, number, `${path}.numbers[${index}]`).initial);
+  const values = makeTenStartValues(numbers.map((number, index) => numberDefinition(plan, number, `${path}.numbers[${index}]`).initial));
   const sharesNumbers = (action) => action.action === "create" && action.kind === "visual" && action.content.capability !== "make_ten" && (action.content.numbers ?? []).some((number) => numbers.includes(number));
   const sharingAt = plan.sections.findIndex((section) => section.moments.some((moment) => moment.actions.some(sharesNumbers)));
   if (sharingAt >= 0) {
@@ -23539,7 +23543,8 @@ function compileMakeTen(base, content, role, placement, plan, path) {
           },
           then: [{
             prompt: compileText(plan, "\u5199\u6210\u7B97\u5F0F\u3002"),
-            hints: [compileText(plan, "\u5148\u8BFB\u6EE1\u5341\u7684\u90A3\u4E00\u6846\uFF0C\u518D\u8BFB\u53E6\u4E00\u6846\u3002")],
+            // The row reads in the order the pair is written: the bigger number first, its full frame first.
+            hints: [compileText(plan, pa >= pb ? "\u5148\u8BFB\u6EE1\u5341\u7684\u90A3\u4E00\u6846\uFF0C\u518D\u8BFB\u53E6\u4E00\u6846\u3002" : "\u5148\u8BFB\u53E6\u4E00\u6846\u5269\u4E0B\u7684\uFF0C\u518D\u8BFB\u6EE1\u5341\u7684\u90A3\u4E00\u6846\u3002")],
             anchor: base,
             allowed_operations: [{ kind: "row_entry" }],
             completion: { kind: "numeric_row", parts: makeTenRow(pa, pb, language) },
@@ -24393,6 +24398,7 @@ function compileLessonPlan(value2, options = {}) {
         for (const variable of mover.visual.variables ?? []) replayed.add(variable.as);
       }
       const moved = /* @__PURE__ */ new Set();
+      const writtenHere = /* @__PURE__ */ new Map();
       let leftOut = false;
       const playMoves = (visual, capability2) => {
         const state = moverStates.get(visual);
@@ -24403,7 +24409,10 @@ function compileLessonPlan(value2, options = {}) {
           fail2("LESSON_PLAN_NUMBER_NOT_DRAWABLE", `${momentPath}.actions[${at2.offset}].end_value`, result.refused.reason, capability2);
         }
         state.now = result.steps.at(-1)?.to ?? state.now;
-        const when = actionWhen(animations[0].timing);
+        const PHASES2 = ["before_speech", "during_speech", "after_speech"];
+        const phase = (timing) => PHASES2.indexOf(String(timing ?? "during_speech"));
+        const written = writtenHere.has(visual) ? writtenHere.get(visual) : void 0;
+        const when = actionWhen(writtenHere.has(visual) && phase(written) > phase(animations[0].timing) ? written ?? "during_speech" : animations[0].timing);
         const first = animations[0].offset;
         const room = 24 - actions.length - moment.actions.slice(first + 1).filter((item) => !(item.action === "animate" && movers.get(item.number)?.visual === visual)).length;
         const played = visual.mover.play(result.steps, room).map((action) => ({ ...action, ...when }));
@@ -24445,6 +24454,7 @@ function compileLessonPlan(value2, options = {}) {
               reusableVisuals.set(identity, visual);
               for (const variable of visual.variables ?? []) if (!visualVariables.has(variable.as)) visualVariables.set(variable.as, variable);
               actions.push(...visual.actions.map((action) => ({ ...action, ...actionWhen(item.timing) })));
+              writtenHere.set(visual, item.timing);
               if (visual.mover && RECIPE_HOOKS[visualContent.capability]?.number_moves) {
                 const start = visual.mover.numbers.map((number) => plan.numbers[number - 1].initial);
                 const state = RECIPE_HOOKS[visualContent.capability].number_moves.state(start, visualContent);
@@ -24557,6 +24567,13 @@ function compileLessonPlan(value2, options = {}) {
       if (actions.length === 0 && leftOut) actions.push({ do: "expression", expression: "neutral", when: "after_speech" });
       if (actions.length === 0) {
         fail2("LESSON_PLAN_COMPILER_EMPTY_BEAT", `${momentPath}.actions`, "OLL requires at least one action per moment");
+      }
+      for (const number of moment.restart_numbers ?? []) {
+        const mover = movers.get(number);
+        if (mover && writtenHere.has(mover.visual)) {
+          for (const other of mover.visual.mover.numbers) replayed.delete(variableAlias(other));
+          for (const variable of mover.visual.variables ?? []) replayed.delete(variable.as);
+        }
       }
       includeWrittenCardsInFocus(actions);
       beats.push({
@@ -25602,7 +25619,7 @@ var MATH_SECTION_FACTS = {
   make_ten: ({ established, numbers, state, language }) => {
     if (!numbers || !established?.numbers?.length) return {};
     const lessonNumbers = established.numbers;
-    const values = lessonNumbers.map((number) => Number(numbers[number - 1]?.initial ?? 0));
+    const values = makeTenStartValues(lessonNumbers.map((number) => Number(numbers[number - 1]?.initial ?? 0)));
     if (makeTenStartFault2(values)) return {};
     const cardLanguage = /^en(?:-|$)/iu.test(language ?? "") ? "en-US" : "zh-CN";
     const [a, b, pa, pb] = values;
