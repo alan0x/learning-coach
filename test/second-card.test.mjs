@@ -34,10 +34,11 @@ const run = (body) => JSON.parse(execFileSync(process.execPath, ["--input-type=m
       ...(opts.moves ?? KINDS[kind].moves).map((value) => ({ narration: "看。", actions: [animate(demonstration, value)] })));
     plan.sections[2] = opts.section3 ?? { purpose: "Sum up", moments: [{ narration: "小结。", actions: [{ action: "create", kind: "text", role: "follow_up_explanation", content: { text: "summary" }, placement: { relation: "new_region" } }] }] };
     opts.mutate?.(plan);
+    const kept = plan.numbers.length;
     const compatible = sp.makeSamplePlanModelCompatible(plan);
     const drafts = compatible.sections.map(({ moments, student_activities }, index) => H.toModelSectionDraft({ section: index + 1, version: compatible.version, moments, student_activities }));
     const stage = { outline: H.stagedOutline(compatible, drafts), drafts };
-    stage.outline.numbers = stage.outline.numbers.slice(0, opts.outlineNumbers ?? declared);
+    stage.outline.numbers = stage.outline.numbers.slice(0, opts.outlineNumbers ?? kept);
     const log = { requests: [], prompts: [], adjustments: [], rejected: [], ready: [], published: [] };
     let section2 = 0;
     try {
@@ -90,6 +91,10 @@ for (const [kind, label, values] of [
     assert.deepEqual(result.rejected, []);
     assert.deepEqual(result.requests, ["lesson-plan-bootstrap", "lesson-plan-section2", "lesson-plan-section3"]);
     assert.deepEqual(result.ready.map((event) => event.second_cards), [1]);
+    // Every published part extends the one before: the second card's number starting where the card starts changes
+    // no variable a part already declared.
+    assert.equal(result.parts, 3);
+    assert.deepEqual(result.changed, []);
     // Section 2 is told the number the program gave the second card's demonstration, after the first card's.
     assert.deepEqual(result.sectionTwoNumbers.at(-1)[1], label);
     assert.deepEqual(result.cards.map(([step]) => step), [1, 2]);
@@ -244,6 +249,7 @@ for (const [kind, label, start] of [
     assert.deepEqual(result.rejected, []);
     assert.deepEqual(result.cards.map(([step]) => step), [1, 2]);
     assert.equal(result.variables.filter((alias) => alias.startsWith("section_02_")).length, 1);
+    assert.deepEqual(result.changed, []);
     const [, named, initial] = result.sectionThreeNumbers.at(-1);
     assert.deepEqual([named, initial], [label, start]);
   });
@@ -259,4 +265,54 @@ test("the acceptance budget counts the second card's number: section 1 at 16 var
   assert.deepEqual(result.fifteen, []);
   assert.deepEqual(result.sixteen.map(({ capability, section }) => [capability, section]), [["make_ten", 2]]);
   assert.match(result.sixteen[0].detail, /the lesson holds at most 16 numbers \(OLL\): section 1 uses 16; the second make_ten card needs one more/u);
+});
+
+test("section 1 at 16 variables (the trade card and three other pictures) withdraws the second trade card at acceptance; at 15 it stays; every part extends the one before", () => {
+  const result = run(`
+    const big = () => sp.placeValueTradePlan({ operation: "add", numbers: [456789, 345678], practice: [356789, 245678] });
+    const extras = (capabilities) => (plan) => {
+      const base = plan.numbers.length, first = plan.sections[0];
+      first.reusable_items = [...(first.reusable_items ?? [])];
+      let added = 0;
+      for (const capability of capabilities) {
+        const sample = sp.samplePlan(capability);
+        const create = structuredClone(sample.sections[0].moments[0].actions.find((action) => action.action === "create"));
+        const numbers = create.content.numbers.map((number) => { plan.numbers.splice(base + added, 0, structuredClone(sample.numbers[number - 1])); added += 1; return base + added; });
+        first.reusable_items.push({ kind: "board_item", board_kind: "visual", capability });
+        first.moments.push({ narration: capability + "。", actions: [{ ...create, role: "supporting_visual", content: { ...create.content, numbers }, placement: { relation: "new_region" }, reusable_item: first.reusable_items.length }] });
+      }
+      for (const moment of plan.sections[1].moments) for (const action of moment.actions) if (action.action === "animate" && action.number === base + 1) action.number = base + added + 1;
+    };
+    const at = async (capabilities) => {
+      const r = await lesson("place_value_trade", { example_first_number: 556789, example_second_number: 145678 }, undefined, { plan: big, moves: [3, 6], mutate: extras(capabilities) });
+      return { error: r.error, rejected: r.rejected, adjustments: r.adjustments, cards: r.cards.length, changed: r.changed, parts: r.parts, variables: r.variables.length };
+    };
+    console.log(JSON.stringify({ sixteen: await at(["number_line_steps", "number_line_compare", "rectangle_unit_square_array"]), fifteen: await at(["number_line_steps", "number_line_compare", "number_line"]) }));
+  `);
+  for (const each of [result.sixteen, result.fifteen]) {
+    assert.equal(each.error, undefined, each.error);
+    assert.deepEqual([each.rejected, each.changed, each.parts, each.variables], [[], [], 3, 16]);
+  }
+  assert.deepEqual(result.sixteen.adjustments, [["visual_removed", 2, "place_value_trade", "planned_card_budget"]]);
+  assert.equal(result.sixteen.cards, 1);
+  assert.deepEqual([result.fifteen.adjustments, result.fifteen.cards], [[], 2]);
+});
+
+test("make_ten: a copy of the question's pair published in section 2 keeps its variables when the second card arrives in section 3", () => {
+  const result = run(`
+    const line = ${JSON.stringify(line([1, 2], 0))};
+    const mutate = (plan) => {
+      const two = plan.sections[1], cardMoments = two.moments.slice(1), cardItem = two.reusable_items.at(-1);
+      two.reusable_items = [{ kind: "board_item", board_kind: "visual", capability: "number_line_compare" }];
+      two.moments = [two.moments[0], { narration: "数轴。", actions: [{ ...line, reusable_item: 1 }] }, { narration: "移动。", actions: [animate(1, 9)] }];
+      plan.sections[2] = { purpose: "Another example", reusable_items: [cardItem], moments: cardMoments.map((moment) => ({ ...moment, actions: moment.actions.map((action) => (action.action === "create" ? { ...action, reusable_item: 1 } : action)) })) };
+      plan.sections[3] = { purpose: "Sum up", moments: [{ narration: "小结。", actions: [{ action: "create", kind: "text", role: "follow_up_explanation", content: { text: "summary" }, placement: { relation: "new_region" } }] }] };
+    };
+    console.log(JSON.stringify(await lesson("make_ten", undefined, undefined, { mutate })));
+  `);
+  assert.equal(result.error, undefined, result.error);
+  assert.deepEqual(result.rejected, []);
+  assert.deepEqual([result.parts, result.changed], [4, []]);
+  assert.ok(result.variables.includes("number_17"), JSON.stringify(result.variables));
+  assert.deepEqual(result.cards.map(([step]) => step), [1, 3]);
 });
