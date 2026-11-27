@@ -29536,12 +29536,14 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
             outline = shorter;
             drafts.length = section - 1;
             sectionErrors.delete(section);
+            endedEarly = true;
             await options.on_program_adjustment?.({
               kind: "sections_removed",
               section,
               capability: capability2,
               reason: "visual_limits_after_retries",
-              detail: error instanceof Error ? error.message : String(error)
+              detail: error instanceof Error ? error.message : String(error),
+              close_summary: "left_out"
             });
             return;
           }
@@ -29566,6 +29568,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
     }
   };
   let outlineRestarts = 0;
+  let endedEarly = false;
   let sharedRestarts = 0;
   const acceptFirstSection = async () => {
     try {
@@ -29725,6 +29728,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
     }
   }
   if (!compiled) throw finalError;
+  if (endedEarly) compiled.lesson.close.summary = "";
   for (const draft of drafts) await reportDraftAdjustments(draft);
   for (const adjustment of programAdjustments) {
     await options.on_program_adjustment?.(adjustment);

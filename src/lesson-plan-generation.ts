@@ -127,6 +127,8 @@ export interface GenerateLessonPlanOptions {
     number?: number;
     reason: string;
     detail?: string;
+    /** A lesson ended early (`sections_removed`): its close summary is left out of the lesson. */
+    close_summary?: "left_out";
     /** The task a success-message record is about. */
     task?: string;
   }) => void | Promise<void>;
@@ -3642,9 +3644,13 @@ export async function generateLessonPlanWithModel(
             outline = shorter;
             drafts.length = section - 1;
             sectionErrors.delete(section);
+            // The outline's close was written for the whole lesson and may describe the removed sections: the lesson
+            // is played without it (owner's call on #189). OLL still requires a close, so it keeps its focus.
+            endedEarly = true;
             await options.on_program_adjustment?.({
               kind: "sections_removed", section, capability: capability as keyof typeof LESSON_PLAN_CAPABILITIES,
               reason: "visual_limits_after_retries", detail: error instanceof Error ? error.message : String(error),
+              close_summary: "left_out",
             });
             return;
           }
@@ -3679,6 +3685,8 @@ export async function generateLessonPlanWithModel(
   // A card the outline gave too few lesson numbers goes the same way at once, before section 1 is written.
   // At most two restarts, so a request can lose a number line and then a mat, never more.
   let outlineRestarts = 0;
+  // The lesson ended at its published sections (endOutlineBefore): its close summary is left out.
+  let endedEarly = false;
   // Restarts for a picture on a tap card's numbers: after the first, the card goes instead.
   let sharedRestarts = 0;
   const acceptFirstSection = async (): Promise<LessonPlanGenerationResult | undefined> => {
@@ -3843,6 +3851,8 @@ export async function generateLessonPlanWithModel(
     }
   }
   if (!compiled) throw finalError;
+  // OLL's close summary is a plain string the schema lets be empty (the close event reads it as "" when absent).
+  if (endedEarly) compiled.lesson.close.summary = "";
   for (const draft of drafts) await reportDraftAdjustments(draft);
   for (const adjustment of programAdjustments) {
     await options.on_program_adjustment?.(adjustment);

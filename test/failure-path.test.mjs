@@ -34,11 +34,15 @@ const run = (body) => JSON.parse(execFileSync(process.execPath, ["--input-type=m
       }, { turn_id: "failure-path", learner_request, language: "en-US" }, {
         max_attempts_per_part: 3,
         on_rejected_part: (part) => log.rejected.push(part.error),
-        on_program_adjustment: (adjustment) => log.adjustments.push([adjustment.kind, adjustment.section, adjustment.capability, adjustment.reason]),
+        on_program_adjustment: (adjustment) => log.adjustments.push([adjustment.kind, adjustment.section, adjustment.capability, adjustment.reason, ...(adjustment.close_summary ? [adjustment.close_summary] : [])]),
       });
       log.sections = generated.outline.sections.length;
       log.drafts = generated.drafts.length;
       log.steps = generated.lesson.steps.length;
+      log.close = generated.lesson.close;
+      const oll = await import("octos-lesson-language");
+      log.oll_valid = oll.validateAuthoringSchema(generated.lesson).valid;
+      try { oll.validateAuthoringLesson(generated.lesson, { assets: [] }); } catch (caught) { log.oll_valid = caught.message; }
       log.written = generated.lesson.steps.flatMap((step) => step.beats.flatMap((beat) => beat.actions.filter((action) => action.do === "write").map((action) => action.kind)));
     } catch (caught) { log.error = { message: caught.message.slice(0, 300), code: caught.code, capability: caught.capability }; }
     return log;
@@ -81,7 +85,13 @@ test("PF-03: a later section's repairs spent on section 1's mat end the lesson a
   assert.equal(failing.error, undefined, JSON.stringify(failing.error));
   assert.deepEqual(failing.requests, ["lesson-plan-bootstrap", "lesson-plan-section2", "lesson-plan-section2", "lesson-plan-section2"]);
   assert.deepEqual([failing.sections, failing.drafts, failing.steps], [1, 1, 1]);
-  assert.deepEqual(failing.adjustments.filter(([kind]) => kind === "sections_removed"), [["sections_removed", 2, "base_ten_trade", "visual_limits_after_retries"]]);
+  assert.deepEqual(failing.adjustments.filter(([kind]) => kind === "sections_removed"), [["sections_removed", 2, "base_ten_trade", "visual_limits_after_retries", "left_out"]]);
+  // The close the outline wrote for the whole lesson is left out (owner's call on #189); OLL requires a close, so it
+  // keeps its focus on what is left, and the lesson passes OLL's own validation. The twin keeps the outline's close.
+  assert.equal(passing.close.summary, "Review the main visual.");
+  assert.equal(failing.close.summary, "");
+  assert.equal(failing.close.focus.length, 1);
+  assert.deepEqual([passing.oll_valid, failing.oll_valid], [true, true]);
   assert.ok(failing.written.includes("base_ten_trade"));
   // Every try's fault is recorded, the third too, with the picture it was on (trace only).
   assert.equal(failing.rejected.length, 3);
