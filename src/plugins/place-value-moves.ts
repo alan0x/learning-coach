@@ -5,7 +5,11 @@
 // - building, it starts at 0 when the chart is drawn and each step adds whole places of the question's number
 //   (0 -> 60000 -> 60400 -> 60408, or straight to 60408); writing the number again changes nothing, so a later
 //   section that writes the full number to show it on the chart is no change (objective check 1: PV-02 and
-//   PV-05 were lost when "the number still to do" was written as the number in section 2);
+//   PV-05 were lost when "the number still to do" was written as the number in section 2). A chart to build whose
+//   own section never puts any of its number on it is drawn showing the whole number, already built (PT-15 and
+//   PF-01, 35P-04/35P-07 run 2: the learner saw an empty chart); sections publish one at a time, so only the section
+//   that draws it decides. A later section's step to the number changes nothing, and one to a part of it is left
+//   out: the part is on the chart already;
 // - pulling apart, it is what is still on the chart: it starts at the number and each step takes whole places
 //   out (60408 -> 408 -> 8 -> 0).
 // The practice number is the learner's own: it never moves in the lesson. These rules are pure, so the
@@ -98,15 +102,35 @@ export function placeValueStepPlaces(from: number, to: number, build: boolean): 
   return build ? placesOnlyIn(to, from) : placesOnlyIn(from, to);
 }
 
+/** The chart's last state entry: pulling apart, building from empty, or building drawn with the whole number on it. */
+const PULL_APART = 0, BUILD = 1, DRAWN_BUILT = 2;
+
+/** An action of the section that draws a card, as far as the chart reads it: an animation of a lesson number. */
+export interface DrawnWithAction { action: string; number?: number; end_value?: number }
+
 /**
- * The chart's state when it is drawn, from its lesson numbers ([the question's number, the practice number])
- * and its content: the value on the chart (building: 0, the chart starts empty; pulling apart: the number,
- * whole), the practice number when there is one, then the question's number and whether the chart builds,
- * which no step changes. The leading entries are the lesson numbers as the chart reads them.
+ * Whether the section that draws a chart to build puts any of its number on it: an animation of the chart's number
+ * (`number`, its first lesson number) to a value above 0 in `drawnWith`, that section's actions from the moment the
+ * chart is drawn on (an animation before the chart is drawn is left out, and one to 0 changes nothing). An
+ * animation the chart refuses fails the section, so it never decides a published chart.
  */
-export function placeValueState(start: readonly number[], content?: { parameters?: Record<string, unknown> }): number[] {
+export function placeValueBuiltWhereDrawn(number: number, drawnWith: readonly DrawnWithAction[]): boolean {
+  return drawnWith.some((action) => action.action === "animate" && action.number === number
+    && (placeValueThousandths(Number(action.end_value)) ?? 1) > 0);
+}
+
+/**
+ * The chart's state when it is drawn, from its lesson numbers ([the question's number, the practice number]), its
+ * content and, when known, what the section that draws it does (`drawnWith`: see placeValueBuiltWhereDrawn): the
+ * value on the chart (building: 0, the chart starts empty, or the number when that section never builds it; pulling
+ * apart: the number, whole), the practice number when there is one, then the question's number and how the chart
+ * reads (pulling apart 0, building 1, building drawn with the number on it 2), which no step changes. The leading
+ * entries are the lesson numbers as the chart reads them.
+ */
+export function placeValueState(start: readonly number[], content?: { parameters?: Record<string, unknown>; numbers?: readonly number[] }, drawnWith?: readonly DrawnWithAction[]): number[] {
   const build = content?.parameters?.given !== "numeral";
-  return [build ? 0 : start[0]!, ...start.slice(1), start[0]!, build ? 1 : 0];
+  const drawnBuilt = build && drawnWith !== undefined && content?.numbers?.[0] !== undefined && !placeValueBuiltWhereDrawn(content.numbers[0], drawnWith);
+  return [build && !drawnBuilt ? 0 : start[0]!, ...start.slice(1), start[0]!, !build ? PULL_APART : drawnBuilt ? DRAWN_BUILT : BUILD];
 }
 
 /**
@@ -131,7 +155,7 @@ export function placeValueNextValues(number: number, from: number, build: boolea
  */
 export function placeValueMove(state: readonly number[], position: number, to: number): number[] | string {
   if (position !== 0 || state.length < 3) return "the practice number is the learner's: it does not move in the lesson. Animate the question's number to show the demonstration";
-  const build = state.at(-1) === 1;
+  const build = state.at(-1) !== PULL_APART;
   const number = Math.round(state.at(-2)! * 1000);
   const from = Math.round(state[0]! * 1000);
   const target = placeValueThousandths(to);
@@ -154,7 +178,24 @@ export function placeValueMove(state: readonly number[], position: number, to: n
   return next;
 }
 
-/** Several animations of one chart in one moment, applied in order; the states after each, or the first refusal. */
+/**
+ * Why a step on a chart drawn with its whole number on it is left out, or undefined: a step to a part of the number
+ * (a value whose every digit is the number's own, 60000 or 60400 of 60408) puts on places that are on already.
+ */
+function placeValueDrawnBuiltPart(state: readonly number[], position: number, to: number): string | undefined {
+  if (position !== 0 || state.at(-1) !== DRAWN_BUILT) return undefined;
+  const number = Math.round(state.at(-2)! * 1000);
+  const target = placeValueThousandths(to);
+  if (target === undefined || target === number) return undefined;
+  if (!PLACES.every((place) => !placeValueDigitAt(target, place) || placeValueDigitAt(target, place) === placeValueDigitAt(number, place))) return undefined;
+  return `the chart has shown all of ${placeValueDecimal(number)} since it was drawn (the section that drew it put none of it on), so ${placeValueDecimal(target)} is on it already`;
+}
+
+/**
+ * Several animations of one chart in one moment, applied in order; the states after each, or the first refusal. On a
+ * chart drawn with its whole number on it, a step to a part of the number is left out (`ignored`), not refused: the
+ * program drew the number, so a later section that builds it again does not lose the chart.
+ */
 export function placeValueMoves(state: readonly number[], moves: ReadonlyArray<{ position: number; to: number }>):
   { steps: Array<{ position: number; from: number[]; to: number[] }>; ignored?: Array<{ index: number; position: number; reason: string }> } | { refused: { position: number; reason: string } } {
   const steps: Array<{ position: number; from: number[]; to: number[] }> = [];
@@ -165,6 +206,11 @@ export function placeValueMoves(state: readonly number[], moves: ReadonlyArray<{
     // the times-ten card's are (#188).
     if (move.position === 1 && state.length === 4 && move.to !== current[1]) {
       ignored.push({ index, position: move.position, reason: "the practice number is the learner's: it stays as written, and the demonstration moves only the question's number" });
+      continue;
+    }
+    const part = placeValueDrawnBuiltPart(current, move.position, move.to);
+    if (part) {
+      ignored.push({ index, position: move.position, reason: part });
       continue;
     }
     const result = placeValueMove(current, move.position, move.to);

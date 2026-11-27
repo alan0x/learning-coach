@@ -81,6 +81,23 @@ export function recipeNumberRole(capability: string | undefined, position: numbe
   return Array.isArray(roles) ? roles[position] as NumberRole | undefined : undefined;
 }
 
+/**
+ * A recipe's guidance as a request that offers `offered` gives it. A recipe whose description depends on another
+ * recipe being offered declares `model_guidance_with` ({ other recipe: its guidance then }): the first entry whose
+ * recipe is offered is its guidance; otherwise, and for every other recipe, `model_guidance`. So a card on trial
+ * can narrow what a default card claims while it is offered, and the default card's text stays as it is when the
+ * trial is off (the place-value chart beside the times-ten card; the number line in steps beside the make-ten card).
+ */
+export function recipeGuidance(capability: string, offered: Iterable<string>): string {
+  const entry = recipeEntry(capability);
+  const base = String(entry?.model_guidance ?? "");
+  const variants = entry?.model_guidance_with as Readonly<Record<string, string>> | undefined;
+  if (!variants) return base;
+  const names = new Set(offered);
+  const found = Object.entries(variants).find(([other]) => names.has(other));
+  return found ? found[1] : base;
+}
+
 /** The fewest lesson numbers a recipe's visual can start on (`min_lesson_numbers`), or 0 when it declares none. */
 export function recipeMinLessonNumbers(capability: string | undefined): number {
   const declared = recipeEntry(capability)?.min_lesson_numbers;

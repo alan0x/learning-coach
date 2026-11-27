@@ -17,7 +17,7 @@ import {
 import { compileText, lessonTextLanguage } from "../lesson-text.js";
 import { type CompiledVisual } from "../compiled-visual-reuse.js";
 import { baseTenStartFault, baseTenState, baseTenTapTask } from "./base-ten-moves.js";
-import { PLACE_VALUE_GIVENS, placeValuePlain, placeValueStepPlaces, placeValueStartFault, placeValueWordsWrite } from "./place-value-moves.js";
+import { PLACE_VALUE_GIVENS, placeValueBuiltWhereDrawn, placeValuePlain, placeValueStepPlaces, placeValueStartFault, placeValueWordsWrite } from "./place-value-moves.js";
 import {
   PLACE_VALUE_TRADE_OPERATIONS, TRADE_NUMBER, placeValueTradeColumnsOf, placeValueTradeStartFault, placeValueTradeThousandths, placeValueTradeWordsGiveAnswer,
 } from "./place-value-trade-moves.js";
@@ -1868,6 +1868,14 @@ function compilePlaceValueChart(
   // The columns cover both numbers, so the card never resizes when practice starts on the other one.
   const { top_place, decimals } = placeValueColumnsFor([number, ...(practice !== undefined ? [practice] : [])], language);
   const columns = placeValueColumns(top_place, decimals);
+  // A chart to build whose own section never puts any of its number on it is drawn showing the whole number (PT-15,
+  // PF-01: an empty chart the lesson never filled); the section that draws it decides, as the mover's state does.
+  // OLL refuses a build chart written already holding its number (review of OLL #111), so it is written empty and
+  // filled at once, in the same phase as the write, each place's disks in one brief animation (`opening`).
+  const at = /\$lessonPlan\.sections\[(\d+)\]\.moments\[(\d+)\]/u.exec(path);
+  const drawnWith = at ? plan.sections[Number(at[1])]?.moments.slice(Number(at[2])).flatMap((moment) => moment.actions) : undefined;
+  const drawnBuilt = mode === "build" && drawnWith !== undefined && !placeValueBuiltWhereDrawn(numbers[0]!, drawnWith);
+  const startCount = (place: number) => (mode === "apart" ? placeValueDigitAt(number, place) : 0);
   // Pulling apart binds two variables a column and the number one, and a lesson (and a task's start) holds at
   // most 16 (OLL): seven columns at most, such as a Chinese chart to the millions, or one with decimals to 9,999.999.
   if (mode === "apart" && 2 * columns.length + 1 > PLACE_VALUE_MAX_VARIABLES) {
@@ -1886,7 +1894,7 @@ function compilePlaceValueChart(
     ...(practice !== undefined ? { numbers: [practice] } : {}),
     places: columns.map((place) => ({
       place,
-      count: { expression: variableOf(place, "count"), initial: mode === "apart" ? placeValueDigitAt(number, place) : 0 },
+      count: { expression: variableOf(place, "count"), initial: startCount(place) },
       ...(mode === "apart" ? { pulled: { expression: variableOf(place, "pulled"), initial: 0 } } : {}),
     })),
   });
@@ -1896,7 +1904,7 @@ function compilePlaceValueChart(
     ...columns.flatMap((place) => {
       const name = placeValueColumnName(place, language);
       return [
-        { as: variableOf(place, "count"), initial: mode === "apart" ? placeValueDigitAt(number, place) : 0, min: 0, max: 9, label: text.count(name) },
+        { as: variableOf(place, "count"), initial: startCount(place), min: 0, max: 9, label: text.count(name) },
         ...(mode === "apart" ? [{ as: variableOf(place, "pulled"), initial: 0, min: 0, max: 9, label: text.pulled(name) }] : []),
       ];
     }),
@@ -1906,6 +1914,8 @@ function compilePlaceValueChart(
     mover: {
       unbound: true,
       numbers: [...numbers],
+      ...(drawnBuilt ? { opening: columns.filter((place) => placeValueDigitAt(number, place) > 0).map((place) => (
+        { do: "animate", variable: variableOf(place, "count"), value: placeValueDigitAt(number, place), duration_intent: "brief" } as AuthoringAction)) } : {}),
       // A step changes whole places: building puts each new place's disks on the chart (its count animated from
       // 0 to the digit, the disks appearing one at a time), pulling apart takes each place out by the card's own
       // tap. Highest place first.
