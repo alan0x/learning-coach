@@ -1307,6 +1307,27 @@ function normalizeExecutableNumberInteractions(
     if (!section.student_activities) continue;
     section.student_activities = section.student_activities.flatMap((activity) => {
       if (activity.kind !== "number_target") return [activity];
+      // A number the program supplied (a number line's walk for making ten, a second card's demonstration) has no
+      // learner control: its value is the pair's, and the picture drawn on it would no longer agree if the learner
+      // moved it (pilot 2, MT-07: a slider task on "the step to ten" failed OLL three times and lost the lesson). A
+      // task that moves it is not run: dropped, recorded.
+      // (A point the learner drags on a picture is the picture's control, not the number's: it stays.)
+      const sliderless = (number: number) => visuallyBound.has(number) && !outline.numbers?.[number - 1]?.student_control;
+      let removedSlider = false;
+      const controlled = activity.number_controls.flatMap((control) => {
+        if (!sliderless(control.number) || !control.controls.includes("slider")) return [control];
+        removedSlider = true;
+        sanitized.adjustments.push({
+          kind: "number_interaction_removed",
+          section: section.section,
+          number: control.number,
+          reason: "activity_slider_on_program_number",
+        });
+        const controls = control.controls.filter((kind) => kind !== "slider");
+        return controls.length ? [{ ...control, controls }] : [];
+      });
+      if (removedSlider && controlled.length === 0) return [];
+      activity = { ...activity, number_controls: controlled };
       const numberControls = activity.number_controls.filter(({ number }) => visuallyBound.has(number));
       const expressionNumbers = new Set((activity.expression ?? []).flatMap((token) => (
         token.kind === "number" ? [token.number] : []
@@ -3174,6 +3195,19 @@ export function plannedCardOverflow(outline: LessonPlanOutline, sectionOne: Less
   };
 }
 
+/**
+ * The learner tasks an OLL refusal is about: those that work a variable the refusal names (a control the lesson does
+ * not offer on it, ...). A task is optional, so each goes and the section stays (pilot 2, MT-07: the refusal named no
+ * picture, so nothing could be withdrawn and the lesson was lost after its repairs).
+ */
+export function learnerTasksOllRefused(error: unknown, activities: readonly LessonPlanStudentActivity[]): LessonPlanStudentActivity[] {
+  if (!(error instanceof LessonPlanError) || error.code !== "LESSON_PLAN_OLL_SEMANTIC") return [];
+  const named = new Set([...error.message.matchAll(/'([A-Za-z_][A-Za-z0-9_]*)'/gu)].map((match) => match[1]));
+  return activities.filter((activity) => activity.kind === "number_target"
+    && [...activity.number_controls.map(({ number }) => number), ...(activity.expression ?? []).flatMap((token) => (token.kind === "number" ? [token.number] : []))]
+      .some((number) => named.has(`number_${String(number).padStart(2, "0")}`)));
+}
+
 /** The outline's second cards (a later course visual of a kind that takes one, `second_card_label`), in order. */
 function secondCardVisuals(outline: LessonPlanOutline): Array<{ capability: string; create_section: number; label: string; starts: string }> {
   const visuals = outline.course_visuals ?? [];
@@ -4011,6 +4045,23 @@ export async function generateLessonPlanWithModel(
     else delete draft.student_activities;
   };
 
+  // A learner task is optional: when OLL refuses the lesson over a variable this section's task works, the task is
+  // dropped and the section kept, with no call (`learnerTasksOllRefused`). Returns whether one was dropped.
+  const dropTasksOllRefused = async (error: unknown, draft: LessonPlanSectionDraft, section: number): Promise<boolean> => {
+    const refused = learnerTasksOllRefused(error, draft.student_activities ?? []);
+    if (!refused.length) return false;
+    for (const activity of refused) {
+      await options.on_program_adjustment?.({
+        kind: "number_interaction_removed", section, number: activity.kind === "number_target" ? activity.number_controls[0]?.number : undefined,
+        reason: "activity_refused_by_oll", detail: (error as Error).message,
+      });
+    }
+    const kept = draft.student_activities!.filter((activity) => !refused.includes(activity));
+    if (kept.length) draft.student_activities = kept;
+    else delete draft.student_activities;
+    return true;
+  };
+
   const acceptSection = async (
     section: number,
     initialCandidate?: LessonPlanSectionDraft,
@@ -4041,6 +4092,7 @@ export async function generateLessonPlanWithModel(
       } catch (error) {
         // A fault only the outline can fix is not retried as a section: the caller asks for a new outline.
         if (section === 1 && isOutlineOwnedFault(error)) throw error;
+        if (await dropTasksOllRefused(error, candidate, section)) continue;
         // A picture on a tap card's lesson numbers goes at once, with no repair: the card is the need's picture.
         // Section 1's by a new outline without it (acceptFirstSection), a later section's from the outline in place.
         if (error instanceof LessonPlanError && error.withdrawAtOnce && error.capability) {
@@ -4371,6 +4423,9 @@ export async function generateLessonPlanWithModel(
       break;
     } catch (error) {
       finalError = error;
+      let dropped = false;
+      for (const [index, draft] of drafts.entries()) if (draft && await dropTasksOllRefused(error, draft, index + 1)) dropped = true;
+      if (dropped) continue;
       const section = sectionIndexFromError(error, outline.sections.length);
       if (!section || (sectionAttempts.get(section) ?? 0) >= maxAttempts) throw error;
       sectionErrors.set(section, error);
