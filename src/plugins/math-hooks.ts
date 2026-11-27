@@ -15,6 +15,7 @@ import { MAKE_TEN_NUMBER, makeTenMoves, makeTenState } from "./make-ten-moves.js
 import { TIMES_TEN_NUMBER, placeValueTimesTenMoves, placeValueTimesTenState, timesTenDecimal, timesTenOutlineFault, timesTenStartProblem } from "./place-value-times-ten-moves.js";
 import { placeValueTimesTenPath } from "octos-lesson-language/plugin-math";
 import { SECOND_CARDS, exampleOf, exampleStart, isSecondCard, isSecondCardKind } from "./second-card.js";
+import { COMPARE_MOST, COMPARE_NUMBER, compareMoves, compareOutlineFault, compareState } from "./place-value-compare-moves.js";
 import { plotCurveNumbers, plotSampleNumbers, validatePlotSampleNumbers, normalizePlotDraftBindings } from "./plot-bindings.js";
 
 /**
@@ -273,6 +274,28 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
       const found = timesTenStartProblem(values.slice(0, 5));
       return "fault" in found ? 5 : 4 + (found.problem.g === 2 ? 1 : 0);
     },
+  },
+  place_value_compare: {
+    // The card's numbers have no control: the learner works it by its own taps (OLL 0029; the model never names a
+    // control). Each number's range is its own value, and compared runs from 0 to the most any pair reaches (seven
+    // columns, then the sign); the compiler checks every number and each step itself.
+    fit_numbers(content, plan) {
+      const numbers = content.numbers ?? [];
+      const definitions = numbers.map((number) => plan.numbers?.[number - 1]);
+      if (!definitions.length || definitions.some((definition) => !definition)) return new Map();
+      definitions.forEach((definition, position) => {
+        definition!.min = position === COMPARE_NUMBER.compared ? 0 : Math.min(0, definition!.initial);
+        definition!.max = position === COMPARE_NUMBER.compared ? COMPARE_MOST : Math.max(0, definition!.initial);
+        delete definition!.student_control;
+        delete definition!.unit;
+      });
+      return new Map();
+    },
+    // Compared moves forward from 0 to the sign; nothing else moves (an animation of another number is left out and
+    // recorded; a value past the end is the end).
+    number_moves: { state: compareState, moves: compareMoves },
+    // Numbers the card cannot start on go with the outline, before any section is written for them.
+    outline_fault: compareOutlineFault,
   },
   number_line: { fit_numbers: fitNumberLineNumbers },
   number_line_compare: { fit_numbers: fitComparedNumbers },

@@ -49,7 +49,7 @@ export function samplePlan(capability) {
       ? 2
       : capability === "number_line_steps"
         ? 3
-        : capability === "place_value_trade" || capability === "place_value_times_ten"
+        : capability === "place_value_trade" || capability === "place_value_times_ten" || capability === "place_value_compare"
           ? 5
           : capability === "make_ten"
             ? 6
@@ -94,8 +94,8 @@ export function samplePlan(capability) {
     firstMomentActions.push({
       action: "animate",
       // The trade card's demonstration moves its fifth number, columns finished (OLL decision 0026).
-      number: capability === "place_value_trade" || capability === "make_ten" || capability === "place_value_times_ten" ? 5 : 1,
-      end_value: capability === "place_value_trade" ? 4 : capability === "make_ten" ? 10 : capability === "place_value_times_ten" ? 0.001 : capability === "base_ten_trade" ? 4 : capability === "place_value_chart" ? 4050 : capability === "circle_polygon_bounds" ? 96 : capability === "rectangle_unit_square_array" ? 6 : capability === "number_line_rounding" ? 43 : capability === "number_line_steps" ? 7 : 0.75,
+      number: capability === "place_value_trade" || capability === "make_ten" || capability === "place_value_times_ten" || capability === "place_value_compare" ? 5 : 1,
+      end_value: capability === "place_value_trade" || capability === "place_value_compare" ? 4 : capability === "make_ten" ? 10 : capability === "place_value_times_ten" ? 0.001 : capability === "base_ten_trade" ? 4 : capability === "place_value_chart" ? 4050 : capability === "circle_polygon_bounds" ? 96 : capability === "rectangle_unit_square_array" ? 6 : capability === "number_line_rounding" ? 43 : capability === "number_line_steps" ? 7 : 0.75,
       easing: "linear",
       duration_intent: "brief",
       timing: "during_speech",
@@ -136,6 +136,10 @@ export function samplePlan(capability) {
         // The times-ten card (OLL decision 0028): 3 tenths counted in thousandths ("counted in" 0.1 -> 0.001); the
         // learner counts 5 in hundredths. Counted in starts at 0.1 (the program's own number).
         ? [0.3, 0.001, 5, 0.01, 0.1].map((initial, position) => ({ initial, min: 0, max: initial, label: ["the amount", "counted in", "practice amount", "practice unit", "counted in now"][position] }))[index]
+        : capability === "place_value_compare"
+        // The compare card (OLL decision 0029): 4,530 and 4,503, compared to the sign (the tens decide: 0 to 4); the
+        // learner compares 6,281 and 6,218. Compared starts at 0 (the program's own number).
+        ? [4530, 4503, 6281, 6218, 0].map((initial, position) => ({ initial, min: 0, max: position === 4 ? 8 : initial, label: ["first number", "second number", "practice first", "practice second", "places compared"][position] }))[index]
         : capability === "number_line_compare"
         ? { initial: index === 0 ? 0.5 : 0.25, min: 0, max: 1, label: index === 0 ? "first" : "second", student_control: { kind: "slider", step: 0.05 } }
         : capability === "rectangle_unit_square_array"
@@ -185,8 +189,8 @@ export function samplePlan(capability) {
           student_activities: [{
             kind: "number_target",
             prompt: "Move the main value to one half.",
-            number_controls: [{ number: capability === "place_value_trade" || capability === "make_ten" || capability === "place_value_times_ten" ? 5 : 1, controls: ["slider"] }],
-            value: capability === "place_value_trade" ? 4 : capability === "make_ten" ? 10 : capability === "place_value_times_ten" ? 0.001 : capability === "place_value_chart" ? 3207 : capability === "circle_polygon_bounds" ? 96 : capability === "number_line_rounding" ? 45 : capability === "number_line_steps" ? 6 : 0.5,
+            number_controls: [{ number: capability === "place_value_trade" || capability === "make_ten" || capability === "place_value_times_ten" || capability === "place_value_compare" ? 5 : 1, controls: ["slider"] }],
+            value: capability === "place_value_trade" || capability === "place_value_compare" ? 4 : capability === "make_ten" ? 10 : capability === "place_value_times_ten" ? 0.001 : capability === "place_value_chart" ? 3207 : capability === "circle_polygon_bounds" ? 96 : capability === "number_line_rounding" ? 45 : capability === "number_line_steps" ? 6 : 0.5,
             tolerance: 0.02,
             hints: ["Watch the numeric value."],
           }],
@@ -335,6 +339,46 @@ export function makeTenPlan({ numbers, practice, steps = [10], prompt, hints = [
     plan.sections[1].student_activities = [{
       kind: "numeric_answer", prompt: `What is ${numbers[0]} + ${numbers[1]}?`, answer: String(numbers[0] + numbers[1]), check: String(numbers[0] + numbers[1]),
       reference: reusable(1, 1), hints: ["Ten and the ones left."],
+    }];
+  }
+  return plan;
+}
+
+/** A number as written ("0.70") as an outline number holds it: its value, and its written decimals when more than it needs. */
+export function writtenOutlineNumber(text, label) {
+  const [whole, frac = ""] = String(text).replace(/,/gu, "").split(".");
+  const value = Number(`${whole}${frac ? `.${frac}` : ""}`);
+  const own = frac.replace(/0+$/u, "").length;
+  return { initial: value, min: 0, max: Math.max(value, 1), label, ...(frac.length > own ? { written_decimals: frac.length } : {}) };
+}
+
+/**
+ * A compare lesson (OLL decision 0029) as a model writes it: the question's pair as written ("0.7", "0.70"), the
+ * practice pair, and compared (0; the program supplies it when `withCompared` is false). The demonstration is values of
+ * compared in moments of their own (to the sign by default: `steps`), and the practice a number target on compared.
+ */
+export function comparePlan({ numbers, practice, steps = [8], prompt, hints = ["Start at the left."], withCompared = true, typed }) {
+  const plan = samplePlan("place_value_compare");
+  const labels = ["first number", "second number", "practice first", "practice second"];
+  plan.numbers = [...numbers, ...practice].map((text, position) => writtenOutlineNumber(text, labels[position]));
+  if (withCompared) plan.numbers.push({ initial: 0, min: 0, max: 8, label: "places compared" });
+  const first = plan.sections[0].moments[0];
+  first.actions = first.actions.filter((action) => action.action !== "animate");
+  first.actions[0].content = { capability: "place_value_compare", parameters: {}, numbers: [1, 2, 3, 4, 5] };
+  plan.sections[0].moments.push(...steps.map((value, index) => ({
+    narration: `Step ${index + 1}.`,
+    actions: [{ action: "animate", number: 5, end_value: value, duration_intent: "brief", timing: "during_speech" }],
+  })));
+  plan.sections[0].student_activities = [{
+    kind: "number_target",
+    prompt: prompt ?? "Your turn: compare the new pair.",
+    number_controls: [{ number: 5, controls: ["slider"] }],
+    value: 4, tolerance: 0.5, hints,
+  }];
+  if (typed) {
+    plan.sections[1].student_activities = [{
+      kind: "numeric_answer", prompt: typed.prompt, answer: typed.answer, check: typed.answer,
+      reference: reusable(1, 1), hints: ["Look at the chart."],
     }];
   }
   return plan;
