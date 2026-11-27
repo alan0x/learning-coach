@@ -1,0 +1,349 @@
+{
+ "note": "Ten of one place make one of the next: development cases for need 35P-04, 2026-11-27, written from place-value-times-ten-blueprint.json (rows T1-T5). Used for design and tuning; the scoring set is separate, written later by a fresh agent from the blueprint alone, sealed. Never taken from the question set. PF-01 to PF-15 are cases this need serves (8 en-US, 7 zh-CN; 9 count, 6 times; 8 whole numbers, 7 decimals). expect.ask is count (an amount counted in another unit: expect.amount shown at first as disks of expect.start, counted in expect.target; expect.result the count) or times (expect.amount against expect.target, the same digit one place right; expect.renamed is the amount counted in the target's place, expect.result is 10). Numbers are plain decimal strings. PF-16 to PF-22 are near misses that belong to other needs (expect.need names it): this need's component must not be used (forbid names the tentative recipe). Chinese cases use 个百、个十分之一、几倍、十分之一, as Chinese learners say them.",
+ "cases": [
+  {
+   "id": "PF-01",
+   "row": "T1",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "1000 on the chart as disks of 1000; each move one column toward 10 (break one into ten, or ten into one); the amount counted in 10: 100.",
+   "prompt": "How many tens are in one thousand? My kid insists it's ten.",
+   "expect": {
+    "need": "35P-04",
+    "ask": "count",
+    "amount": "1000",
+    "start": "1000",
+    "target": "10",
+    "result": "100"
+   }
+  },
+  {
+   "id": "PF-02",
+   "row": "T1",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "400 on the chart as disks of 100; each move one column toward 1 (break one into ten, or ten into one); the amount counted in 1: 400.",
+   "prompt": "4个百里面一共有多少个一？孩子说就是4个。",
+   "expect": {
+    "need": "35P-04",
+    "ask": "count",
+    "amount": "400",
+    "start": "100",
+    "target": "1",
+    "result": "400"
+   }
+  },
+  {
+   "id": "PF-03",
+   "row": "T1",
+   "language": "en-US",
+   "kind": "detailed",
+   "teacher_picture": "6000 on the chart as disks of 1000; each move one column toward 100 (break one into ten, or ten into one); the amount counted in 100: 60.",
+   "prompt": "Homework blank reads 6 thousands = ___ hundreds. My girl filled in 600. Close? Totally off? I'd like her to see it rather than memorise it.",
+   "expect": {
+    "need": "35P-04",
+    "ask": "count",
+    "amount": "6000",
+    "start": "1000",
+    "target": "100",
+    "result": "60"
+   }
+  },
+  {
+   "id": "PF-04",
+   "row": "T2",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "300 on the chart as disks of 10; each move one column toward 100 (break one into ten, or ten into one); the amount counted in 100: 3.",
+   "prompt": "My nephew can't believe thirty tens equal three hundreds. He keeps saying thirty is bigger than three, so it can't match.",
+   "expect": {
+    "need": "35P-04",
+    "ask": "count",
+    "amount": "300",
+    "start": "10",
+    "target": "100",
+    "result": "3"
+   }
+  },
+  {
+   "id": "PF-05",
+   "row": "T2",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "0.4 on the chart as disks of 0.01; each move one column toward 0.1 (break one into ten, or ten into one); the amount counted in 0.1: 4.",
+   "prompt": "40个百分之一合起来是几个十分之一？为什么？",
+   "expect": {
+    "need": "35P-04",
+    "ask": "count",
+    "amount": "0.4",
+    "start": "0.01",
+    "target": "0.1",
+    "result": "4"
+   }
+  },
+  {
+   "id": "PF-06",
+   "row": "T2",
+   "language": "zh-CN",
+   "kind": "detailed",
+   "teacher_picture": "0.5 on the chart as disks of 0.001; each move one column toward 0.1 (break one into ten, or ten into one); the amount counted in 0.1: 5.",
+   "prompt": "500个千分之一是多少个十分之一？要不要先变成百分之一再变？孩子越想越乱。",
+   "expect": {
+    "need": "35P-04",
+    "ask": "count",
+    "amount": "0.5",
+    "start": "0.001",
+    "target": "0.1",
+    "result": "5"
+   }
+  },
+  {
+   "id": "PF-07",
+   "row": "T3",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "700 above, 70 below, lined up by place; 700 broken into 70 of the next place right; loops of 70: 10. So 700 is 10 times 70, and 70 is 1/10 of 700.",
+   "prompt": "Seven hundred divided by seventy gives ten, and I want my class to see that through place value instead of a division algorithm.",
+   "expect": {
+    "need": "35P-04",
+    "ask": "times",
+    "amount": "700",
+    "start": null,
+    "target": "70",
+    "renamed": "70",
+    "result": "10"
+   }
+  },
+  {
+   "id": "PF-08",
+   "row": "T3",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "8000 above, 800 below, lined up by place; 8000 broken into 80 of the next place right; loops of 800: 10. So 8000 is 10 times 800, and 800 is 1/10 of 8000.",
+   "prompt": "8000 是 800 的几倍？能不能不列竖式，从数位上讲？",
+   "expect": {
+    "need": "35P-04",
+    "ask": "times",
+    "amount": "8000",
+    "start": null,
+    "target": "800",
+    "renamed": "80",
+    "result": "10"
+   }
+  },
+  {
+   "id": "PF-09",
+   "row": "T3",
+   "language": "en-US",
+   "kind": "detailed",
+   "teacher_picture": "300 above, 30 below, lined up by place; 300 broken into 30 of the next place right; loops of 30: 10. So 300 is 10 times 30, and 30 is 1/10 of 300.",
+   "prompt": "The number 3,330 has three 3s and my son thinks they are all worth the same. How can I show that the 3 sitting in the hundreds is worth ten times the 3 sitting in the tens?",
+   "expect": {
+    "need": "35P-04",
+    "ask": "times",
+    "amount": "300",
+    "start": null,
+    "target": "30",
+    "renamed": "30",
+    "result": "10"
+   }
+  },
+  {
+   "id": "PF-10",
+   "row": "T3",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "60000 above, 6000 below, lined up by place; 60000 broken into 60 of the next place right; loops of 6000: 10. So 60000 is 10 times 6000, and 6000 is 1/10 of 60000.",
+   "prompt": "60000 和 6000，6 只是往左挪了一位，为什么就大了十倍？",
+   "expect": {
+    "need": "35P-04",
+    "ask": "times",
+    "amount": "60000",
+    "start": null,
+    "target": "6000",
+    "renamed": "60",
+    "result": "10"
+   }
+  },
+  {
+   "id": "PF-11",
+   "row": "T4",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "0.7 on the chart as disks of 0.1; each move one column toward 0.01 (break one into ten, or ten into one); the amount counted in 0.01: 70.",
+   "prompt": "Quick one for a fifth grader: seven tenths, renamed as hundredths, is what count?",
+   "expect": {
+    "need": "35P-04",
+    "ask": "count",
+    "amount": "0.7",
+    "start": "0.1",
+    "target": "0.01",
+    "result": "70"
+   }
+  },
+  {
+   "id": "PF-12",
+   "row": "T4",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "0.2 on the chart as disks of 0.1; each move one column toward 0.001 (break one into ten, or ten into one); the amount counted in 0.001: 200.",
+   "prompt": "2个十分之一等于几个千分之一？女儿说是20个。",
+   "expect": {
+    "need": "35P-04",
+    "ask": "count",
+    "amount": "0.2",
+    "start": "0.1",
+    "target": "0.001",
+    "result": "200"
+   }
+  },
+  {
+   "id": "PF-13",
+   "row": "T4",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "0.6 on the chart as disks of 0.1; each move one column toward 0.001 (break one into ten, or ten into one); the amount counted in 0.001: 600.",
+   "prompt": "Is 0.6 really the same as 600 thousandths? That number seems way too big.",
+   "expect": {
+    "need": "35P-04",
+    "ask": "count",
+    "amount": "0.6",
+    "start": "0.1",
+    "target": "0.001",
+    "result": "600"
+   }
+  },
+  {
+   "id": "PF-14",
+   "row": "T5",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "3 above, 0.3 below, lined up by place; 3 broken into 30 of the next place right; loops of 0.3: 10. So 3 is 10 times 0.3, and 0.3 is 1/10 of 3.",
+   "prompt": "Our textbook claims 0.3 is a tenth of 3. Picture it for a kid who only trusts what he can see?",
+   "expect": {
+    "need": "35P-04",
+    "ask": "times",
+    "amount": "3",
+    "start": null,
+    "target": "0.3",
+    "renamed": "30",
+    "result": "10"
+   }
+  },
+  {
+   "id": "PF-15",
+   "row": "T5",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "0.4 above, 0.04 below, lined up by place; 0.4 broken into 40 of the next place right; loops of 0.04: 10. So 0.4 is 10 times 0.04, and 0.04 is 1/10 of 0.4.",
+   "prompt": "0.4 里的 4 和 0.04 里的 4 差多少倍？哪个是哪个的十分之一？",
+   "expect": {
+    "need": "35P-04",
+    "ask": "times",
+    "amount": "0.4",
+    "start": null,
+    "target": "0.04",
+    "renamed": "40",
+    "result": "10"
+   }
+  },
+  {
+   "id": "PF-16",
+   "row": null,
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "Not this need: What one digit is worth in a numeral (4.NBT.A.2). Need 35P-05.",
+   "prompt": "In 46,218, what is the 6 actually worth?",
+   "expect": {
+    "need": "35P-05",
+    "forbid": [
+     "place_value_times_ten"
+    ]
+   }
+  },
+  {
+   "id": "PF-17",
+   "row": null,
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "Not this need: Multiplying by a power of ten: the digits slide past the point (5.NBT.A.2). Need 35P-11.",
+   "prompt": "4.37 乘 100 以后，孩子不明白为什么数字整体往左挪了两格。",
+   "expect": {
+    "need": "35P-11",
+    "forbid": [
+     "place_value_times_ten"
+    ]
+   }
+  },
+  {
+   "id": "PF-18",
+   "row": null,
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "Not this need: Dividing by a decimal: rename in tenths, then group (5.NBT.B.7). Need 35P-12.",
+   "prompt": "Grandson asks why 2.4 split into chunks of 0.6 gives 4 chunks; calculator agrees, he wants the reason.",
+   "expect": {
+    "need": "35P-12",
+    "forbid": [
+     "place_value_times_ten"
+    ]
+   }
+  },
+  {
+   "id": "PF-19",
+   "row": null,
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "Not this need: Adding decimals with a carry (5.NBT.B.7). Need 35P-07.",
+   "prompt": "3.6 + 2.7 十分位加起来超过十了，怎么办？",
+   "expect": {
+    "need": "35P-07",
+    "forbid": [
+     "place_value_times_ten"
+    ]
+   }
+  },
+  {
+   "id": "PF-20",
+   "row": null,
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "Not this need: K-2 bundling ten ones into a ten with blocks (1.NBT.B.2). Need K2N-23.",
+   "prompt": "First grade: we have 23 loose cubes. How do we snap them into tens and leftover ones?",
+   "expect": {
+    "need": "K2N-23",
+    "forbid": [
+     "place_value_times_ten"
+    ]
+   }
+  },
+  {
+   "id": "PF-21",
+   "row": null,
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "Not this need: Equal groups of a place-value unit, 6 × 5 tens (3.NBT.A.3). Need 35P-03.",
+   "prompt": "6 × 50 等于多少？孩子不会算整十数乘一位数。",
+   "expect": {
+    "need": "35P-03",
+    "forbid": [
+     "place_value_times_ten"
+    ]
+   }
+  },
+  {
+   "id": "PF-22",
+   "row": null,
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "Not this need: tenths as hundredths in fraction notation on a hundred grid (4.NF.C.5). Fractions map B09.",
+   "prompt": "把 3/10 写成分母是 100 的分数，用百格图涂一涂该怎么涂？",
+   "expect": {
+    "need": "B09",
+    "forbid": [
+     "place_value_times_ten"
+    ]
+   }
+  }
+ ]
+}
