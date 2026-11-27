@@ -48,6 +48,7 @@ test("place_value_compare is a trial, off by default: built, not offered; its gu
   assert.ok(offered.guidance.includes("0.70 写 mantissa 70、scale 2；0.7 写 7、1，不要补0"), "a written zero kept, never added");
   assert.ok(offered.guidance.includes("演示一直比到选好符号"), "the demonstration reaches the sign (owner, 2026-11-27)");
   assert.ok(offered.guidance.includes("不写 >、<、="), "the practice's answer is never written");
+  assert.match(offered.guidance, /练习的数是孩子课后自己做的：课上可以说“课后试试……”，但不讲它怎么做、不写出它的算式、不说它的答案，outline 也不为它安排一节。/u);
   assert.ok(!/滑块|slider|拖|按钮|一样」|不一样」|Same|Different/u.test(offered.guidance), "the guidance names no control");
   // Beside the card the number line does not take comparing by place; alone its text is unchanged.
   assert.ok(offered.line.includes("按数位比大小") && offered.line.includes("不用数轴"));
@@ -203,7 +204,7 @@ test("section facts: the card in its own terms, once it is drawn; never the prac
     ],
     // Where the demonstration goes: compared to the sign (owner, 2026-11-27; information only).
     demonstration_to: { compared: 4 },
-    practice_pair: ["0.40", "0.4"],
+    after_class_practice: ["0.40", "0.4"],
   });
   const whole = facts({ section: 2, mode: "reuse", established, numbers: [4530, 4503, 6281, 6218, 0].map((initial) => ({ initial, min: 0, max: 8000 })), state: new Map([[5, 9]]), language: "zh-CN" }).facts;
   assert.deepEqual([whole.compared_now, whole.sign_chosen, whole.deciding_place, whole.chart_now.map((column) => column.marked)], [4, ">", "十位", ["=", "=", "≠", "doesn't matter"]]);
@@ -281,7 +282,7 @@ test("a stubbed generation run: 0.7 and 0.70 as the model writes them, the progr
     assert.deepEqual(result.verdict.notes.filter((note) => !note.pass), [], `${outlineNumbers}`);
     assert.deepEqual(result.adjustments, [], `${outlineNumbers}`);
     // Section 2 is told where the demonstration stands; the written decimals are never sent back to the model.
-    for (const fact of ['"sign_chosen":"="', '"pair":["0.7","0.70"]', '"practice_pair":["0.40","0.4"]']) assert.ok(result.later.includes(fact), `${outlineNumbers}: ${fact}`);
+    for (const fact of ['"sign_chosen":"="', '"pair":["0.7","0.70"]', '"after_class_practice":["0.40","0.4"]']) assert.ok(result.later.includes(fact), `${outlineNumbers}: ${fact}`);
     assert.equal(result.later.includes("written_decimals"), false);
   }
   // Whole numbers: nothing written beyond the value, no decimals bound.
@@ -311,4 +312,50 @@ test("written decimals are read only while a recipe that keeps them is offered: 
     console.log(JSON.stringify(Object.entries(api.LESSON_PLAN_CAPABILITY_REGISTRY).filter(([, recipe]) => recipe.keeps_written_decimals === true).map(([name]) => name)));
   `);
   assert.deepEqual(on, ["place_value_compare"]);
+});
+
+test("a replay lays the card fresh again: compared back to 0, the learner's fields 0, the written decimals as written", () => {
+  const result = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    const { comparePlan } = await import(${here("./sample-plans.mjs")});
+    const { judgePlaceValueCompare } = await import(${here("../scripts/place-value-compare-judge.mjs")});
+    const plan = comparePlan({ numbers: ["0.7", "0.70"], practice: ["0.40", "0.4"], steps: [8] });
+    plan.sections[0].moments.push({ narration: "Once more.", restart_numbers: [5], actions: [{ action: "animate", number: 5, end_value: 8, duration_intent: "brief", timing: "during_speech" }] });
+    const compiled = api.compileAndValidateLessonPlan(plan, { language: "en-US" });
+    const item = { id: "PC-14", expect: { need: "35P-06", numbers: ["0.7", "0.70"], relation: "=", deciding_place: null } };
+    const replay = compiled.lesson.steps[0].beats.find((beat) => beat.start?.kind === "replay");
+    console.log(JSON.stringify({ start: replay?.start, verdict: judgePlaceValueCompare(item, compiled.lesson), adjustments: compiled.program_adjustments }));
+  `);
+  // Every variable of the card listed without a value: each back to its start (the pair and its written decimals as
+  // written, nothing compared, judged or signed).
+  assert.deepEqual(result.start.variables.map(short), ["a", "b", "a_decimals", "b_decimals", "compared", "marked", "signed"]);
+  assert.equal(result.start.values, undefined);
+  assert.deepEqual(result.verdict.checks.filter((check) => !check.pass), []);
+  assert.deepEqual(result.adjustments, []);
+});
+
+test("a picture before the card on the same numbers: the card draws its copies with their written zero (#194)", () => {
+  const result = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    const { comparePlan } = await import(${here("./sample-plans.mjs")});
+    const { judgePlaceValueCompare } = await import(${here("../scripts/place-value-compare-judge.mjs")});
+    // A number line on 0.7 and 0.70 in section 1; the compare card on the same numbers in section 2.
+    const plan = comparePlan({ numbers: ["0.7", "0.70"], practice: ["0.40", "0.4"], steps: [8] });
+    const s0 = plan.sections[0];
+    const create = s0.moments[0].actions[0];
+    const steps = s0.moments.slice(1);
+    s0.moments = [s0.moments[0]];
+    s0.reusable_items = [{ kind: "board_item", board_kind: "visual", capability: "number_line_compare" }];
+    s0.moments[0].actions[0] = { ...create, content: { capability: "number_line_compare", parameters: {}, numbers: [1, 2] } };
+    plan.sections[1].reusable_items = [{ kind: "board_item", board_kind: "visual", capability: "place_value_compare" }];
+    plan.sections[1].moments.push({ narration: "Now by place.", actions: [{ ...create, reusable_item: 1 }] }, ...steps);
+    plan.sections[1].student_activities = s0.student_activities;
+    delete s0.student_activities;
+    const compiled = api.compileAndValidateLessonPlan(plan, { language: "en-US" });
+    const write = compiled.lesson.steps.flatMap((step) => step.beats).flatMap((beat) => beat.actions).find((action) => action.kind === "place_value_compare");
+    const item = { id: "PC-14", expect: { need: "35P-06", numbers: ["0.7", "0.70"], relation: "=", deciding_place: null } };
+    console.log(JSON.stringify({ card: write.content, verdict: judgePlaceValueCompare(item, compiled.lesson) }));
+  `);
+  assert.deepEqual([result.card.a, result.card.b, result.card.a_decimals, result.card.b_decimals], [700, 700, 1, 2]);
+  assert.deepEqual(result.verdict.checks.filter((check) => !check.pass), []);
 });

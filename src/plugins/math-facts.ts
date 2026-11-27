@@ -190,7 +190,7 @@ export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
   // columns, the deciding place and the true sign (the lesson's own pair: the demonstration shows it), where the
   // demonstration stands (compared now, and each column as judged so far), what the next value does in the card's own
   // sentences, where the demonstration goes (compared to the sign: owner, 2026-11-27; information only, no check
-  // enforces it), and the practice pair as written (never its answer: the learner finds it on the card).
+  // enforces it), and the after-class practice pair as written (never its answer: the learner finds it on the card).
   place_value_compare: ({ established, numbers, state, language }) => {
     if (!numbers || !established?.numbers?.length) return {};
     const lessonNumbers = established.numbers;
@@ -221,7 +221,7 @@ export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
         ? { next: Array.from({ length: end - k }, (_, i) => ({ value: k + i + 1, does: says[k + i]! })) }
         : { sign_chosen: pair.relation }),
       demonstration_to: { compared: end },
-      practice_pair: [compareNumeral(pa!), compareNumeral(pb!)],
+      after_class_practice: [compareNumeral(pa!), compareNumeral(pb!)],
     } };
   },
   function_plot: ({ established }) => (established && fixedLineSamples(established) ? { lead: { sample_slope: "constant" } } : {}),
