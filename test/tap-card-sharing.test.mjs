@@ -151,3 +151,55 @@ for (const order of ["card-first", "line-first"]) {
     assert.deepEqual(result.drawn.filter((kind) => kind === "number_line" || kind === "make_ten"), ["number_line", "make_ten"]);
   });
 }
+
+test("section 1 with both outline restarts spent: the card is named and repaired as usual, as on main (review of #186, round 2)", () => {
+  const result = run(`
+    const api = await import(${here("../lesson-plan.js")});
+    const { makeTenPlan, samplePlan, makeSamplePlanModelCompatible } = await import(${here("./sample-plans.mjs")});
+    const { modelResponseHelpers } = await import(${here("./model-responses.mjs")});
+    const { bootstrapModelResponse, bootstrapSectionFromExact, stagedOutline, toModelSectionDraft } = modelResponseHelpers(api.LESSON_PLAN_CAPABILITY_REGISTRY);
+    const withPicture = (other, numbers) => {
+      const plan = makeTenPlan({ numbers: [8, 6], practice: [7, 5] });
+      const picture = samplePlan(other).sections[0].moments[0].actions.find((action) => action.action === "create");
+      const at = plan.sections[0];
+      at.reusable_items = [...(at.reusable_items ?? []), { kind: "board_item", board_kind: "visual", capability: other }];
+      at.moments[0].actions.push({ ...structuredClone(picture), content: { ...structuredClone(picture.content), numbers }, placement: { relation: "new_region" }, reusable_item: at.reusable_items.length });
+      return plan;
+    };
+    // An outline-owned fault of the unit-square array: a count of 12 beyond what it draws.
+    const overflow = samplePlan("rectangle_unit_square_array");
+    overflow.sections[0].student_activities = [];
+    Object.assign(overflow.numbers[0], { initial: 12, min: 10, max: 14 });
+    const staged = [withPicture("number_line_steps", [1, 2, 3]), overflow, withPicture("function_plot", [1])].map((plan) => {
+      const compatible = makeSamplePlanModelCompatible(plan);
+      const drafts = compatible.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({ section: index + 1, version: compatible.version, moments, student_activities }));
+      return { outline: stagedOutline(compatible, drafts), drafts };
+    });
+    let stage = 0;
+    const requests = [], rejected = [], adjustments = [];
+    let error;
+    try {
+      await api.generateLessonPlanWithModel(async (request) => {
+        requests.push(request.label + (request.section ?? ""));
+        if (requests.length > 16) throw new Error("too many requests");
+        if (request.label === "lesson-plan-bootstrap") return bootstrapModelResponse(request, staged[0].outline, bootstrapSectionFromExact(staged[0].outline, staged[0].drafts[0]));
+        if (request.label === "lesson-plan-outline") { stage = Math.min(stage + 1, staged.length - 1); return JSON.stringify(staged[stage].outline); }
+        return JSON.stringify(staged[stage].drafts[request.section - 1]);
+      }, { turn_id: "sharing", learner_request: "How do I explain 8 + 6 by making a ten?", language: "en-US" }, {
+        max_attempts_per_part: 3, on_program_adjustment: (adjustment) => adjustments.push([adjustment.kind, adjustment.section, adjustment.capability, adjustment.reason]),
+        on_rejected_part: (part) => rejected.push(part.error.code),
+      });
+    } catch (caught) { error = { message: caught.message.slice(0, 200), capability: caught.capability }; }
+    console.log(JSON.stringify({ error, requests, rejected, adjustments: adjustments.filter(([kind]) => kind === "visual_removed") }));
+  `, "make_ten");
+  // Two restarts: the line (shared numbers), then the array (its own limit).
+  assert.equal(result.requests.filter((label) => label === "lesson-plan-outline").length, 2);
+  assert.deepEqual(result.adjustments, [["visual_removed", 1, "number_line_steps", "shares_tap_card_numbers"]]);
+  // Then the third outline's section 1 shares the card's numbers again: no restart is left, so the card is named and
+  // section 1 is repaired three times, as on main, before the lesson ends (this stub never writes a repair).
+  assert.deepEqual(result.requests.slice(-3), ["lesson-plan-section1", "lesson-plan-section1", "lesson-plan-section1"]);
+  // (The last attempt's fault is the one thrown, not reported as a rejected part.)
+  assert.deepEqual(result.rejected.slice(-2), ["LESSON_PLAN_SHARED_NUMBER", "LESSON_PLAN_SHARED_NUMBER"]);
+  assert.equal(result.error.capability, "make_ten");
+  assert.match(result.error.message, /the make-ten card needs lesson numbers of its own: the function_plot visual/u);
+});

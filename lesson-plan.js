@@ -28284,7 +28284,9 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
       } catch (error) {
         if (section === 1 && isOutlineOwnedFault(error)) throw error;
         if (error instanceof LessonPlanError && error.withdrawAtOnce && error.capability) {
-          if (section === 1) throw error;
+          if (section === 1 && outlineRestarts < 2) throw error;
+        }
+        if (section > 1 && error instanceof LessonPlanError && error.withdrawAtOnce && error.capability) {
           const cardsIn = (from) => (from?.course_visuals ?? []).filter((visual) => visual.capability === error.tapCard).length;
           const unlinked = outline ? structuredClone(outline) : void 0;
           for (const visual of unlinked?.course_visuals ?? []) {
@@ -28312,7 +28314,9 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
             candidate = void 0;
             continue;
           }
-          if (error.tapCard) error = new LessonPlanError(error.code, error.path, error.message.slice(error.path.length + 2), error.tapCard);
+        }
+        if (error instanceof LessonPlanError && error.withdrawAtOnce && error.tapCard) {
+          error = new LessonPlanError(error.code, error.path, error.message.slice(error.path.length + 2), error.tapCard);
         }
         const previousError = sectionErrors.get(section);
         if (unsupportedSectionResponse(error, previousError, input.language)) throw error;

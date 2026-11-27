@@ -3451,7 +3451,11 @@ export async function generateLessonPlanWithModel(
         // A picture on a tap card's lesson numbers goes at once, with no repair: the card is the need's picture.
         // Section 1's by a new outline without it (acceptFirstSection), a later section's from the outline in place.
         if (error instanceof LessonPlanError && error.withdrawAtOnce && error.capability) {
-          if (section === 1) throw error;
+          // Section 1's goes by a new outline, while one is left; with both spent the card is named and repaired as
+          // usual, as on main (review of #186, round 2).
+          if (section === 1 && outlineRestarts < 2) throw error;
+        }
+        if (section > 1 && error instanceof LessonPlanError && error.withdrawAtOnce && error.capability) {
           // The card must survive the withdrawal: a card related to the picture (supporting it) would go with it
           // (review of #186). Then the card is named, as before, and the section is repaired as usual.
           const cardsIn = (from: LessonPlanOutline | undefined) => (from?.course_visuals ?? []).filter((visual) => visual.capability === error.tapCard).length;
@@ -3478,7 +3482,9 @@ export async function generateLessonPlanWithModel(
             candidate = undefined;
             continue;
           }
-          if (error.tapCard) error = new LessonPlanError(error.code, error.path, error.message.slice(error.path.length + 2), error.tapCard);
+        }
+        if (error instanceof LessonPlanError && error.withdrawAtOnce && error.tapCard) {
+          error = new LessonPlanError(error.code, error.path, error.message.slice(error.path.length + 2), error.tapCard);
         }
         const previousError = sectionErrors.get(section);
         if (unsupportedSectionResponse(error, previousError, input.language)) throw error;
