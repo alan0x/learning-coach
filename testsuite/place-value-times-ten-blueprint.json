@@ -1,0 +1,51 @@
+{
+ "note": "Ten of one place make one of the next: blueprint for need 35P-04 of the frozen K-12 component map (Grades 3-5 place value, row 4), 2026-11-27. One row per idea, from the Common Core standards: 4.NBT.A.1 (recognize that in a multi-digit whole number, a digit in one place represents ten times what it represents in the place to its right; e.g. 700 ÷ 70 = 10 by applying concepts of place value and division) and 5.NBT.A.1 (in a multi-digit number, a digit in one place represents 10 times as much as it represents in the place to its right and 1/10 of what it represents in the place to its left). Each row's teacher picture says what a good teacher draws, written without reference to any card or component. Neighbours, not this need: building a number and what one digit is worth (35P-05); comparing by place (35P-06); adding and subtracting with trades (35P-07); multiplying or dividing by 10, 100, 1000 as digits sliding past the point (35P-11); dividing by a decimal (35P-12); equal groups of a unit, 9 × 80 (35P-03); K-2 bundling ten ones into a ten with blocks (K2N-23); tenths and hundredths on a hundred grid (fractions map B09). Cases (development and scoring) are written from these rows, worded as learners ask, in English and Chinese. Never taken from the question set.",
+ "rows": [
+  {
+   "id": "T1",
+   "idea": "One of a place breaks into ten of the place to its right; across two places it is a hundred",
+   "standards": [
+    "4.NBT.A.1"
+   ],
+   "grades": "4",
+   "teacher_picture": "A place-value chart with one disk in the thousands; it is broken into 10 hundreds, and each hundred into 10 tens, so 1 thousand is 100 tens. The same with a few disks (4 hundreds = 40 tens = 400 ones). In Chinese: 1个千是10个百，是100个十。"
+  },
+  {
+   "id": "T2",
+   "idea": "Ten of a place make one of the place to its left (bundling)",
+   "standards": [
+    "4.NBT.A.1",
+    "5.NBT.A.1"
+   ],
+   "grades": "4-5",
+   "teacher_picture": "30 tens on the chart in rows of ten; each full ten is bundled into one hundred, which moves one column left: 30 tens = 3 hundreds. With decimals: 40 hundredths bundle into 4 tenths, 500 thousandths into 5 tenths (through hundredths). In Chinese: 满十进一，10个百分之一是1个十分之一。"
+  },
+  {
+   "id": "T3",
+   "idea": "A digit is worth ten times as much one place to the left: 700 ÷ 70 = 10",
+   "standards": [
+    "4.NBT.A.1"
+   ],
+   "grades": "4",
+   "teacher_picture": "700 and 70 on one chart, lined up by place: 7 hundreds above, 7 tens below. The 7 hundreds broken into 70 tens, then looped in groups of 7 tens (each group is 70): 10 groups, so 700 is 10 times 70. The same digit in two neighbouring places (the 5s in 5,550), whatever the number around it."
+  },
+  {
+   "id": "T4",
+   "idea": "Past the point: 1 is 10 tenths, a tenth is 10 hundredths, a hundredth is 10 thousandths; renaming across two places",
+   "standards": [
+    "5.NBT.A.1"
+   ],
+   "grades": "5",
+   "teacher_picture": "The chart on past the ones, the point fixed. 3 tenths broken into 30 hundredths, then into 300 thousandths. 0.3 = 30 hundredths = 300 thousandths, the same amount counted in a smaller unit. In Chinese: 3个十分之一是300个千分之一。"
+  },
+  {
+   "id": "T5",
+   "idea": "One place to the right is worth 1/10: 0.3 is 1/10 of 3",
+   "standards": [
+    "5.NBT.A.1"
+   ],
+   "grades": "5",
+   "teacher_picture": "3 and 0.3 on the chart, the points lined up: 3 ones above, 3 tenths below. The 3 ones broken into 30 tenths, then looped in groups of 3 tenths: 10 groups, so 3 is 10 times 0.3, and 0.3 is 1/10 of 3. The same for 0.4 and 0.04, and for a whole place and its neighbour (50 is 1/10 of 500)."
+  }
+ ]
+}
