@@ -366,7 +366,7 @@ test("a stubbed generation run: the card, its steps and the practice reach the l
   `);
   assert.deepEqual(result.beats, [["write", "focus"], [1], [2]]);
   assert.deepEqual(result.tasks.map((task) => [task.completion.kind, task.completion.fact ?? task.completion.answer]), [["card_fact", "complete"], ["numeric_answer", "4732"]]);
-  assert.deepEqual(result.plugins, { math: "0.9.0", shared: "0.1.0" });
+  assert.deepEqual(result.plugins, { math: "0.10.0", shared: "0.1.0" });
   assert.deepEqual(result.verdict.checks.filter((check) => !check.pass), []);
   assert.deepEqual(result.verdict.notes.filter((note) => !note.pass).map((note) => note.check), ["the demonstration finishes every column"]);
   assert.deepEqual(result.adjustments, []);

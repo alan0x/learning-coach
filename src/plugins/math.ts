@@ -2,7 +2,7 @@
 // Subject plugin (decision 0012, draft). Coach assembles its recipe registry
 // and the recipe rules in its prompts from the installed plugins.
 import { REARRANGEMENT_MODEL_GUIDANCE } from "../rearrangement.js";
-import { MATH_PLUGIN_MANIFEST, MATH_SUBJECT_DESCRIPTION, PLACE_VALUE_TRADE_MAX_COLUMNS } from "octos-lesson-language/plugin-math";
+import { MATH_PLUGIN_MANIFEST, MATH_SUBJECT_DESCRIPTION, MAKE_TEN_MAX_MOVED, MAKE_TEN_PLACES, PLACE_VALUE_TRADE_MAX_COLUMNS, makeTenFreshCount } from "octos-lesson-language/plugin-math";
 import type { CoachSubjectPlugin } from "./types.js";
 import { PLOT_MARKS } from "./plot-mark-names.js";
 
@@ -233,6 +233,37 @@ export const MATH_RECIPES = {
     student_controls: [],
     required_features: ["column_add_subtract_trades"],
     model_guidance: "数位表加减（竖式，进位、退位就是交换）：多位数加减（到十万位）和小数加减（到百分位），至少有一位要进位或退位，最多六列（从两个数最低的一位到两个数和得数最高的一位）。不用于摆数、拆数、比较、凑整、乘法，也不用于低年级的凑十（用方块）。operation 写 add 或 subtract。outline 的 numbers 依次写这五个数（不动的也要写）：第一个数、第二个数（减法第一个数不小于第二个数）、练习的第一个数、练习的第二个数、做完了几列。数值写实际大小（2.75），最多两位小数。练习的一对是另一对（不是题目的，免得孩子照抄演示），也要进位或退位，列和题目的一样（同样多的整数位和小数位，题目的得数多出一位时练习的也多出一位）。做完了几列从最右边一列数起，写 0：表一开始一列也没有做。演示时把它动画到 1、2……：每到一个值，程序按规则做完右边又一列（合起来、满十换一、不够拆一），只往前走，同一个值再写表不变；可以只演示几列。两个数和练习的数不动画。练习：对做完了几列写一个数值目标题（数值写列数），孩子在表上做完练习的一对，程序再自己问得数，不另出问这一对得数的填数题；题目和提示不写练习的得数。表上的数、圆片和操作说明都由卡片自己写；说数位用名字（个位、十分位、hundreds），不说怎么点卡片",
+  },
+  // OLL decision 0027 (a trial): making ten to add on two ten frames (8 + 6 = 8 + 2 + 4 = 10 + 4). The model writes
+  // the question's pair and a practice pair; the program supplies the count in the bigger number's frame (it starts
+  // at the bigger number, taken from the pair) and the count the learner moves (0), and the demonstration animates
+  // the first of them to 10 (or 9) while the card moves one counter at a time. The program makes the learner's task
+  // on the practice pair and the row of four blanks after it.
+  make_ten: {
+    parts: ["whole"],
+    number_inputs: ["first", "second", "practice_first", "practice_second", "filled", "moved"],
+    number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
+    // The two counts start where the pair puts them (the frames apart, nothing moved), so the program supplies
+    // them: an outline that declares the four numbers before them gets both, one that also declares the first
+    // keeps it and gets the second.
+    program_number_inputs: [
+      { initial: ([a, b]: readonly number[]) => makeTenFreshCount(a ?? 0, b ?? 0), min: 0, max: MAKE_TEN_PLACES, label: "大数那一框里有几个" },
+      { initial: 0, min: 0, max: MAKE_TEN_MAX_MOVED, label: "移过去几个" },
+    ],
+    // The card starts on no fewer: an outline that declares fewer loses it at once (a section cannot add one).
+    min_lesson_numbers: 6,
+    parameter_names: [],
+    model_parameter_names: [],
+    required_model_schema_parameters: [],
+    semantic_parameters: [],
+    output_kinds: ["make_ten"],
+    // Four lesson variables (the pair, the two counts): when a lesson holds too many, the card is the picture that goes.
+    binds_many_variables: true,
+    // No control: the learner works the card by its own taps; the model never names one, and the card's own
+    // fixed text says how it is used.
+    student_controls: [],
+    required_features: ["make_ten_to_add"],
+    model_guidance: "凑十（两个十格框）：两个一位数相加、和大于10（如8+6），小数分出一部分把大数补成十。不用于和正好是10、接着数、破十减、两位数加一位数、三个数相加。outline 的 numbers 依次写四个数：题目的两个数、练习的两个数（另一对，也是一位数、和大于10，不是题目的，换顺序也不算）。程序再补两个数：大数那一框里有几个（开始就是大数）、移过去几个（0）。演示时把第五个数动画到10（可以只到9），程序一个一个地移圆片；别的数不动画。练习：对第五个数写一个数值目标题（数值写10），孩子自己补满十，程序再出一行空（8+6=8+__+__=10+__=__）；题目和提示不写练习的和。不说怎么点卡片",
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],

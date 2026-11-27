@@ -51,7 +51,9 @@ export function samplePlan(capability) {
         ? 3
         : capability === "place_value_trade"
           ? 5
-          : 1;
+          : capability === "make_ten"
+            ? 6
+            : 1;
   // The number line's question types (decisions 0013 and 0016): the parameters each one needs.
   const numberLineParameters = { number_line_solution: { relation: "x>a" }, number_line_rounding: { place: "tens" } }[capability];
   const hasNumber = numberCount > 0;
@@ -92,8 +94,8 @@ export function samplePlan(capability) {
     firstMomentActions.push({
       action: "animate",
       // The trade card's demonstration moves its fifth number, columns finished (OLL decision 0026).
-      number: capability === "place_value_trade" ? 5 : 1,
-      end_value: capability === "place_value_trade" ? 4 : capability === "base_ten_trade" ? 4 : capability === "place_value_chart" ? 4050 : capability === "circle_polygon_bounds" ? 96 : capability === "rectangle_unit_square_array" ? 6 : capability === "number_line_rounding" ? 43 : capability === "number_line_steps" ? 7 : 0.75,
+      number: capability === "place_value_trade" || capability === "make_ten" ? 5 : 1,
+      end_value: capability === "place_value_trade" ? 4 : capability === "make_ten" ? 10 : capability === "base_ten_trade" ? 4 : capability === "place_value_chart" ? 4050 : capability === "circle_polygon_bounds" ? 96 : capability === "rectangle_unit_square_array" ? 6 : capability === "number_line_rounding" ? 43 : capability === "number_line_steps" ? 7 : 0.75,
       easing: "linear",
       duration_intent: "brief",
       timing: "during_speech",
@@ -126,6 +128,10 @@ export function samplePlan(capability) {
         // The place-value trade card (OLL decision 0026): 3,486 + 2,739, every column demonstrated (columns
         // finished 0 to 4); the learner adds 4,658 + 1,573.
         ? [3486, 2739, 4658, 1573, 0].map((initial, position) => ({ initial, min: 0, max: position === 4 ? 4 : initial, label: ["first number", "second number", "practice first", "practice second", "columns finished"][position] }))[index]
+        : capability === "make_ten"
+        // The make-ten card (OLL decision 0027): 8 + 6, the 8's frame filled to ten; the learner makes ten with
+        // 7 + 5. The count in the bigger frame starts at 8 and the count moved at 0 (the program's own numbers).
+        ? [8, 6, 7, 5, 8, 0].map((initial, position) => ({ initial, min: 0, max: position === 4 ? 10 : position === 5 ? 4 : initial, label: ["first number", "second number", "practice first", "practice second", "in the bigger frame", "moved"][position] }))[index]
         : capability === "number_line_compare"
         ? { initial: index === 0 ? 0.5 : 0.25, min: 0, max: 1, label: index === 0 ? "first" : "second", student_control: { kind: "slider", step: 0.05 } }
         : capability === "rectangle_unit_square_array"
@@ -175,8 +181,8 @@ export function samplePlan(capability) {
           student_activities: [{
             kind: "number_target",
             prompt: "Move the main value to one half.",
-            number_controls: [{ number: capability === "place_value_trade" ? 5 : 1, controls: ["slider"] }],
-            value: capability === "place_value_trade" ? 4 : capability === "place_value_chart" ? 3207 : capability === "circle_polygon_bounds" ? 96 : capability === "number_line_rounding" ? 45 : capability === "number_line_steps" ? 6 : 0.5,
+            number_controls: [{ number: capability === "place_value_trade" || capability === "make_ten" ? 5 : 1, controls: ["slider"] }],
+            value: capability === "place_value_trade" ? 4 : capability === "make_ten" ? 10 : capability === "place_value_chart" ? 3207 : capability === "circle_polygon_bounds" ? 96 : capability === "number_line_rounding" ? 45 : capability === "number_line_steps" ? 6 : 0.5,
             tolerance: 0.02,
             hints: ["Watch the numeric value."],
           }],
@@ -293,6 +299,38 @@ export function placeValueTradePlan({ operation, numbers, practice, steps, promp
     plan.sections[1].student_activities = [{
       kind: "numeric_answer", prompt: `What is ${numbers[0]} ${operation === "add" ? "+" : "-"} ${numbers[1]}?`, answer, check: answer,
       reference: reusable(1, 1), hints: ["Read the answer row."],
+    }];
+  }
+  return plan;
+}
+
+/**
+ * A make-ten lesson (OLL decision 0027) as a model writes it: the question's pair, a practice pair, and the two
+ * numbers the program supplies (the count in the bigger frame at the bigger number, the count moved 0); the
+ * demonstration as values of the count in moments of their own (10 by default), and the practice as a number target
+ * on the count (10). `typed` adds a model's typed question in section 2, placed by the card.
+ */
+export function makeTenPlan({ numbers, practice, steps = [10], prompt, hints = ["How many more does the bigger number need to make ten?"], typed = false }) {
+  const plan = samplePlan("make_ten");
+  const written = [...numbers, ...practice, Math.max(...numbers), 0];
+  plan.numbers = written.map((initial, position) => ({ initial, min: 0, max: position === 4 ? 10 : position === 5 ? 4 : initial, label: ["first number", "second number", "practice first", "practice second", "in the bigger frame", "moved"][position] }));
+  const first = plan.sections[0].moments[0];
+  first.actions = first.actions.filter((action) => action.action !== "animate");
+  first.actions[0].content = { capability: "make_ten", parameters: {}, numbers: [1, 2, 3, 4, 5, 6] };
+  plan.sections[0].moments.push(...steps.map((value, index) => ({
+    narration: `Step ${index + 1}.`,
+    actions: [{ action: "animate", number: 5, end_value: value, duration_intent: "brief", timing: "during_speech" }],
+  })));
+  plan.sections[0].student_activities = [{
+    kind: "number_target",
+    prompt: prompt ?? "Your turn: make a ten with the new pair.",
+    number_controls: [{ number: 5, controls: ["slider"] }],
+    value: 10, tolerance: 0.5, hints,
+  }];
+  if (typed) {
+    plan.sections[1].student_activities = [{
+      kind: "numeric_answer", prompt: `What is ${numbers[0]} + ${numbers[1]}?`, answer: String(numbers[0] + numbers[1]), check: String(numbers[0] + numbers[1]),
+      reference: reusable(1, 1), hints: ["Ten and the ones left."],
     }];
   }
   return plan;

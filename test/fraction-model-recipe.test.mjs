@@ -206,7 +206,7 @@ test("a stubbed generation run: the card reaches the lesson; numerators and deno
   assert.deepEqual(result.content.fractions, [{ as: "a", numerator: 5, denominator: 8 }, { as: "b", numerator: 2, denominator: 3 }]);
   assert.equal(result.content.model, "circle");
   assert.equal(result.content.relation, "compare");
-  assert.deepEqual(result.plugins, { math: "0.9.0", shared: "0.1.0" });
+  assert.deepEqual(result.plugins, { math: "0.10.0", shared: "0.1.0" });
 });
 
 test("share (0021 amendment 2): a/b is a wholes shared among b, one piece of each whole marked; the program draws the wholes", () => {
