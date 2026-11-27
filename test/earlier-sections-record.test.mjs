@@ -176,3 +176,44 @@ test("a picture the program takes out as section 1's prefix compiles (no rewrite
   // The outline still lists the diagram's slot (reusable_items); what was drawn does not.
   assert.doesNotMatch(JSON.stringify(second.course_and_section.previous_sections.map(({ taught }) => taught)), /process_diagram/u);
 });
+
+test("pictures keep their course visuals when a picture the prefix's clean-up takes out renumbers the slots (review of #191, B1)", () => {
+  const log = run(`
+    const plan = sp.samplePlan("rectangle_unit_square_array");
+    plan.numbers = [
+      { initial: 3, min: 1, max: 9, label: "A rows" }, { initial: 4, min: 1, max: 9, label: "A cols" },
+      { initial: 2, min: 1, max: 9, label: "B rows" }, { initial: 5, min: 1, max: 9, label: "B cols" },
+    ];
+    const first = plan.sections[0].moments[0];
+    first.narration = "Two arrays.";
+    first.actions = first.actions.filter((action) => action.action !== "animate");
+    const array = (numbers, reusable_item) => ({ ...structuredClone(first.actions[0]), content: { ...structuredClone(first.actions[0].content), numbers }, reusable_item });
+    // Slot 1: a process diagram whose step is too long, which the clean-up takes out; slots 2 and 3 become 1 and 2.
+    const diagram = { action: "create", kind: "visual", role: "supporting_visual", content: { capability: "process_diagram", parameters: { title: "Trading", steps: ["x".repeat(400)] } }, placement: { relation: "new_region" }, reusable_item: 1 };
+    first.actions = [diagram, array([1, 2], 2), array([3, 4], 3)];
+    plan.sections[0].reusable_items = [
+      { kind: "board_item", board_kind: "visual", capability: "process_diagram" },
+      { kind: "board_item", board_kind: "visual", capability: "rectangle_unit_square_array" },
+      { kind: "board_item", board_kind: "visual", capability: "rectangle_unit_square_array" },
+    ];
+    delete plan.sections[0].student_activities;
+    delete plan.sections[1].student_activities;
+    const stage = staged(plan);
+    const [d, a, b] = stage.outline.course_visuals;
+    delete d.related_visual; d.relation = "primary";
+    delete a.related_visual; a.relation = "primary";
+    b.related_visual = 2; b.relation = "comparison";
+    const log = await generate((request) => request.label === "lesson-plan-bootstrap" ? bootstrap(request, stage) : JSON.stringify(stage.drafts[request.section - 1]),
+      "Compare 3 by 4 and 2 by 5.");
+    console.log(JSON.stringify(log));
+  `);
+  const [second] = prompts(log, "lesson-plan-section2");
+  assert.ok(second, JSON.stringify(log.requests));
+  // The same request's visuals_for_section: course visual 2 is the first array, 3 the second.
+  assert.deepEqual(second.visuals_for_section.map(({ course_visual, capability }) => [course_visual, capability]),
+    [[1, "process_diagram"], [2, "rectangle_unit_square_array"], [3, "rectangle_unit_square_array"]]);
+  const label = (pictures) => pictures.map(({ course_visual, capability, numbers }) => [course_visual, capability, numbers.map(({ number }) => number)]);
+  const expected = [[2, "rectangle_unit_square_array", [1, 2]], [3, "rectangle_unit_square_array", [3, 4]]];
+  assert.deepEqual(label(second.course_and_section.previous_sections[0].taught[0].drew), expected);
+  assert.deepEqual(label(second.course_and_section.pictures_now), expected);
+});

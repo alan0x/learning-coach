@@ -27597,7 +27597,7 @@ function sanitizeNonessentialVisuals(outlineValue, draftValues) {
       outline.close.focus = [{ source: "reusable", section, item }];
     }
   }
-  return { outline, drafts, adjustments };
+  return { outline, drafts, adjustments, reusable_item_map: reusableItemMap };
 }
 function normalizeExecutableNumberInteractions(outlineValue, draftValues) {
   const sanitized = sanitizeNonessentialVisuals(outlineValue, draftValues);
@@ -27693,7 +27693,7 @@ function normalizeExecutableNumberInteractions(outlineValue, draftValues) {
     });
     if (section.student_activities.length === 0) delete section.student_activities;
   }
-  return { outline, drafts, adjustments: sanitized.adjustments };
+  return { outline, drafts, adjustments: sanitized.adjustments, reusable_item_map: sanitized.reusable_item_map };
 }
 function lowerModelActionReferences(actionName, action, currentMoment, numberCount, numberLabels = [], programNumberCard) {
   const lowered = { ...action };
@@ -28046,12 +28046,13 @@ function boardText(content) {
   if ("columns" in content) return [content.columns, ...content.rows].map((row) => row.join(" | ")).join("; ");
   return void 0;
 }
-function earlierSectionsRecord(outline, drafts, dropped) {
+function earlierSectionsRecord(outline, drafts, dropped, slots) {
+  const writtenSlot = new Map([...slots].map(([key, slot]) => [`${key.split(":")[0]}:${slot}`, Number(key.split(":")[1])]));
   const courseVisual = (section, action) => {
-    if (action.action !== "create" || action.kind !== "visual") return 0;
+    if (action.action !== "create" || action.kind !== "visual" || !Number.isInteger(action.reusable_item)) return 0;
     const capability2 = action.content.capability;
-    const visuals = (outline.course_visuals ?? []).map((visual, index) => ({ ...visual, position: index + 1 })).filter((visual) => visual.create_section === section && visual.capability === capability2);
-    return (visuals.find((visual) => visual.reusable_item === action.reusable_item) ?? (visuals.length === 1 ? visuals[0] : void 0))?.position ?? 0;
+    const slot = writtenSlot.get(`${section}:${action.reusable_item}`) ?? action.reusable_item;
+    return (outline.course_visuals ?? []).findIndex((visual) => visual.create_section === section && visual.reusable_item === slot && visual.capability === capability2) + 1;
   };
   const values = (numbers, state) => (numbers ?? []).map((number) => ({ number, value: state.get(number) }));
   const sections = drafts.map(() => ({ taught: [] }));
@@ -29599,6 +29600,10 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     text: fixedRequestParts[item.request_part - 1]
   }));
   const laterSectionContext = { ...context, current_lesson: null, teacher_experiences: null };
+  const earlierRecord = (section) => {
+    const compiled2 = prefixSections(outline, drafts.slice(0, section - 1), options.compile);
+    return earlierSectionsRecord(outline, compiled2.drafts, (earlier) => compileDroppedActivities.get(drafts[earlier - 1]), compiled2.reusable_item_map);
+  };
   const generateSection = async (section) => {
     const attempt = (sectionAttempts.get(section) ?? 0) + 1;
     sectionAttempts.set(section, attempt);
@@ -29625,11 +29630,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
             section,
             allowedNumberIndexes,
             currentNumbers,
-            section > 1 ? earlierSectionsRecord(
-              outline,
-              prefixSections(outline, drafts.slice(0, section - 1), options.compile).drafts,
-              (earlier) => compileDroppedActivities.get(drafts[earlier - 1])
-            ) : void 0
+            section > 1 ? earlierRecord(section) : void 0
           ),
           visuals_for_section: visualsForSection(section, currentNumbers),
           assigned_request_parts: assignedRequestParts(section),
