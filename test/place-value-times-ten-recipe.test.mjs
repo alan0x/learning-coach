@@ -52,7 +52,7 @@ test("place_value_times_ten is a trial, off by default: built, not offered; its 
   assert.deepEqual([offered.min, offered.many, offered.controls], [5, true, []]);
   // Short guidance (tracked, not capped): the numbers by role, a breaking and a put-together example, the
   // demonstration to the unit asked, the practice; no control named.
-  assert.equal(Buffer.byteLength(offered.guidance), 1770);
+  assert.equal(Buffer.byteLength(offered.guidance), 1958);
   for (const role of ["amount", "unit_asked", "practice_amount", "practice_unit_asked", "start_unit"]) assert.ok(offered.guidance.includes(role), role);
   // PF-11's question, written as the program wants it: a breaking question with no fifth number.
   assert.ok(offered.guidance.includes("7个十分之一=?个百分之一 写0.7、0.01、练习两个数；"));
@@ -312,13 +312,24 @@ test("counted in written where the amount cannot start is read over, never refus
   assert.deepEqual(card("together"), ["count", "left", 2, 1]);
 });
 
-test("a moment that animates the card's fixed numbers plays the rest and records the left-out one (PF-10)", () => {
+test("a moment that animates the card's fixed numbers: refused with a fact by default; behind the flag, the rest play and the left-out one is recorded (PF-10)", () => {
   // PF-10's second outline: 6,000 and 600 (a times pair); a section animated the amount to 60,000 with counted in
   // to 600 in one moment, then counted in to 60,000.
   const result = withTrial(`
     const api = await import(${here("../lesson-plan.js")});
     const { timesTenPlan } = await import(${here("./sample-plans.mjs")});
     const out = {};
+    // Behind the recipe's flag (pilot 1, 2026-11-27: refused by default), the moves are left out as since #188.
+    const mode = (each) => { api.LESSON_PLAN_CAPABILITY_REGISTRY.place_value_times_ten.wrong_number_moves = each; };
+    mode("refused");
+    {
+      const plan = timesTenPlan({ amount: 6000, target: 600, practice: [8000, 800], steps: [] });
+      plan.numbers[0].max = 60000;
+      plan.sections[0].moments.push({ narration: "Now watch.", actions: [{ action: "animate", number: 1, end_value: 60000, duration_intent: "brief", timing: "during_speech" }] });
+      try { api.compileAndValidateLessonPlan(plan, { language: "zh-CN" }); out.refused = { compiled: true }; }
+      catch (error) { out.refused = { code: error.code, capability: error.capability, message: error.message }; }
+    }
+    mode("left_out");
     // [name, [number, value, timing]...]
     for (const [name, animations] of [["amount", [[1, 60000], [5, 600]]], ["practice", [[3, 9000]]], ["off-path", [[5, 60000]]],
       ["timing", [[1, 60000, "before_speech"], [5, 600, "after_speech"]]], ["twice", [[1, 60000], [1, 70000], [5, 600]]]]) {
@@ -333,6 +344,8 @@ test("a moment that animates the card's fixed numbers plays the rest and records
     }
     console.log(JSON.stringify(out));
   `);
+  assert.deepEqual([result.refused.code, result.refused.capability], ["LESSON_PLAN_CARD_NUMBER_STAYS", "place_value_times_ten"]);
+  assert.match(result.refused.message, /lesson number 1 is the times-ten card's amount 6000, which stays as written; the demonstration moves lesson number 5, the start unit$/u);
   assert.deepEqual(result.amount.beat, [600_000]);
   assert.deepEqual(result.amount.adjustments, ["animation_left_out: $lessonPlan.sections[0].moments[1].actions[0]: the amount, the unit asked and the practice stay as written: the demonstration moves only the start unit, counted in (the card's fifth lesson number); left out"]);
   // Only a fixed number: the moment still looks at the card.
@@ -381,7 +394,7 @@ test("section facts: the card in its own terms, once it is drawn", () => {
       { column: "Thousandths", disks: 0, rows_of_ten: 0, squares: 0 },
     ],
     next: [{ value: 0.001, does: "Break every hundredth into ten thousandths." }],
-    practice: [5, 0.01],
+    after_class_practice: [5, 0.01],
   });
   const start = facts({ section: 2, mode: "reuse", established, numbers, state: new Map(), language: "zh-CN" }).facts;
   assert.deepEqual([start.counted_in_now, start.next.map((each) => each.value), start.next[0].does], [0.1, [0.01, 0.001], "把每个十分之一拆成十个百分之一。"]);
@@ -454,7 +467,7 @@ test("a stubbed generation run: the outline's four numbers, the program's counte
     assert.deepEqual(result.verdict.notes.filter((note) => !note.pass), [], `${outlineNumbers}`);
     assert.deepEqual(result.adjustments, [], `${outlineNumbers}`);
     // Section 2 is told where the demonstration stands.
-    for (const fact of ['"reached_target":true', '"counted_in_now":0.001', '"practice":[5,0.01]']) assert.ok(result.later.includes(fact), `${outlineNumbers}: ${fact}`);
+    for (const fact of ['"reached_target":true', '"counted_in_now":0.001', '"after_class_practice":[5,0.01]']) assert.ok(result.later.includes(fact), `${outlineNumbers}: ${fact}`);
   }
 });
 

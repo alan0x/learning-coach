@@ -17,6 +17,8 @@ import {
 } from "octos-lesson-language/plugin-math";
 import { TIMES_TEN_NUMBER, timesTenDecimal, timesTenStartProblem } from "./place-value-times-ten-moves.js";
 
+// A card's practice is told as `after_class_practice`: the learner's, after class (guidance: a lesson may name it, never
+// works it, writes it out or says its answer; pilot 1, 2026-11-27). The facts state the practice problem only.
 export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
   // The trading mat in its own terms (owner, 2026-11-24): where practice starts, the amount no trade changes,
   // the counts each place passes as it is traded, and the pile with every trade made.
@@ -64,7 +66,7 @@ export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
           places_still_on_chart: placeValueParts(now).map((part) => placeValueColumnName(part.place, chartLanguage)),
           ...(now > 0 ? { next_values: placeValueNextValues(number, now, false).map(placeValueDecimal) } : {}),
         }),
-      ...(values[1] !== undefined ? { practice_number: values[1] } : {}),
+      ...(values[1] !== undefined ? { after_class_practice: values[1] } : {}),
     } };
   },
   // The place-value trade card in its own terms (OLL 0026), once it is drawn: the pair, its answer and columns,
@@ -107,7 +109,7 @@ export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
       ...(card.next
         ? { next: { value: card.next.finished, finishes: name(card.next.place), does: placeValueTradeStepSentences(problem, card.next.finished, cardLanguage) } }
         : { every_column_finished: true }),
-      practice_pair: [tradeDecimal(pa), tradeDecimal(pb)],
+      after_class_practice: [tradeDecimal(pa), tradeDecimal(pb)],
     } };
   },
   // The make-ten card in its own terms (OLL 0027), once it is drawn: the pair and its sum, which frame fills (the
@@ -143,7 +145,7 @@ export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
       ...(filled < MAKE_TEN_PLACES
         ? { next: { value: filled + 1, does: makeTenNext(a, b, filled), says: makeTenStepSentences(problem, filled, filled + 1, cardLanguage) } }
         : { ten_made: true }),
-      practice_pair: [pa, pb],
+      after_class_practice: [pa, pb],
     } };
   },
   // The times-ten card in its own terms (OLL 0028), once it is drawn: the question (a count or a times pair), the
@@ -181,7 +183,7 @@ export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
       ...(k < path.length - 1
         ? { next: path.slice(k + 1).map((value, i) => ({ value: timesTenDecimal(value), does: does[k + i]! })) }
         : { reached_target: true }),
-      practice: [timesTenDecimal(practice.amount), timesTenDecimal(practice.target)],
+      after_class_practice: [timesTenDecimal(practice.amount), timesTenDecimal(practice.target)],
     } };
   },
   function_plot: ({ established }) => (established && fixedLineSamples(established) ? { lead: { sample_slope: "constant" } } : {}),

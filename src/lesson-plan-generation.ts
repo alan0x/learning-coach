@@ -39,6 +39,7 @@ import {
   compileAndValidateLessonPlan,
   mathExpressionToOll,
   separateCardProblemNumbers,
+  CARD_NUMBER_STAYS,
   type CompileLessonPlanOptions,
   type CompiledLessonPlan,
 } from "./lesson-plan-compiler.js";
@@ -3617,7 +3618,10 @@ export async function generateLessonPlanWithModel(
   const leaveOutEarlierPictureMoves = (error: unknown, section: number): CompiledLessonPlan | undefined => {
     const site = faultSite(error, section);
     const draft = drafts[section - 1];
-    if (!site || !draft || site.section >= section) return undefined;
+    // A card in this section too, for a move of a number the card keeps as written (`CARD_NUMBER_STAYS`): once the
+    // section's repairs are spent the move is left out, never the card or the lesson (pilot 1, 2026-11-27).
+    const ownCard = error instanceof LessonPlanError && error.code === CARD_NUMBER_STAYS && site?.kind === "animate";
+    if (!site || !draft || (site.section >= section && !(ownCard && site.section === section))) return undefined;
     const keyOf = (moment: number, action: number) => `${moment}:${action}`;
     const candidates = new Set<string>();
     if (site.kind === "animate") {
@@ -3910,6 +3914,7 @@ export async function generateLessonPlanWithModel(
     // A card the outline gave too few lesson numbers is lost whatever the section writes (a section cannot add
     // an outline number), so it goes now, before any section is written or retried: section 1's by a new
     // outline without it (acceptFirstSection), a later section's from the outline in place.
+    if (outline) for (const hooks of PLUGIN_HOOKS) hooks.prepare_section?.(outline, section, { language: input.language });
     const missing = outline ? outlineNumbersMissing(outline, section) : undefined;
     if (missing && section === 1) throw missing;
     if (missing) await withdrawLaterSectionVisual(section, missing.capability!, outlineNumbersReason(missing), missing.message);
@@ -3963,6 +3968,20 @@ export async function generateLessonPlanWithModel(
         }
         const previousError = sectionErrors.get(section);
         if (unsupportedSectionResponse(error, previousError, input.language)) throw error;
+        if ((sectionAttempts.get(section) ?? 0) >= maxAttempts && error instanceof LessonPlanError && error.code === CARD_NUMBER_STAYS) {
+          // The repairs are spent on a move of a card's own problem or practice number: the move is left out and the
+          // section kept, the card with it, in any section (section 1 too, which is never planned again for it).
+          const kept = leaveOutEarlierPictureMoves(error, section);
+          if (kept) {
+            await options.on_rejected_part?.({ label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error) });
+            sectionErrors.delete(section);
+            for (const left of leftOutMoves) await options.on_program_adjustment?.({ kind: "plot_view_adjusted", section, reason: "animation_left_out", ...left });
+            await reportDraftAdjustments(drafts[section - 1]!);
+            noteCompiledDrops(kept, section);
+            await options.on_playable_prefix?.({ completed_sections: section, compiled: kept });
+            return;
+          }
+        }
         if ((sectionAttempts.get(section) ?? 0) >= maxAttempts) {
           // The repairs are spent on a picture's own limits: a later section is written once more without
           // that picture, outside the repair budget, so the lesson keeps its published sections. Section 1

@@ -162,7 +162,7 @@ test("a practice pair that keeps one number compiles: that variable's range wide
   }
 });
 
-test("a moment that animates the pair or the practice pair is left out and recorded, never refused", () => {
+test("a moment that animates the pair or the practice pair is refused with the card's tag and a fact, never at OLL", () => {
   const result = withTrial(`
     const api = await import(${here("../lesson-plan.js")});
     const { placeValueTradePlan } = await import(${here("./sample-plans.mjs")});
@@ -176,10 +176,12 @@ test("a moment that animates the pair or the practice pair is left out and recor
     console.log(JSON.stringify(out));
   `);
   for (const number of ["1", "3"]) {
-    assert.equal(result[number].compiled, true, number);
-    assert.match(result[number].left[0] ?? "", /stay as written: the demonstration moves only columns finished/, number);
+    assert.deepEqual([result[number].code, result[number].capability], ["LESSON_PLAN_CARD_NUMBER_STAYS", "place_value_trade"], number);
+    assert.match(result[number].message, /which stays as written; the demonstration moves lesson number 5, the columns finished$/u, number);
   }
+  assert.match(result["1"].message, /lesson number 1 is the place-value trade card's first number 3486/u);
 });
+
 
 test("a replay lays the chart fresh again: its own variables only, the pair as the lesson's, columns finished 0", () => {
   const result = withTrial(`
@@ -312,7 +314,7 @@ test("section facts: the card in its own terms, once it is drawn, in the lesson'
       { column: "Ones", below_line: 5 },
     ],
     next: { value: 3, finishes: "Hundreds", does: ["Hundreds: put both rows together, with the carried 100.", "Ten 100s make one 1,000. It goes above the thousands."] },
-    practice_pair: [4658, 1573],
+    after_class_practice: [4658, 1573],
   });
   // Read as the card reads its field: whole columns, within the card's.
   assert.deepEqual([2.5, 9, -1].map((value) => facts({ section: 2, mode: "reuse", established, numbers, state: new Map([[5, value]]), language: "en-US" }).facts.columns_finished), [2, 4, 0]);
@@ -320,7 +322,7 @@ test("section facts: the card in its own terms, once it is drawn, in the lesson'
   const decimals = [8.2, 3.75, 9.3, 4.68, 0].map((initial) => ({ initial, min: 0, max: initial }));
   const sub = { ...established, parameters: { operation: "subtract" } };
   const done = facts({ section: 3, mode: "reuse", established: sub, numbers: decimals, state: new Map([[5, 3]]), language: "zh-CN" }).facts;
-  assert.deepEqual([done.pair, done.answer, done.columns, done.every_column_finished, "next" in done, done.practice_pair], [[8.2, 3.75], 4.45, ["个位", "十分位", "百分位"], true, false, [9.3, 4.68]]);
+  assert.deepEqual([done.pair, done.answer, done.columns, done.every_column_finished, "next" in done, done.after_class_practice], [[8.2, 3.75], 4.45, ["个位", "十分位", "百分位"], true, false, [9.3, 4.68]]);
   assert.deepEqual(done.demonstration_to, { columns_finished: 3, answer: 4.45 });
   // Nothing done yet: the next value finishes the hundredths, borrowing from the tenths.
   const fresh = facts({ section: 2, mode: "reuse", established: sub, numbers: decimals, state: new Map(), language: "en-US" }).facts;
@@ -376,7 +378,7 @@ test("a stubbed generation run: the card, its steps and the practice reach the l
   assert.deepEqual(result.adjustments, []);
   // Section 2 is told where the demonstration stands and what the next value does.
   const facts = JSON.stringify(result.later);
-  for (const fact of ['"columns_finished":2', '"answer":4734', '"finishes":"Hundreds"', '"practice_pair":[8461,3729]', '"take_away":6']) assert.ok(facts.includes(fact), fact);
+  for (const fact of ['"columns_finished":2', '"answer":4734', '"finishes":"Hundreds"', '"after_class_practice":[8461,3729]', '"take_away":6']) assert.ok(facts.includes(fact), fact);
 });
 
 test("the fixed sample (used for request hashes with the trial on) compiles through the full OLL validation", () => {

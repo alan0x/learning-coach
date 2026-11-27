@@ -19,7 +19,7 @@ const SCENE_FIRST_CAMERA = { yaw: 0.72, pitch: 0.55, zoom: 1 } as const;
 // The place-value chart's guidance in two parts, so the cards offered beside it can narrow what it is not for
 // (`model_guidance_with`) while its text alone stays byte-identical.
 const PLACE_VALUE_CHART_GUIDANCE_HEAD = "数位表：照读法、展开式或每一位有几个摆出一个数，或把一个数按数位一位一位拆开（到百万位和千分位）。不用于比较两个数、十个这一位是左边一位的一个、在表上加减、凑整";
-const PLACE_VALUE_CHART_GUIDANCE_TAIL = "，也不用于低年级的十个一换一个十（用方块）。数值依次是题目的数和练习的数（另一个数，不是题目的，免得孩子照抄演示），数值写这个数本身（如 0.309），不写 0：表一开始是空的，由程序摆，写实际大小（26.075），最多三位小数。given 是卡片上给出的：摆数写 name（读法）、expanded（值的和，如 4,000 + 50）、expanded_factors（如 4 × 1,000 + 5 × 10）或 place_counts（如 8个千、6个十和3个一）；拆数写 numeral，拆的数有小数时整数部分英文课不超过三位、中文课不超过四位。只有一位不是零的数（4000、0.05）不用 expanded，也不拆。带乘号的小数写法（3 × (1/10)）只用于英文五年级的小数题或题目自己这样写；中文课用 place_counts（3个0.1、9个0.01和2个0.001）或值的和（0.3 + 0.09 + 0.002）。卡片上的读法、展开式和数字都由程序写。摆数演示时把题目的数动画到表上现在的值：从 0 起，每一步摆上一位或几位，通常从最高位起（60408：先到 60000，再到 60400，最后 60408）；后面的节再写这个数，表不变。拆数演示时把题目的数动画到表上还剩的：每一步拿出一位或几位，如 60408 先到 408，再到 8，最后到 0。练习：对题目的数写一个数值目标题（数值写练习的数），孩子在表上摆出或拆开练习的数；摆数题的题目和提示不写练习的数（卡片上已经给出它的读法或展开式）；拆完以后程序出一行空，写每一部分是多少。说数位用名字（千位、十分位、hundreds），不说怎么点卡片";
+const PLACE_VALUE_CHART_GUIDANCE_TAIL = "，也不用于低年级的十个一换一个十（用方块）。数值依次是题目的数和练习的数（另一个数，不是题目的，免得孩子照抄演示），数值写这个数本身（如 0.309），不写 0：表一开始是空的，由程序摆，写实际大小（26.075），最多三位小数。given 是卡片上给出的：摆数写 name（读法）、expanded（值的和，如 4,000 + 50）、expanded_factors（如 4 × 1,000 + 5 × 10）或 place_counts（如 8个千、6个十和3个一）；拆数写 numeral，拆的数有小数时整数部分英文课不超过三位、中文课不超过四位。只有一位不是零的数（4000、0.05）不用 expanded，也不拆。带乘号的小数写法（3 × (1/10)）只用于英文五年级的小数题或题目自己这样写；中文课用 place_counts（3个0.1、9个0.01和2个0.001）或值的和（0.3 + 0.09 + 0.002）。卡片上的读法、展开式和数字都由程序写。摆数演示时把题目的数动画到表上现在的值：从 0 起，每一步摆上一位或几位，通常从最高位起（60408：先到 60000，再到 60400，最后 60408）；后面的节再写这个数，表不变。拆数演示时把题目的数动画到表上还剩的：每一步拿出一位或几位，如 60408 先到 408，再到 8，最后到 0。练习的数是孩子课后自己做的：课上可以说“课后试试……”，但不讲它怎么做、不写出它的算式、不说它的答案，outline 也不为它安排一节。练习：对题目的数写一个数值目标题（数值写练习的数），孩子在表上摆出或拆开练习的数；摆数题的题目和提示不写练习的数（卡片上已经给出它的读法或展开式）；拆完以后程序出一行空，写每一部分是多少。说数位用名字（千位、十分位、hundreds），不说怎么点卡片";
 
 export const MATH_RECIPES = {
   function_plot: {
@@ -231,6 +231,11 @@ export const MATH_RECIPES = {
     number_inputs: ["first", "second", "practice_first", "practice_second", "columns_finished"],
     // The pair is the problem, which the card only reads: another picture may show it on a copy of its own.
     number_roles: ["problem", "problem", "practice", "practice", "demonstration"],
+    // A move of the pair or the practice pair is refused with what the number is to the card (pilot 1, 2026-11-27: a move
+    // left out let a card sit still under narration that moved it); left out only once the section's repairs are spent.
+    wrong_number_moves: "refused",
+    card_name: "place-value trade card",
+    number_names: ["first number", "second number", "practice first number", "practice second number", "columns finished"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
     // Columns finished starts at 0 whatever the outline holds (the card is drawn with no column done), so the
     // program supplies it: an outline that declares only the four numbers before it gets it (0, from 0 to the
@@ -251,7 +256,7 @@ export const MATH_RECIPES = {
     // fixed text says how it is used.
     student_controls: [],
     required_features: ["column_add_subtract_trades"],
-    model_guidance: "数位表加减（竖式，进位、退位就是交换）：多位数加减（到十万位）和小数加减（到百分位），至少有一位要进位或退位，最多六列（从两个数最低的一位到两个数和得数最高的一位）。不用于摆数、拆数、比较、凑整、乘法，也不用于低年级的凑十（用方块）。operation 写 add 或 subtract。outline 的 numbers 依次写这五个数（不动的也要写）：第一个数、第二个数（减法第一个数不小于第二个数）、练习的第一个数、练习的第二个数、做完了几列。数值写实际大小（2.75），最多两位小数。练习的一对是另一对（不是题目的，免得孩子照抄演示），也要进位或退位，列和题目的一样（同样多的整数位和小数位，题目的得数多出一位时练习的也多出一位）。做完了几列从最右边一列数起，写 0：表一开始一列也没有做。演示时把它动画到 1、2……：每到一个值，程序按规则做完右边又一列（合起来、满十换一、不够拆一），只往前走，同一个值再写表不变；演示做完每一列，一直到得数（最后一个值是列数）。两个数和练习的数不动画。练习：对做完了几列写一个数值目标题（数值写列数），孩子在表上做完练习的一对，程序再自己问得数，不另出问这一对得数的填数题；题目和提示不写练习的得数。表上的数、圆片和操作说明都由卡片自己写；说数位用名字（个位、十分位、hundreds），不说怎么点卡片",
+    model_guidance: "数位表加减（竖式，进位、退位就是交换）：多位数加减（到十万位）和小数加减（到百分位），至少有一位要进位或退位，最多六列（从两个数最低的一位到两个数和得数最高的一位）。不用于摆数、拆数、比较、凑整、乘法，也不用于低年级的凑十（用方块）。operation 写 add 或 subtract。outline 的 numbers 依次写这五个数（不动的也要写）：第一个数、第二个数（减法第一个数不小于第二个数）、练习的第一个数、练习的第二个数、做完了几列。数值写实际大小（2.75），最多两位小数。练习的一对是另一对（不是题目的，免得孩子照抄演示），也要进位或退位，列和题目的一样（同样多的整数位和小数位，题目的得数多出一位时练习的也多出一位）。做完了几列从最右边一列数起，写 0：表一开始一列也没有做。演示时把它动画到 1、2……：每到一个值，程序按规则做完右边又一列（合起来、满十换一、不够拆一），只往前走，同一个值再写表不变；演示做完每一列，一直到得数（最后一个值是列数）。两个数和练习的数不动画。练习的数是孩子课后自己做的：课上可以说“课后试试……”，但不讲它怎么做、不写出它的算式、不说它的答案，outline 也不为它安排一节。练习：对做完了几列写一个数值目标题（数值写列数），孩子在表上做完练习的一对，程序再自己问得数，不另出问这一对得数的填数题；题目和提示不写练习的得数。表上的数、圆片和操作说明都由卡片自己写；说数位用名字（个位、十分位、hundreds），不说怎么点卡片",
   },
   // OLL decision 0027 (a trial): making ten to add on two ten frames (8 + 6 = 8 + 2 + 4 = 10 + 4). The model writes
   // the question's pair and a practice pair; the program supplies the count in the bigger number's frame (it starts
@@ -264,6 +269,11 @@ export const MATH_RECIPES = {
     number_inputs: ["first", "second", "practice_first", "practice_second", "filled", "moved"],
     // The pair is the problem, which the card only reads: another picture may show it on a copy of its own.
     number_roles: ["problem", "problem", "practice", "practice", "demonstration", "program"],
+    // A move of the pair or the practice pair is refused with what the number is to the card (pilot 1, MT-13: the first
+    // addend animated to 10 was left out and the card sat still); left out only once the section's repairs are spent.
+    wrong_number_moves: "refused",
+    card_name: "make-ten card",
+    number_names: ["first addend", "second addend", "practice first addend", "practice second addend", "count in the bigger frame", "count moved"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
     // The two counts start where the pair puts them (the frames apart, nothing moved), so the program supplies
     // them: an outline that declares the four numbers before them gets both, one that also declares the first
@@ -285,7 +295,7 @@ export const MATH_RECIPES = {
     // fixed text says how it is used.
     student_controls: [],
     required_features: ["make_ten_to_add"],
-    model_guidance: "凑十（两个十格框）：两个一位数相加、和大于10（如8+6），小数分出一部分把大数补成十。也用于问“应该拆哪个数”“怎样拆算得快”：卡片画快的拆法（拆小数补大数，如4+9拆4补9），慢的拆法只用话说，不画。不用于和正好是10、接着数、破十减、两位数加一位数、三个数相加。这道加法的画面是这张卡片；后面的节可以再用数轴把同一道加法走一遍，数轴不代替这张卡片。outline 的 numbers 依次写四个数：题目的两个数、练习的两个数（另一对，也是一位数、和大于10，不是题目的，换顺序也不算）。程序再补两个数：大数那一框里有几个（开始就是大数）、移过去几个（0）。演示时把第五个数动画到10，一直到大数那一框满十，程序一个一个地移圆片；别的数不动画。练习：对第五个数写一个数值目标题（数值写10），孩子自己补满十，程序再出一行空（8+6=8+__+__=10+__=__）；题目和提示不写练习的和。不说怎么点卡片",
+    model_guidance: "凑十（两个十格框）：两个一位数相加、和大于10（如8+6），小数分出一部分把大数补成十。也用于问“应该拆哪个数”“怎样拆算得快”：卡片画快的拆法（拆小数补大数，如4+9拆4补9），慢的拆法只用话说，不画。不用于和正好是10、接着数、破十减、两位数加一位数、三个数相加。这道加法的画面是这张卡片；后面的节可以再用数轴把同一道加法走一遍，数轴不代替这张卡片。outline 的 numbers 依次写四个数：题目的两个数、练习的两个数（另一对，也是一位数、和大于10，不是题目的，换顺序也不算）。程序再补两个数：大数那一框里有几个（开始就是大数）、移过去几个（0）。演示时把第五个数动画到10，一直到大数那一框满十，程序一个一个地移圆片；别的数不动画。练习的数是孩子课后自己做的：课上可以说“课后试试……”，但不讲它怎么做、不写出它的算式、不说它的答案，outline 也不为它安排一节。练习：对第五个数写一个数值目标题（数值写10），孩子自己补满十，程序再出一行空（8+6=8+__+__=10+__=__）；题目和提示不写练习的和。不说怎么点卡片",
   },
   // OLL decision 0028 (a trial): the same amount counted in another unit on the place-value chart, a count (3 tenths =
   // ? thousandths) or a times pair (700 is ? times 70). The model writes the amount, the unit asked and a practice of
@@ -300,6 +310,10 @@ export const MATH_RECIPES = {
     number_inputs: ["amount", "unit_asked", "practice_amount", "practice_unit_asked", "start_unit"],
     // The amount and the unit asked are the problem, which the card only reads: another picture may show them on a copy.
     number_roles: ["problem", "problem", "practice", "practice", "demonstration"],
+    // Left out since #188; refused like the other cards' since pilot 1 (2026-11-27), behind this flag ("left_out" goes back).
+    wrong_number_moves: "refused",
+    card_name: "times-ten card",
+    number_names: ["amount", "unit asked", "practice amount", "practice unit asked", "start unit"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
     // Counted in starts at the unit the question names: for a count that breaks and for a times pair it is the
     // amount's own place, so the program supplies it from the amount when the outline declares only the four numbers
@@ -320,7 +334,7 @@ export const MATH_RECIPES = {
     // text says how it is used.
     student_controls: [],
     required_features: ["count_in_another_unit"],
-    model_guidance: "换一个单位来数（数位表：往右一位一个拆成十个，往左一位十个合成一个）：数单位（3个十分之一=?个千分之一；6个千=?个百；一千里有几个十）或倍数（700是70的几倍；0.3是3的十分之一）。这些题用这张卡，不用 trade_ten_for_one（它只把十个合成一个）。数只有一位不是零（5550里的两个5写500和50），单位最多隔两位，倍数是相邻两位。不用于一个数字表示多少、比较、加减、乘除以10或100、除以小数。outline 的 numbers 依次是五个角色，每个数的 label 用课的语言写它的角色（如 unit asked、问的单位）：amount 要数的数（写值，3个十分之一写0.3）；unit_asked 问的单位（问“是几个百分之一”写0.01；倍数写小的数70）；practice_amount、practice_unit_asked 练习的两个数（同一种问法，隔同样几位、同一方向，不是题目的）；start_unit 要数的数现在用什么单位在数（题目说它时用的单位）。拆开的题（往小的单位数）和倍数不写 start_unit，程序补成要数的数自己那一位：7个十分之一=?个百分之一 写0.7、0.01、练习两个数；一千里有几个十 写1000、10、练习两个数。合起来的题（往大的单位数）要写：70个百分之一=?个十分之一 写0.7、0.1、练习两个数、0.01。start_unit 和 unit_asked 是两个不同的单位。演示只动画 start_unit（第五个数）：从它一步一步动画到 unit_asked 的值（0.1、0.01、0.001；倍数到70），只往前走，一直到问的单位；别的数不动画。练习：对第五个数写数值目标题，程序再出答案那一行；题目和提示不写练习的答案。不说怎么点卡片",
+    model_guidance: "换一个单位来数（数位表：往右一位一个拆成十个，往左一位十个合成一个）：数单位（3个十分之一=?个千分之一；6个千=?个百；一千里有几个十）或倍数（700是70的几倍；0.3是3的十分之一）。这些题用这张卡，不用 trade_ten_for_one（它只把十个合成一个）。数只有一位不是零（5550里的两个5写500和50），单位最多隔两位，倍数是相邻两位。不用于一个数字表示多少、比较、加减、乘除以10或100、除以小数。outline 的 numbers 依次是五个角色，每个数的 label 用课的语言写它的角色（如 unit asked、问的单位）：amount 要数的数（写值，3个十分之一写0.3）；unit_asked 问的单位（问“是几个百分之一”写0.01；倍数写小的数70）；practice_amount、practice_unit_asked 练习的两个数（同一种问法，隔同样几位、同一方向，不是题目的）；start_unit 要数的数现在用什么单位在数（题目说它时用的单位）。拆开的题（往小的单位数）和倍数不写 start_unit，程序补成要数的数自己那一位：7个十分之一=?个百分之一 写0.7、0.01、练习两个数；一千里有几个十 写1000、10、练习两个数。合起来的题（往大的单位数）要写：70个百分之一=?个十分之一 写0.7、0.1、练习两个数、0.01。start_unit 和 unit_asked 是两个不同的单位。演示只动画 start_unit（第五个数）：从它一步一步动画到 unit_asked 的值（0.1、0.01、0.001；倍数到70），只往前走，一直到问的单位；别的数不动画。练习的数是孩子课后自己做的：课上可以说“课后试试……”，但不讲它怎么做、不写出它的算式、不说它的答案，outline 也不为它安排一节。练习：对第五个数写数值目标题，程序再出答案那一行；题目和提示不写练习的答案。不说怎么点卡片",
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
@@ -445,7 +459,7 @@ export const MATH_RECIPES = {
     model_guidance: "数轴分步：两到三步的加减（数轴加减是一步），如凑十、先整十再个位、上下移动；数值依次是起点和各步移动量（两步写两个），落点和终点由程序算；往回走的一步不讲一格一格",
     // Beside the make-ten card (a trial, OLL 0027) the line does not claim making ten with two one-digit numbers
     // (MT-07: "4 + 9, which number should I split?" drew the line in 2 of 2 runs). Without the trial its text is unchanged.
-    model_guidance_with: { make_ten: "数轴分步：两到三步的加减（数轴加减是一步），如先整十再个位、上下移动、两位数加一位数先凑整十（38+5）；两个一位数相加的凑十（4+9、8+6，也包括问拆哪个数），题目的画面是凑十卡片，数轴分步只在卡片之后的节里作第二种看法；数值依次是起点和各步移动量（两步写两个），落点和终点由程序算；往回走的一步不讲一格一格" },
+    model_guidance_with: { make_ten: "数轴分步：两到三步的加减（数轴加减是一步），如先整十再个位、上下移动、两位数加一位数先凑整十（38+5）；两个一位数相加的凑十（4+9、8+6，也包括问拆哪个数），题目的画面是凑十卡片，数轴分步只在卡片之后的节里作第二种看法，数值写程序在 numbers 里给出的三个数：数轴的起点（大数）、补成十的一步、剩下的一步（8+5：8，+2，+3）；数值依次是起点和各步移动量（两步写两个），落点和终点由程序算；往回走的一步不讲一格一格" },
   },
 } as const;
 

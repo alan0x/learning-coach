@@ -113,14 +113,13 @@ test("one copy per problem number: a third picture on it is refused, with the fa
   assert.match(result.error.message, /lesson number 1 is the make-ten card's problem number, and another picture already shows it on a copy of its own; the rectangle_unit_square_array visual shows it too/u);
 });
 
-test("before the line is drawn, a move of the pair is left out and recorded; it never refuses the section", () => {
+test("before the line is drawn, a move of the pair is the card's, which keeps it as written: refused with the fact (pilot 1)", () => {
   const result = run(`
     const compiled = compile(makeTen([{ narration: "先说一说。", actions: [animate(2, 4)] }, { narration: "数轴。", actions: [local("number_line", [1, 2])] }]));
-    console.log(JSON.stringify(compiled.error ?? { left: compiled.view_adjustments.filter((each) => each.reason === "animation_left_out").length,
-      moved: actions(compiled.lesson).filter((action) => action.do === "animate" && action.variable.startsWith("number_")).length }));
+    console.log(JSON.stringify(compiled.error ?? { compiled: true }));
   `);
-  assert.equal(result.code, undefined, JSON.stringify(result));
-  assert.deepEqual(result, { left: 1, moved: 0 });
+  assert.equal(result.code, "LESSON_PLAN_CARD_NUMBER_STAYS");
+  assert.match(result.message, /lesson number 2 is the make-ten card's second addend 5, which stays as written/u);
 });
 
 test("PT-15 with a built chart (7 variables): the chart in section 1 keeps 8.2 and the column card in section 2 reads a copy; section 1 compiles exactly as it did alone", () => {
