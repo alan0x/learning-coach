@@ -55,12 +55,18 @@ export function timesTenStartProblem(values: readonly number[]): { problem: Plac
   if ([A, T, PA, PT].some((value) => value === undefined || value <= 0)) return { fault: "the amount, the target and the practice's two numbers are numbers above 0 with at most three decimal places (thousandths)" };
   // Counted in as written decides the problem only where it names a unit the amount can start in (a put-together
   // question's 0.01); one that cannot (0, or 0.01 for 3 tenths) is read over when the amount's own place makes a
-  // problem: the card opens fresh there.
+  // problem: the card opens fresh there. Never when it is the target itself: then the target and the unit the
+  // question names are mixed up (objective run 1, PF-05: 40 hundredths = ? tenths written 0.4, 0.01, ..., 0.01), and
+  // reading over would draw another question (0.4 counted in hundredths).
   const written = timesTenProblemOf(A!, T!, C);
-  const own = "fault" in written ? timesTenProblemOf(A!, T!, undefined) : written;
+  const mixed = "fault" in written && C === T;
+  const own = "fault" in written && !mixed ? timesTenProblemOf(A!, T!, undefined) : written;
   const problem = "fault" in own ? written : own;
   if ("fault" in problem) {
     const said = placeValueTimesTenFaultText(problem.fault as Parameters<typeof placeValueTimesTenFaultText>[0], A, T);
+    if (mixed) {
+      return { fault: `${said}; the target (the second number) is the unit the question asks for and counted in (the fifth number) the unit it names: 40 hundredths = ? tenths is 0.4, 0.1, then the practice, then 0.01` };
+    }
     return { fault: problem.fault === "same_unit" || problem.fault === "start_not_unit"
       ? `${said}; counted in (the fifth number) is the unit the question names, not the target: 3 tenths starts at 0.1, 40 hundredths at 0.01`
       : `the question: ${said}` };
@@ -74,6 +80,17 @@ export function timesTenStartProblem(values: readonly number[]): { problem: Plac
     return { fault: `the practice is ${how}: ${placeValueTimesTenFaultText(practice.fault as Parameters<typeof placeValueTimesTenFaultText>[0], PA, PT)}` };
   }
   return { problem, practice };
+}
+
+/**
+ * Why the card cannot start on the outline's numbers (its five, in order, as the outline declares them with the
+ * program's own), or undefined: the recipe's `outline_fault`. A section cannot change an outline number, so the card
+ * goes at once, before any section is written for it (objective run 1: PF-05, PF-09, PF-17 spent three section
+ * attempts each on numbers no section could fix).
+ */
+export function timesTenOutlineFault(values: readonly number[]): string | undefined {
+  const found = timesTenStartProblem(values);
+  return "fault" in found ? found.fault : undefined;
 }
 
 /** "0.1 (tenths) -> 0.01 (hundredths) -> 0.001 (thousandths)", or "100 (hundreds) -> 70". */
@@ -156,16 +173,23 @@ export function placeValueTimesTenMove(state: readonly number[], position: numbe
 
 /** Several animations of one card in one moment, applied in order; the states after each, or the first refusal. */
 export function placeValueTimesTenMoves(state: readonly number[], moves: ReadonlyArray<{ position: number; to: number }>):
-  { steps: Array<{ position: number; from: number[]; to: number[] }> } | { refused: { position: number; reason: string } } {
+  { steps: Array<{ position: number; from: number[]; to: number[] }>; ignored?: Array<{ position: number; reason: string }> } | { refused: { position: number; reason: string } } {
   const steps: Array<{ position: number; from: number[]; to: number[] }> = [];
+  const ignored: Array<{ position: number; reason: string }> = [];
   let current = [...state];
   for (const move of moves) {
+    // The amount, the target and the practice never move: an animation of one is left out (and recorded by the
+    // compiler), not refused, so a section's repairs are not spent on it (objective run 1, PF-02 and PF-10).
+    if (move.position >= 0 && move.position < TIMES_TEN_NUMBER.countedIn && move.to !== current[move.position]) {
+      ignored.push({ position: move.position, reason: "the amount, the target and the practice stay as written: the demonstration moves only counted in (the card's fifth lesson number)" });
+      continue;
+    }
     const result = placeValueTimesTenMove(current, move.position, move.to);
     if (typeof result === "string") return { refused: { position: move.position, reason: result } };
     steps.push({ position: move.position, from: current, to: result });
     current = result;
   }
-  return { steps };
+  return { steps, ...(ignored.length ? { ignored } : {}) };
 }
 
 const FULL_WIDTH = /[０-９．，＝]/gu;

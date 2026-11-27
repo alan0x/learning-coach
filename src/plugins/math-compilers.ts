@@ -2228,7 +2228,7 @@ function compileMakeTen(
 /** The times-ten card's own words: the labels of the variables it creates. Everything said is the model's. */
 const TIMES_TEN_TEXT = {
   "en-US": { amount: "the amount", target: "the target", counted_in: "counted in", moved_once: "rows moved once", moved_twice: "rows moved twice" },
-  "zh-CN": { amount: "要数的数", target: "用什么来数", counted_in: "现在用什么单位在数", moved_once: "动过一次的行", moved_twice: "动过两次的行" },
+  "zh-CN": { amount: "要数的数", target: "问的单位", counted_in: "现在用什么单位在数", moved_once: "动过一次的行", moved_twice: "动过两次的行" },
 } as const;
 
 /**

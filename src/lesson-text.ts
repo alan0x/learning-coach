@@ -30,7 +30,7 @@ const EN: Readonly<Record<string, string>> = {
   "大数那一框里有几个": "in the bigger number's frame", "移过去几个": "moved across",
   "写成算式。": "Write it as a number sentence.", "写出有多少个。": "Write how many.", "写出答案。": "Write the answers.",
   "数一数目标那一列。": "Count the target column.", "先数一个小的数里有几个，再数有几个小的数。": "Count what one copy of the smaller number holds, then how many copies there are.",
-  "要数的数": "the amount", "用什么来数": "the target", "现在用什么单位在数": "counted in", "先读满十的那一框，再读另一框。": "Read the full frame first, then the other one.",
+  "要数的数": "the amount", "问的单位": "the target", "现在用什么单位在数": "counted in", "先读满十的那一框，再读另一框。": "Read the full frame first, then the other one.",
   "先读另一框剩下的，再读满十的那一框。": "Read what is left in the other frame first, then the full frame.",
   "y 截距": "y-intercept", "x 截距": "x-intercept", "对称轴": "Axis of symmetry", "定义域": "Domain", "值域": "Range",
   "A点的x坐标": "x-coordinate of point A", "B点的x坐标": "x-coordinate of point B",

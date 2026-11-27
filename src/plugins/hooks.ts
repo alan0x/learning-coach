@@ -54,9 +54,18 @@ export interface RecipeHooks {
    */
   number_moves?: {
     state(start: readonly number[], content?: LessonPlanVisualContent): number[];
+    // `ignored`: animations the card leaves out rather than refuses (a number it never moves), each with why; the
+    // compiler records them and plays the rest.
     moves(state: readonly number[], moves: ReadonlyArray<{ position: number; to: number }>):
-      { steps: Array<{ position: number; from: number[]; to: number[] }> } | { refused: { position: number; reason: string } };
+      { steps: Array<{ position: number; from: number[]; to: number[] }>; ignored?: Array<{ position: number; reason: string }> } | { refused: { position: number; reason: string } };
   };
+  /**
+   * Why the visual cannot start on the outline's numbers, or undefined. `values` are its lesson numbers' starting
+   * values as the outline declares them (with the program's own), in its number order; asked only when the visual
+   * is the outline's first numbered picture, so those are its numbers. A section cannot change an outline number,
+   * so the visual goes at once, before any section is written for it.
+   */
+  outline_fault?(values: readonly number[]): string | undefined;
   /**
    * The model wrote several first-section creates of this course visual (their contents, in order): the
    * index of the one the card is made from, drawn at the first create's moment. Without the hook Coach

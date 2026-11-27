@@ -643,6 +643,11 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
           // lesson (BT-31, check 4: two piles to compare, moved as one; Coach #170).
           fail("LESSON_PLAN_NUMBER_NOT_DRAWABLE", `${momentPath}.actions[${at.offset}].end_value`, result.refused.reason, capability);
         }
+        // An animation the card leaves out (a number it never moves) is recorded; the rest play.
+        for (const ignored of result.ignored ?? []) {
+          const at = animations.find((animation) => animation.position === ignored.position)!;
+          viewAdjustments.push({ section: sectionIndex, reason: "animation_left_out", detail: `${momentPath}.actions[${at.offset}]: ${ignored.reason}; left out` });
+        }
         state.now = result.steps.at(-1)?.to ?? state.now;
         const PHASES = ["before_speech", "during_speech", "after_speech"];
         const phase = (timing: unknown) => PHASES.indexOf(String(timing ?? "during_speech"));
