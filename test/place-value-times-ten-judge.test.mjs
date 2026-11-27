@@ -20,13 +20,14 @@ function row(p, answers = p.answers) {
 }
 
 /** A times-ten lesson as the recipe is to write it: the card, "counted in" animated, practices with the card's row. */
-function timesTenLesson({ amount, target, start, language = "en-US", cardLanguage = language, practice = [], counted = [], rows, starts = [], typed, cardStart = {} }) {
+function timesTenLesson({ amount, target, start, language = "en-US", cardLanguage = language, practice = [], counted = [], rows, starts = [], typed, cardStart = {}, asWritten = false }) {
   const p = timesTenProblem(v(amount), v(target), start === undefined ? undefined : v(start));
   if (p.fault) throw new Error(`fixture: ${p.fault}`);
   const fields = p.g === 2 ? ["moved_once", "moved_twice"] : ["moved_once"];
   const tasks = practice.flatMap(([pa, pt], i) => {
     const q = timesTenProblemOfShape(shapeOf(p), v(pa), v(pt));
-    const values = { amount: q.amount ?? v(pa), target: q.target ?? v(pt), counted_in: q.start ?? 0, ...Object.fromEntries(fields.map((field) => [field, 0])), ...(starts[i] ?? {}) };
+    // As written (asWritten): the numbers as given, a times pair possibly smaller first; else as the card takes them.
+    const values = { amount: asWritten ? v(pa) : q.amount ?? v(pa), target: asWritten ? v(pt) : q.target ?? v(pt), counted_in: q.start ?? 0, ...Object.fromEntries(fields.map((field) => [field, 0])), ...(starts[i] ?? {}) };
     return [
       {
         as: `practice-${i + 1}`, prompt: "Move every disk to the target column.", availability: { kind: "after_lesson" },
@@ -43,7 +44,7 @@ function timesTenLesson({ amount, target, start, language = "en-US", cardLanguag
   });
   const content = {
     ...(cardLanguage !== "en-US" ? { language: cardLanguage } : {}),
-    ...shapeOf(p), amount: p.amount, target: p.target, counted_in: p.start, moved_once: 0, ...(p.g === 2 ? { moved_twice: 0 } : {}), ...cardStart,
+    ...shapeOf(p), amount: asWritten ? v(amount) : p.amount, target: asWritten ? v(target) : p.target, counted_in: p.start, moved_once: 0, ...(p.g === 2 ? { moved_twice: 0 } : {}), ...cardStart,
     bindings: ["amount", "target", "counted_in", ...fields].map((field) => ({ target: field, expression: field })),
   };
   return {
@@ -51,7 +52,7 @@ function timesTenLesson({ amount, target, start, language = "en-US", cardLanguag
     lesson: {
       mode: "explain", language, title: "Ten of one place", goals: ["Count an amount in another unit"],
       variables: [
-        { as: "amount", initial: p.amount, min: 1, max: 9_000_000_000 }, { as: "target", initial: p.target, min: 1, max: 9_000_000_000 },
+        { as: "amount", initial: asWritten ? v(amount) : p.amount, min: 1, max: 9_000_000_000 }, { as: "target", initial: asWritten ? v(target) : p.target, min: 1, max: 9_000_000_000 },
         { as: "counted_in", initial: cardStart.counted_in ?? p.start, min: 0, max: 9_000_000_000 }, ...fields.map((field) => ({ as: field, initial: cardStart[field] ?? 0, min: 0, max: 511 })),
       ],
       tasks,
@@ -103,7 +104,7 @@ test("a served lesson passes: a count, a times pair, a put-together question in 
   assert.equal(verdict.pass, true, JSON.stringify(failed(verdict)));
   const smallerFirst = timesTenLesson({ amount: "0.3", target: "3", practice: [["0.6", "0.06"]] });
   verdict = judgePlaceValueTimesTen(byId["PF-14"], smallerFirst);
-  assert.equal(verdict.pass, true, `a times pair written either way: ${JSON.stringify(failed(verdict))}`);
+  assert.equal(verdict.pass, true, `a question written smaller first, drawn larger first: ${JSON.stringify(failed(verdict))}`);
   assert.deepEqual(noted(verdict), ["the demonstration reaches the target"], "no demonstration: a note, never a failure");
   const together = timesTenLesson({ amount: "0.4", target: "0.1", start: "0.01", language: "zh-CN", practice: [["0.06", "0.01"]], counted: [100] });
   verdict = judgePlaceValueTimesTen(byId["PF-05"], together);
@@ -160,4 +161,37 @@ test("a task the learner cannot reach fails: another shape, the lesson's own, no
   const lesson = timesTenLesson({ amount: "0.2", target: "0.001", practice: [["5", "0.01"]] });
   lesson.lesson.tasks[0].allowed_operations.push({ kind: "card_submit" });
   assert.deepEqual(failed(judgePlaceValueTimesTen(byId["PF-12"], lesson)), ["practice-1: the task on the card is its complete fact, by taps"]);
+});
+
+test("a times pair is written larger first, and the practice is never the lesson's pair the other way round (review of #185)", () => {
+  // The card written smaller first (0.3 and 3): OLL refuses it.
+  const smaller = timesTenLesson({ amount: "0.3", target: "3", practice: [["0.6", "0.06"]], asWritten: true });
+  assert.deepEqual(failed(judgePlaceValueTimesTen(byId["PF-14"], smaller)), ["the times pair is written larger first"]);
+  // PF-07: the practice is the lesson's 700 and 70 written the other way round, with the lesson's row [70, 10].
+  const reversed = timesTenLesson({ amount: "700", target: "70", practice: [["70", "700"]], asWritten: true });
+  assert.deepEqual(failed(judgePlaceValueTimesTen(byId["PF-07"], reversed)),
+    ["practice-1: the practice is not the lesson's own problem", "practice-1: the practice's times pair is written larger first"]);
+  // PF-14: the card smaller first, the practice its own pair larger first.
+  const both = timesTenLesson({ amount: "0.3", target: "3", practice: [["3", "0.3"]], asWritten: true });
+  assert.deepEqual(failed(judgePlaceValueTimesTen(byId["PF-14"], both)), ["the times pair is written larger first", "practice-1: the practice is not the lesson's own problem"]);
+  // Another pair, written smaller first: only the order fails.
+  const other = timesTenLesson({ amount: "3", target: "0.3", practice: [["0.06", "0.6"]], asWritten: true });
+  assert.deepEqual(failed(judgePlaceValueTimesTen(byId["PF-14"], other)), ["practice-1: the practice's times pair is written larger first"]);
+});
+
+test("the demonstration stays on its path, forward; a practice start sets every field the card binds (review of #185)", () => {
+  const fails = (input, item = "PF-12") => failed(judgePlaceValueTimesTen(byId[item], timesTenLesson({ amount: "0.2", target: "0.001", practice: [["5", "0.01"]], ...input })));
+  const path = "the demonstration moves counted in along its path, forward";
+  assert.deepEqual(fails({ counted: [10, 1] }), []);
+  assert.deepEqual(fails({ counted: [1] }), [], "straight to the target");
+  assert.deepEqual(fails({ counted: [50] }), [path], "between two of its values");
+  assert.deepEqual(fails({ counted: [10, 100] }), [path], "back");
+  assert.deepEqual(fails({ counted: [10_000] }), [path], "off the path");
+  assert.deepEqual(failed(judgePlaceValueTimesTen(byId["PF-07"], timesTenLesson({ amount: "700", target: "70", practice: [["4000", "400"]], counted: [10_000] }))), [path], "a times pair's path is 100 then 70");
+  // A practice start without a bound row set.
+  const lesson = timesTenLesson({ amount: "0.2", target: "0.001", practice: [["5", "0.01"]] });
+  const start = lesson.lesson.tasks[0].start;
+  delete start.values.moved_twice;
+  start.variables = start.variables.filter((variable) => variable !== "moved_twice");
+  assert.deepEqual(failed(judgePlaceValueTimesTen(byId["PF-12"], lesson)), ["practice-1: the practice start sets every field the card binds"]);
 });

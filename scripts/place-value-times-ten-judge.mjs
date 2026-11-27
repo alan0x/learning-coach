@@ -132,6 +132,10 @@ const problemText = (state) => `${numeral(state.amount)} in ${numeral(state.targ
 const freshFault = (state, problem) => (state.counted_in === problem.start && !state.moved_once && !state.moved_twice
   ? undefined : `counted_in ${state.counted_in} (fresh is ${problem.start}), moved_once ${state.moved_once}, moved_twice ${state.moved_twice}`);
 
+/** The values "counted in" takes, from the start unit to the target (a times pair: the larger unit, then the smaller number). */
+const pathOf = (problem) => (problem.question === "times" ? [problem.start, problem.target]
+  : Array.from({ length: problem.g + 1 }, (_, k) => unit(problem.s + k * (problem.t < problem.s ? -1 : 1))));
+
 /** Everything the judge reads about one lesson's times-ten card. */
 export function timesTenIn(lesson) {
   const actions = (lesson?.steps ?? []).flatMap((step) => step.beats ?? []).flatMap((beat) => beat.actions ?? []);
@@ -177,6 +181,8 @@ export function judgePlaceValueTimesTen(item, lesson) {
   check("the card's question is the question's (count or times)", shape.question === expect.ask, `card ${shape.question}, question ${expect.ask}`);
   const problem = timesTenProblemOfShape(shape, start.amount, start.target);
   check("the card's problem is one the card takes, of its shape", !problem.fault, `${problemText(start)}: ${problem.fault}`);
+  // OLL refuses a times card written smaller first (decision 0028: the larger number is the amount).
+  if (!problem.fault && problem.question === "times") check("the times pair is written larger first", start.amount === problem.amount, `card ${problemText(start)}`);
   if (!problem.fault && expect.ask === "count" && expect.start !== undefined) {
     check("the card counts from the question's unit", problem.start === thousandths(expect.start), `card starts at ${numeral(problem.start)}, question at ${expect.start}`);
   }
@@ -184,6 +190,10 @@ export function judgePlaceValueTimesTen(item, lesson) {
   check("the card speaks the lesson's language", start.language === (zh ? "zh-CN" : "en-US"), `card ${start.language}, lesson ${lesson.lesson?.language}`);
   if (!problem.fault) {
     check("the card opens fresh, at its start unit", !freshFault(start, problem), `${problemText(start)}: ${freshFault(start, problem)}`);
+    // The demonstration moves counted in along its path, forward (OLL refuses any other value or a step back).
+    const path = pathOf(problem);
+    const off = card.shown.find((value, k) => !path.includes(value) || (k > 0 && path.indexOf(value) < path.indexOf(card.shown[k - 1])));
+    check("the demonstration moves counted in along its path, forward", off === undefined, `counted_in goes to ${JSON.stringify(card.shown)}; the path is ${JSON.stringify(path)}`);
     note("the demonstration reaches the target", card.shown.includes(problem.target), `counted_in goes to ${JSON.stringify(card.shown)}; the target is ${problem.target}`);
   }
 
@@ -207,10 +217,16 @@ export function judgePlaceValueTimesTen(item, lesson) {
         holds = undefined;
         continue;
       }
+      // A practice start sets every field the card binds (OLL: the practice pile is whole).
+      const unset = (card.content?.bindings ?? []).map((binding) => String(binding.expression).trim()).filter((alias) => !Object.hasOwn(values, alias));
+      check(`${label}: the practice start sets every field the card binds`, unset.length === 0, `not set: ${unset.join(", ")}`);
       const practice = cardAt(card.content, { ...card.declared, ...values });
       const own = timesTenProblemOfShape(shape, practice.amount, practice.target);
       check(`${label}: the practice is a problem of the card's shape`, !own.fault, `${problemText(practice)}: ${own.fault}`);
-      check(`${label}: the practice is not the lesson's own problem`, !(practice.amount === start.amount && practice.target === start.target), `both ${problemText(practice)}`);
+      // Compared as problems: a times pair written the other way round is the lesson's own (OLL's same_as_example).
+      const same = !own.fault && !problem.fault ? own.amount === problem.amount && own.target === problem.target : practice.amount === start.amount && practice.target === start.target;
+      check(`${label}: the practice is not the lesson's own problem`, !same, `both ${problemText(practice)}`);
+      if (!own.fault && own.question === "times") check(`${label}: the practice's times pair is written larger first`, practice.amount === own.amount, `practice ${problemText(practice)}`);
       if (!own.fault) check(`${label}: the practice starts fresh, at its own start unit`, !freshFault(practice, own), `${problemText(practice)}: ${freshFault(practice, own)}`);
       holds = own.fault ? undefined : own;
       const words = [task.prompt, ...(task.hints ?? []), task.success_message ?? ""].join(" ");
