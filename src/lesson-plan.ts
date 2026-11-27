@@ -44,7 +44,7 @@ export function recipeInitialCamera(capability: string | undefined): { yaw: numb
 }
 
 /** A recipe's declared flag (`numbers_in_parameters`, `ranges_fixed_once_shown`); false when absent. */
-export function recipeDeclares(capability: string | undefined, flag: "numbers_in_parameters" | "ranges_fixed_once_shown" | "revised_by_program" | "binds_many_variables"): boolean {
+export function recipeDeclares(capability: string | undefined, flag: "numbers_in_parameters" | "ranges_fixed_once_shown" | "revised_by_program" | "binds_many_variables" | "keeps_written_decimals"): boolean {
   return recipeEntry(capability)?.[flag] === true;
 }
 /**
@@ -184,6 +184,12 @@ export interface LessonPlanNumber {
   label?: string;
   unit?: string;
   student_control?: { kind: "slider"; step?: number };
+  /**
+   * The decimals the model wrote the starting value with, when more than it needs (0.70: 2), read from the model's
+   * own mantissa and scale; only while a recipe that keeps a written zero is offered (OLL 0029: 0.7 and 0.70 are a
+   * pair). Program-set, never asked of the model, never sent back to it.
+   */
+  written_decimals?: number;
 }
 
 export type LessonPlanMathToken =
@@ -819,7 +825,7 @@ export function validateLessonPlanNumbers(value: unknown, path: string): unknown
   numbers.forEach((entry, index) => {
     const numberPath = `${path}[${index}]`;
     const number = record(entry, numberPath);
-    allowedKeys(number, ["initial", "min", "max", "label", "unit", "student_control"], numberPath);
+    allowedKeys(number, ["initial", "min", "max", "label", "unit", "student_control", "written_decimals"], numberPath);
     const initial = finiteNumber(number.initial, `${numberPath}.initial`);
     const min = finiteNumber(number.min, `${numberPath}.min`);
     const max = finiteNumber(number.max, `${numberPath}.max`);
@@ -828,6 +834,9 @@ export function validateLessonPlanNumbers(value: unknown, path: string): unknown
     }
     optionalString(number.label, `${numberPath}.label`, 80);
     optionalString(number.unit, `${numberPath}.unit`, 32);
+    if (number.written_decimals !== undefined && (!Number.isInteger(number.written_decimals) || Number(number.written_decimals) < 1 || Number(number.written_decimals) > 3)) {
+      fail("LESSON_PLAN_NUMBERS", `${numberPath}.written_decimals`, "expected the written decimals, 1 to 3");
+    }
     if (number.student_control === undefined) return;
     const controlPath = `${numberPath}.student_control`;
     const control = record(number.student_control, controlPath);

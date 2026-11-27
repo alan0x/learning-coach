@@ -12,6 +12,7 @@ import {
   buildMakeTen, makeTenChainText, makeTenFreshCount, makeTenProblemOf, makeTenRow, MAKE_TEN_MAX_MOVED, MAKE_TEN_PLACES,
   buildPlaceValueTimesTen, placeValueTimesTenAnswerParts, placeValueTimesTenDoneText, placeValueTimesTenPath, placeValueTimesTenRowFields,
   PLACE_VALUE_TIMES_TEN_MAX_ROWS,
+  buildPlaceValueCompare, placeValueCompareDemoEnd, placeValueCompareDoneText, placeValueCompareOwnDecimals, PLACE_VALUE_COMPARE_MAX_COLUMNS,
   type BuiltRecipe, type RearrangementConstruction, type Solid, type SolidMeasureKind,
 } from "octos-lesson-language/plugin-math";
 import { compileText, lessonTextLanguage } from "../lesson-text.js";
@@ -23,6 +24,7 @@ import {
 } from "./place-value-trade-moves.js";
 import { MAKE_TEN_NUMBER, makeTenStartFault, makeTenStartValues, makeTenSum, makeTenWordsGiveAnswer } from "./make-ten-moves.js";
 import { TIMES_TEN_NUMBER, placeValueTimesTenWordsGiveAnswer, timesTenStartProblem } from "./place-value-times-ten-moves.js";
+import { COMPARE_NUMBER, compareStartProblem, compareWordsGiveAnswer } from "./place-value-compare-moves.js";
 import { placeValueThousandths } from "./place-value-moves.js";
 import { plotCurveNumbers, plotSampleNumbers } from "./plot-bindings.js";
 import { planPlotView, type PlotView } from "../plot-view-planner.js";
@@ -2351,6 +2353,130 @@ function compilePlaceValueTimesTen(
   };
 }
 
+/** The compare card's own words: the labels of the variables it creates. Everything said is the model's. */
+const COMPARE_TEXT = {
+  "en-US": { a: "the first number", b: "the second number", a_decimals: "the first number's written decimals", b_decimals: "the second number's written decimals", compared: "places compared", marked: "places judged", signed: "sign chosen" },
+  "zh-CN": { a: "第一个数", b: "第二个数", a_decimals: "第一个数写出的小数位数", b_decimals: "第二个数写出的小数位数", compared: "从左边起比了几位", marked: "判断了几位", signed: "选好了符号" },
+} as const;
+
+/**
+ * The place-value compare card (OLL decision 0029, need 35P-06): two numbers compared by place, from the largest place
+ * down. The model writes five lesson numbers, the question's pair as written (0.70 keeps its zero: the outline number
+ * carries `written_decimals`), a practice pair and "compared" (0; the program supplies it when the outline leaves it
+ * out); the demonstration animates compared (the card judges one column for each value, then chooses the sign; a value
+ * past the end is the end). The program binds the card's own variables (the numbers in thousandths, their written
+ * decimals when any of the four numbers has a written zero, compared, the learner's marked 0 to 7 and signed 0 or 1),
+ * plays each value of compared, and turns the model's practice into the learner's task on the practice pair (fresh;
+ * the true sign ends it). Every fault OLL would refuse at the card is refused here first and names the card.
+ */
+function compilePlaceValueCompare(
+  base: string,
+  content: LessonPlanVisualContent,
+  role: string,
+  placement: ReturnType<typeof place>,
+  plan: LessonPlan,
+  path: string,
+): CompiledVisual {
+  allowParameterKeys(parameters(content), [], path);
+  const numbers = content.numbers ?? [];
+  const definitions = numbers.map((number, index) => numberDefinition(plan, number, `${path}.numbers[${index}]`));
+  const values = definitions.map((definition) => definition.initial);
+  const written = definitions.map((definition) => definition.written_decimals);
+  // The card's numbers are its own: they change only by its rules, so another visual cannot also show them.
+  const sharesNumbers = (action: LessonPlan["sections"][number]["moments"][number]["actions"][number]) => action.action === "create"
+    && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability !== "place_value_compare"
+    && ((action.content as LessonPlanVisualContent).numbers ?? []).some((number) => numbers.includes(number));
+  const sharingAt = plan.sections.findIndex((section) => section.moments.some((moment) => moment.actions.some(sharesNumbers)));
+  if (sharingAt >= 0) {
+    const sharing = plan.sections[sharingAt]!.moments.flatMap((moment) => moment.actions).find(sharesNumbers)!;
+    const cardAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
+    const sharingCapability = (sharing.content as LessonPlanVisualContent).capability;
+    failSharedTapCardNumbers(`${path}.numbers`, sharedNumberFact("place_value_compare", "compare card", numbers, (sharing.content as LessonPlanVisualContent).numbers ?? [], sharingCapability), "place_value_compare", sharingCapability, sharingAt, cardAt);
+  }
+  const found = compareStartProblem(values, written);
+  if ("fault" in found) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, found.fault, "place_value_compare");
+  const { pair, practice, numbers: [A, B, PA, PB] } = found as Exclude<typeof found, { fault: string }>;
+  // One card per lesson: a later card on other numbers is refused at its own path.
+  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions)
+    .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "place_value_compare");
+  if (first && JSON.stringify((first.content as LessonPlanVisualContent).numbers ?? []) !== JSON.stringify(numbers)) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `a lesson has one compare card: this lesson's is on lesson numbers ${((first.content as LessonPlanVisualContent).numbers ?? []).join(", ")}`, "place_value_compare");
+  }
+  const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
+  const text = COMPARE_TEXT[language];
+  const stem = base.replace(/[^A-Za-z0-9]+/gu, "_").toLowerCase();
+  const name = (field: string) => `${stem}_${field}`;
+  // The written decimals are bound when any of the four numbers is written with more than it needs (0.70), so the
+  // practice sets its own (a practice never inherits the lesson's written zero).
+  const own = (n: { value: number; dec: number }) => placeValueCompareOwnDecimals(n.value) === n.dec;
+  const decimals = ![A!, B!, PA!, PB!].every(own);
+  const built = buildPlaceValueCompare({
+    as: base, role, place: placement,
+    ...(language === "zh-CN" ? { language } : {}),
+    a: { expression: name("a"), initial: A!.value },
+    b: { expression: name("b"), initial: B!.value },
+    ...(decimals ? { a_decimals: { expression: name("a_decimals"), initial: A!.dec }, b_decimals: { expression: name("b_decimals"), initial: B!.dec } } : {}),
+    compared: { expression: name("compared"), initial: 0 },
+    marked: { expression: name("marked"), initial: 0 },
+    signed: { expression: name("signed"), initial: 0 },
+  });
+  const end = placeValueCompareDemoEnd(pair);
+  // The pair, compared and the learner's two, and the written decimals when bound: at most 7 of a lesson's 16 (OLL).
+  // Each range covers the lesson's pair and the practice's (a range is never one value).
+  const span = (...items: number[]) => ({ min: Math.min(...items), max: Math.max(...items) + (Math.min(...items) === Math.max(...items) ? 1 : 0) });
+  const variables: NonNullable<CompiledVisual["variables"]> = [
+    { as: name("a"), initial: A!.value, ...span(A!.value, PA!.value), label: text.a },
+    { as: name("b"), initial: B!.value, ...span(B!.value, PB!.value), label: text.b },
+    ...(decimals ? [
+      { as: name("a_decimals"), initial: A!.dec, min: 0, max: 3, label: text.a_decimals },
+      { as: name("b_decimals"), initial: B!.dec, min: 0, max: 3, label: text.b_decimals },
+    ] : []),
+    { as: name("compared"), initial: 0, min: 0, max: Math.max(end, placeValueCompareDemoEnd(practice)), label: text.compared },
+    { as: name("marked"), initial: 0, min: 0, max: PLACE_VALUE_COMPARE_MAX_COLUMNS, label: text.marked },
+    { as: name("signed"), initial: 0, min: 0, max: 1, label: text.signed },
+  ];
+  return {
+    actions: built.actions, whole: built.whole, parts: new Map(Object.entries(built.parts)), variables,
+    mover: {
+      unbound: true,
+      numbers: [...numbers],
+      // A step moves compared forward: the card judges each column, then chooses the sign. A value past the end is
+      // the end (the demonstration runs to the sign). Nothing else moves.
+      play(steps) {
+        const actions: AuthoringAction[] = [];
+        for (const step of steps) {
+          if (step.position !== COMPARE_NUMBER.compared) continue;
+          const from = Math.min(end, step.from[step.position]!), to = Math.min(end, step.to[step.position]!);
+          if (to !== from) actions.push({ do: "animate", variable: name("compared"), value: to } as AuthoringAction);
+        }
+        return actions;
+      },
+      // The model's practice is "the learner compares the practice pair": the card starts again, fresh, on that pair;
+      // the true sign ends the task (no "done"). The value the model wrote is not read. Words that write the practice's
+      // answer (its numbers with the true sign between them) give it away: that task is dropped and recorded, never
+      // the lesson.
+      task(_position, _value, _end, words = []) {
+        if (words.some((each) => compareWordsGiveAnswer(each, practice))) {
+          return { drop: "the task's words write the sign the learner is to find on the card", reason: "practice_answer_in_words" };
+        }
+        const start: Record<string, number> = {
+          [name("a")]: PA!.value, [name("b")]: PB!.value,
+          ...(decimals ? { [name("a_decimals")]: PA!.dec, [name("b_decimals")]: PB!.dec } : {}),
+          [name("compared")]: 0, [name("marked")]: 0, [name("signed")]: 0,
+        };
+        return {
+          task: {
+            start: { kind: "practice", variables: Object.keys(start), values: start },
+            allowed_operations: [{ kind: "card_tap", node: base }],
+            completion: { kind: "card_fact", node: base, fact: "complete" },
+            success_message: placeValueCompareDoneText(practice, language),
+          },
+        };
+      },
+    },
+  };
+}
+
 export const MATH_COMPILERS = {
   number_line: compileNumberLine,
   number_line_compare: compileNumberLineCompare,
@@ -2375,4 +2501,5 @@ export const MATH_COMPILERS = {
   place_value_trade: compilePlaceValueTrade,
   make_ten: compileMakeTen,
   place_value_times_ten: compilePlaceValueTimesTen,
+  place_value_compare: compilePlaceValueCompare,
 } satisfies Record<string, VisualCompiler>;
