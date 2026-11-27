@@ -18117,7 +18117,7 @@ var MATH_RECIPES = {
     // fixed text says how it is used.
     student_controls: [],
     required_features: ["make_ten_to_add"],
-    model_guidance: "\u51D1\u5341\uFF08\u4E24\u4E2A\u5341\u683C\u6846\uFF09\uFF1A\u4E24\u4E2A\u4E00\u4F4D\u6570\u76F8\u52A0\u3001\u548C\u5927\u4E8E10\uFF08\u59828+6\uFF09\uFF0C\u5C0F\u6570\u5206\u51FA\u4E00\u90E8\u5206\u628A\u5927\u6570\u8865\u6210\u5341\u3002\u4E5F\u7528\u4E8E\u95EE\u201C\u5E94\u8BE5\u62C6\u54EA\u4E2A\u6570\u201D\u201C\u600E\u6837\u62C6\u7B97\u5F97\u5FEB\u201D\uFF1A\u5361\u7247\u753B\u5FEB\u7684\u62C6\u6CD5\uFF08\u62C6\u5C0F\u6570\u8865\u5927\u6570\uFF0C\u59824+9\u62C64\u88659\uFF09\uFF0C\u6162\u7684\u62C6\u6CD5\u53EA\u7528\u8BDD\u8BF4\uFF0C\u4E0D\u753B\u3002\u4E0D\u7528\u4E8E\u548C\u6B63\u597D\u662F10\u3001\u63A5\u7740\u6570\u3001\u7834\u5341\u51CF\u3001\u4E24\u4F4D\u6570\u52A0\u4E00\u4F4D\u6570\u3001\u4E09\u4E2A\u6570\u76F8\u52A0\u3002\u8FD9\u9053\u52A0\u6CD5\u53EA\u753B\u8FD9\u5F20\u5361\u7247\uFF0C\u4E0D\u518D\u753B\u6570\u8F74\u3002outline \u7684 numbers \u4F9D\u6B21\u5199\u56DB\u4E2A\u6570\uFF1A\u9898\u76EE\u7684\u4E24\u4E2A\u6570\u3001\u7EC3\u4E60\u7684\u4E24\u4E2A\u6570\uFF08\u53E6\u4E00\u5BF9\uFF0C\u4E5F\u662F\u4E00\u4F4D\u6570\u3001\u548C\u5927\u4E8E10\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u6362\u987A\u5E8F\u4E5F\u4E0D\u7B97\uFF09\u3002\u7A0B\u5E8F\u518D\u8865\u4E24\u4E2A\u6570\uFF1A\u5927\u6570\u90A3\u4E00\u6846\u91CC\u6709\u51E0\u4E2A\uFF08\u5F00\u59CB\u5C31\u662F\u5927\u6570\uFF09\u3001\u79FB\u8FC7\u53BB\u51E0\u4E2A\uFF080\uFF09\u3002\u6F14\u793A\u65F6\u628A\u7B2C\u4E94\u4E2A\u6570\u52A8\u753B\u523010\uFF0C\u4E00\u76F4\u5230\u5927\u6570\u90A3\u4E00\u6846\u6EE1\u5341\uFF0C\u7A0B\u5E8F\u4E00\u4E2A\u4E00\u4E2A\u5730\u79FB\u5706\u7247\uFF1B\u522B\u7684\u6570\u4E0D\u52A8\u753B\u3002\u7EC3\u4E60\uFF1A\u5BF9\u7B2C\u4E94\u4E2A\u6570\u5199\u4E00\u4E2A\u6570\u503C\u76EE\u6807\u9898\uFF08\u6570\u503C\u519910\uFF09\uFF0C\u5B69\u5B50\u81EA\u5DF1\u8865\u6EE1\u5341\uFF0C\u7A0B\u5E8F\u518D\u51FA\u4E00\u884C\u7A7A\uFF088+6=8+__+__=10+__=__\uFF09\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u548C\u3002\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
+    model_guidance: "\u51D1\u5341\uFF08\u4E24\u4E2A\u5341\u683C\u6846\uFF09\uFF1A\u4E24\u4E2A\u4E00\u4F4D\u6570\u76F8\u52A0\u3001\u548C\u5927\u4E8E10\uFF08\u59828+6\uFF09\uFF0C\u5C0F\u6570\u5206\u51FA\u4E00\u90E8\u5206\u628A\u5927\u6570\u8865\u6210\u5341\u3002\u4E5F\u7528\u4E8E\u95EE\u201C\u5E94\u8BE5\u62C6\u54EA\u4E2A\u6570\u201D\u201C\u600E\u6837\u62C6\u7B97\u5F97\u5FEB\u201D\uFF1A\u5361\u7247\u753B\u5FEB\u7684\u62C6\u6CD5\uFF08\u62C6\u5C0F\u6570\u8865\u5927\u6570\uFF0C\u59824+9\u62C64\u88659\uFF09\uFF0C\u6162\u7684\u62C6\u6CD5\u53EA\u7528\u8BDD\u8BF4\uFF0C\u4E0D\u753B\u3002\u4E0D\u7528\u4E8E\u548C\u6B63\u597D\u662F10\u3001\u63A5\u7740\u6570\u3001\u7834\u5341\u51CF\u3001\u4E24\u4F4D\u6570\u52A0\u4E00\u4F4D\u6570\u3001\u4E09\u4E2A\u6570\u76F8\u52A0\u3002\u8FD9\u9053\u52A0\u6CD5\u7684\u753B\u9762\u662F\u8FD9\u5F20\u5361\u7247\uFF1B\u540E\u9762\u7684\u8282\u53EF\u4EE5\u518D\u7528\u6570\u8F74\u628A\u540C\u4E00\u9053\u52A0\u6CD5\u8D70\u4E00\u904D\uFF0C\u6570\u8F74\u4E0D\u4EE3\u66FF\u8FD9\u5F20\u5361\u7247\u3002outline \u7684 numbers \u4F9D\u6B21\u5199\u56DB\u4E2A\u6570\uFF1A\u9898\u76EE\u7684\u4E24\u4E2A\u6570\u3001\u7EC3\u4E60\u7684\u4E24\u4E2A\u6570\uFF08\u53E6\u4E00\u5BF9\uFF0C\u4E5F\u662F\u4E00\u4F4D\u6570\u3001\u548C\u5927\u4E8E10\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u6362\u987A\u5E8F\u4E5F\u4E0D\u7B97\uFF09\u3002\u7A0B\u5E8F\u518D\u8865\u4E24\u4E2A\u6570\uFF1A\u5927\u6570\u90A3\u4E00\u6846\u91CC\u6709\u51E0\u4E2A\uFF08\u5F00\u59CB\u5C31\u662F\u5927\u6570\uFF09\u3001\u79FB\u8FC7\u53BB\u51E0\u4E2A\uFF080\uFF09\u3002\u6F14\u793A\u65F6\u628A\u7B2C\u4E94\u4E2A\u6570\u52A8\u753B\u523010\uFF0C\u4E00\u76F4\u5230\u5927\u6570\u90A3\u4E00\u6846\u6EE1\u5341\uFF0C\u7A0B\u5E8F\u4E00\u4E2A\u4E00\u4E2A\u5730\u79FB\u5706\u7247\uFF1B\u522B\u7684\u6570\u4E0D\u52A8\u753B\u3002\u7EC3\u4E60\uFF1A\u5BF9\u7B2C\u4E94\u4E2A\u6570\u5199\u4E00\u4E2A\u6570\u503C\u76EE\u6807\u9898\uFF08\u6570\u503C\u519910\uFF09\uFF0C\u5B69\u5B50\u81EA\u5DF1\u8865\u6EE1\u5341\uFF0C\u7A0B\u5E8F\u518D\u51FA\u4E00\u884C\u7A7A\uFF088+6=8+__+__=10+__=__\uFF09\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u548C\u3002\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
   },
   // OLL decision 0028 (a trial): the same amount counted in another unit on the place-value chart, a count (3 tenths =
   // ? thousandths) or a times pair (700 is ? times 70). The model writes the amount, the unit asked and a practice of
@@ -18277,7 +18277,7 @@ var MATH_RECIPES = {
     model_guidance: "\u6570\u8F74\u5206\u6B65\uFF1A\u4E24\u5230\u4E09\u6B65\u7684\u52A0\u51CF\uFF08\u6570\u8F74\u52A0\u51CF\u662F\u4E00\u6B65\uFF09\uFF0C\u5982\u51D1\u5341\u3001\u5148\u6574\u5341\u518D\u4E2A\u4F4D\u3001\u4E0A\u4E0B\u79FB\u52A8\uFF1B\u6570\u503C\u4F9D\u6B21\u662F\u8D77\u70B9\u548C\u5404\u6B65\u79FB\u52A8\u91CF\uFF08\u4E24\u6B65\u5199\u4E24\u4E2A\uFF09\uFF0C\u843D\u70B9\u548C\u7EC8\u70B9\u7531\u7A0B\u5E8F\u7B97\uFF1B\u5F80\u56DE\u8D70\u7684\u4E00\u6B65\u4E0D\u8BB2\u4E00\u683C\u4E00\u683C",
     // Beside the make-ten card (a trial, OLL 0027) the line does not claim making ten with two one-digit numbers
     // (MT-07: "4 + 9, which number should I split?" drew the line in 2 of 2 runs). Without the trial its text is unchanged.
-    model_guidance_with: { make_ten: "\u6570\u8F74\u5206\u6B65\uFF1A\u4E24\u5230\u4E09\u6B65\u7684\u52A0\u51CF\uFF08\u6570\u8F74\u52A0\u51CF\u662F\u4E00\u6B65\uFF09\uFF0C\u5982\u5148\u6574\u5341\u518D\u4E2A\u4F4D\u3001\u4E0A\u4E0B\u79FB\u52A8\u3001\u4E24\u4F4D\u6570\u52A0\u4E00\u4F4D\u6570\u5148\u51D1\u6574\u5341\uFF0838+5\uFF09\uFF1B\u4E0D\u7528\u4E8E\u4E24\u4E2A\u4E00\u4F4D\u6570\u76F8\u52A0\u7684\u51D1\u5341\uFF084+9\u30018+6\uFF0C\u4E5F\u5305\u62EC\u95EE\u62C6\u54EA\u4E2A\u6570\uFF09\uFF1B\u6570\u503C\u4F9D\u6B21\u662F\u8D77\u70B9\u548C\u5404\u6B65\u79FB\u52A8\u91CF\uFF08\u4E24\u6B65\u5199\u4E24\u4E2A\uFF09\uFF0C\u843D\u70B9\u548C\u7EC8\u70B9\u7531\u7A0B\u5E8F\u7B97\uFF1B\u5F80\u56DE\u8D70\u7684\u4E00\u6B65\u4E0D\u8BB2\u4E00\u683C\u4E00\u683C" }
+    model_guidance_with: { make_ten: "\u6570\u8F74\u5206\u6B65\uFF1A\u4E24\u5230\u4E09\u6B65\u7684\u52A0\u51CF\uFF08\u6570\u8F74\u52A0\u51CF\u662F\u4E00\u6B65\uFF09\uFF0C\u5982\u5148\u6574\u5341\u518D\u4E2A\u4F4D\u3001\u4E0A\u4E0B\u79FB\u52A8\u3001\u4E24\u4F4D\u6570\u52A0\u4E00\u4F4D\u6570\u5148\u51D1\u6574\u5341\uFF0838+5\uFF09\uFF1B\u4E24\u4E2A\u4E00\u4F4D\u6570\u76F8\u52A0\u7684\u51D1\u5341\uFF084+9\u30018+6\uFF0C\u4E5F\u5305\u62EC\u95EE\u62C6\u54EA\u4E2A\u6570\uFF09\uFF0C\u9898\u76EE\u7684\u753B\u9762\u662F\u51D1\u5341\u5361\u7247\uFF0C\u6570\u8F74\u5206\u6B65\u53EA\u5728\u5361\u7247\u4E4B\u540E\u7684\u8282\u91CC\u4F5C\u7B2C\u4E8C\u79CD\u770B\u6CD5\uFF1B\u6570\u503C\u4F9D\u6B21\u662F\u8D77\u70B9\u548C\u5404\u6B65\u79FB\u52A8\u91CF\uFF08\u4E24\u6B65\u5199\u4E24\u4E2A\uFF09\uFF0C\u843D\u70B9\u548C\u7EC8\u70B9\u7531\u7A0B\u5E8F\u7B97\uFF1B\u5F80\u56DE\u8D70\u7684\u4E00\u6B65\u4E0D\u8BB2\u4E00\u683C\u4E00\u683C" }
   }
 };
 var text4 = { type: "string" };
@@ -18943,11 +18943,11 @@ function compileText(plan, source, values) {
 function fail2(code, path, message, capability2) {
   throw new LessonPlanError(code, path, message, capability2);
 }
-function sharedNumberFact(capability2, card, numbers, other, otherCapability) {
+function sharedNumberFact(capability2, card, numbers, other, otherCapability, moved = `is the number the ${card}'s demonstration moves`) {
   const position = numbers.findIndex((number2) => other.includes(number2));
   const number = numbers[position];
   const role = recipeNumberRole(capability2, position);
-  const what = role === "practice" ? `is the ${card}'s practice number, which the learner works after class` : role === "program" ? `is a count on the ${card} that only the learner's taps change` : role === "problem" ? `is the ${card}'s problem number, and another picture already shows it on a copy of its own` : capability2 === "base_ten_trade" ? `is a count on the ${card}, which changes only by its trades` : `is the number the ${card}'s demonstration moves`;
+  const what = role === "practice" ? `is the ${card}'s practice number, which the learner works after class` : role === "program" ? `is a count on the ${card} that only the learner's taps change` : role === "problem" ? `is the ${card}'s problem number, and another picture already shows it on a copy of its own` : moved;
   return `lesson number ${number} ${what}; the ${otherCapability} visual shows it too`;
 }
 function failSharedTapCardNumbers(path, message, card, other, sharingAt, cardAt) {
@@ -24201,7 +24201,7 @@ function compileBaseTenTrade(base, content, role, placement, plan, path) {
   if (sharing) {
     const matAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
     const sharingCapability = sharing.content.capability;
-    failSharedTapCardNumbers(`${path}.numbers`, sharedNumberFact("base_ten_trade", "trading mat", numbers, sharing.content.numbers ?? [], sharingCapability), "base_ten_trade", sharingCapability, sharingAt, matAt);
+    failSharedTapCardNumbers(`${path}.numbers`, sharedNumberFact("base_ten_trade", "trading mat", numbers, sharing.content.numbers ?? [], sharingCapability, "is a count on the trading mat, which changes only by its trades"), "base_ten_trade", sharingCapability, sharingAt, matAt);
   }
   const fault = baseTenStartFault(start);
   if (fault) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault, "base_ten_trade");
@@ -27917,7 +27917,9 @@ function cardMovedNumbers(actions) {
   return actions.flatMap((action) => {
     const entry = action;
     if (entry.action !== "create" || entry.kind !== "visual" || !entry.content?.capability) return [];
-    return RECIPE_HOOKS[entry.content.capability]?.number_moves ? entry.content.numbers ?? [] : [];
+    if (!RECIPE_HOOKS[entry.content.capability]?.number_moves) return [];
+    const capability2 = entry.content.capability;
+    return (entry.content.numbers ?? []).filter((_number, position) => recipeNumberRole(capability2, position) !== "problem");
   });
 }
 function lowerModelActivityNumbers(activity, kind, path, outline, expectedSection, language, exactNumbers = /* @__PURE__ */ new Set(), cardNumbers = /* @__PURE__ */ new Set()) {
@@ -29196,9 +29198,13 @@ function certainNumberSharing(outline) {
   for (const [index, other] of visuals.entries()) {
     const fewer = recipeMinLessonNumbers(other.capability);
     if (!fewer) continue;
+    const problems = (capability2) => Array.from(
+      { length: LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[capability2] ?? 0 },
+      (_unused, position) => recipeNumberRole(capability2, position)
+    ).filter((role) => role === "problem").length;
     const card = visuals.find((each) => {
       const more = recipeMinLessonNumbers(each.capability);
-      return each.capability !== other.capability && more > fewer && more <= declared && more + fewer > declared;
+      return each.capability !== other.capability && more > fewer && more <= declared && more + fewer - declared > problems(each.capability);
     });
     if (card) return { visual: index + 1, capability: other.capability, card: card.capability };
   }
