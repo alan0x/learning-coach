@@ -244,12 +244,13 @@ export const MATH_RECIPES = {
     // fixed text says how it is used.
     student_controls: [],
     required_features: ["column_add_subtract_trades"],
-    model_guidance: "数位表加减（竖式，进位、退位就是交换）：多位数加减（到十万位）和小数加减（到百分位），至少有一位要进位或退位，最多六列（从两个数最低的一位到两个数和得数最高的一位）。不用于摆数、拆数、比较、凑整、乘法，也不用于低年级的凑十（用方块）。operation 写 add 或 subtract。outline 的 numbers 依次写这五个数（不动的也要写）：第一个数、第二个数（减法第一个数不小于第二个数）、练习的第一个数、练习的第二个数、做完了几列。数值写实际大小（2.75），最多两位小数。练习的一对是另一对（不是题目的，免得孩子照抄演示），也要进位或退位，列和题目的一样（同样多的整数位和小数位，题目的得数多出一位时练习的也多出一位）。做完了几列从最右边一列数起，写 0：表一开始一列也没有做。演示时把它动画到 1、2……：每到一个值，程序按规则做完右边又一列（合起来、满十换一、不够拆一），只往前走，同一个值再写表不变；可以只演示几列。两个数和练习的数不动画。练习：对做完了几列写一个数值目标题（数值写列数），孩子在表上做完练习的一对，程序再自己问得数，不另出问这一对得数的填数题；题目和提示不写练习的得数。表上的数、圆片和操作说明都由卡片自己写；说数位用名字（个位、十分位、hundreds），不说怎么点卡片",
+    model_guidance: "数位表加减（竖式，进位、退位就是交换）：多位数加减（到十万位）和小数加减（到百分位），至少有一位要进位或退位，最多六列（从两个数最低的一位到两个数和得数最高的一位）。不用于摆数、拆数、比较、凑整、乘法，也不用于低年级的凑十（用方块）。operation 写 add 或 subtract。outline 的 numbers 依次写这五个数（不动的也要写）：第一个数、第二个数（减法第一个数不小于第二个数）、练习的第一个数、练习的第二个数、做完了几列。数值写实际大小（2.75），最多两位小数。练习的一对是另一对（不是题目的，免得孩子照抄演示），也要进位或退位，列和题目的一样（同样多的整数位和小数位，题目的得数多出一位时练习的也多出一位）。做完了几列从最右边一列数起，写 0：表一开始一列也没有做。演示时把它动画到 1、2……：每到一个值，程序按规则做完右边又一列（合起来、满十换一、不够拆一），只往前走，同一个值再写表不变；演示做完每一列，一直到得数（最后一个值是列数）。两个数和练习的数不动画。练习：对做完了几列写一个数值目标题（数值写列数），孩子在表上做完练习的一对，程序再自己问得数，不另出问这一对得数的填数题；题目和提示不写练习的得数。表上的数、圆片和操作说明都由卡片自己写；说数位用名字（个位、十分位、hundreds），不说怎么点卡片",
   },
   // OLL decision 0027 (a trial): making ten to add on two ten frames (8 + 6 = 8 + 2 + 4 = 10 + 4). The model writes
   // the question's pair and a practice pair; the program supplies the count in the bigger number's frame (it starts
   // at the bigger number, taken from the pair) and the count the learner moves (0), and the demonstration animates
-  // the first of them to 10 (or 9) while the card moves one counter at a time. The program makes the learner's task
+  // the first of them to 10 while the card moves one counter at a time (owner, 2026-11-27: the demonstration reaches
+  // ten; no check enforces it, OLL 0027 §9). The program makes the learner's task
   // on the practice pair and the row of four blanks after it.
   make_ten: {
     parts: ["whole"],
@@ -275,7 +276,7 @@ export const MATH_RECIPES = {
     // fixed text says how it is used.
     student_controls: [],
     required_features: ["make_ten_to_add"],
-    model_guidance: "凑十（两个十格框）：两个一位数相加、和大于10（如8+6），小数分出一部分把大数补成十。不用于和正好是10、接着数、破十减、两位数加一位数、三个数相加。这道加法只画这张卡片，不再画数轴。outline 的 numbers 依次写四个数：题目的两个数、练习的两个数（另一对，也是一位数、和大于10，不是题目的，换顺序也不算）。程序再补两个数：大数那一框里有几个（开始就是大数）、移过去几个（0）。演示时把第五个数动画到10（可以只到9），程序一个一个地移圆片；别的数不动画。练习：对第五个数写一个数值目标题（数值写10），孩子自己补满十，程序再出一行空（8+6=8+__+__=10+__=__）；题目和提示不写练习的和。不说怎么点卡片",
+    model_guidance: "凑十（两个十格框）：两个一位数相加、和大于10（如8+6），小数分出一部分把大数补成十。也用于问“应该拆哪个数”“怎样拆算得快”：卡片画快的拆法（拆小数补大数，如4+9拆4补9），慢的拆法只用话说，不画。不用于和正好是10、接着数、破十减、两位数加一位数、三个数相加。这道加法只画这张卡片，不再画数轴。outline 的 numbers 依次写四个数：题目的两个数、练习的两个数（另一对，也是一位数、和大于10，不是题目的，换顺序也不算）。程序再补两个数：大数那一框里有几个（开始就是大数）、移过去几个（0）。演示时把第五个数动画到10，一直到大数那一框满十，程序一个一个地移圆片；别的数不动画。练习：对第五个数写一个数值目标题（数值写10），孩子自己补满十，程序再出一行空（8+6=8+__+__=10+__=__）；题目和提示不写练习的和。不说怎么点卡片",
   },
   // OLL decision 0028 (a trial): the same amount counted in another unit on the place-value chart, a count (3 tenths =
   // ? thousandths) or a times pair (700 is ? times 70). The model writes the amount, the unit asked and a practice of

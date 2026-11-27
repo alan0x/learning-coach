@@ -70,9 +70,10 @@ export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
   // The place-value trade card in its own terms (OLL 0026), once it is drawn: the pair, its answer and columns,
   // where the demonstration stands (columns finished, and the chart as it stands: each finished column's digit
   // below the line, each other column's disks in its rows and a carried disk waiting above it), what the next
-  // value of columns finished does and which column it finishes, in the card's own sentences, and the practice
-  // pair. Everything in the lesson's units (2.75, never thousandths). Facts, not instructions: a lesson may
-  // rightly stop with columns still to do.
+  // value of columns finished does and which column it finishes, in the card's own sentences, where the
+  // demonstration goes (every column, to the answer: owner, 2026-11-27, PT-12 stopped after the hundredths with an
+  // unfinished sum on the board; information only, no check enforces it), and the practice pair. Everything in the
+  // lesson's units (2.75, never thousandths).
   place_value_trade: ({ established, numbers, state, language }) => {
     if (!numbers || !established?.numbers?.length) return {};
     const lessonNumbers = established.numbers;
@@ -97,6 +98,7 @@ export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
       answer: tradeDecimal(op === "add" ? a + b : a - b),
       columns: columns.map(name),
       columns_finished: k,
+      demonstration_to: { columns_finished: columns.length, answer: tradeDecimal(op === "add" ? a + b : a - b) },
       chart_now: card.cells.map((cell) => (cell.down
         ? { column: name(cell.place), below_line: cell.answer }
         : op === "add"
@@ -111,7 +113,8 @@ export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
   // The make-ten card in its own terms (OLL 0027), once it is drawn: the pair and its sum, which frame fills (the
   // bigger number's) and which gives, how many cross to make ten and the ones left then, where the demonstration
   // stands (the count in the bigger frame now, each frame's count), what the next value does in the card's own
-  // sentences, and the practice pair. Facts, not instructions: a lesson may rightly stop before the frame is full.
+  // sentences, where the demonstration goes (the bigger frame full, 10: owner, 2026-11-27; information only, no check
+  // enforces it, OLL 0027 §9), and the practice pair.
   make_ten: ({ established, numbers, state, language }) => {
     if (!numbers || !established?.numbers?.length) return {};
     const lessonNumbers = established.numbers;
@@ -135,6 +138,7 @@ export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
       to_make_ten: makeTenToTen(problem),
       ones_left: problem.left,
       in_bigger_frame_now: filled,
+      demonstration_to: { in_bigger_frame: MAKE_TEN_PLACES },
       frames_now: [makeTenFrame(card, 0).count, makeTenFrame(card, 1).count],
       ...(filled < MAKE_TEN_PLACES
         ? { next: { value: filled + 1, does: makeTenNext(a, b, filled), says: makeTenStepSentences(problem, filled, filled + 1, cardLanguage) } }
