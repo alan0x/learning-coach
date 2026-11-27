@@ -28712,6 +28712,9 @@ function sectionIndexFromError(error, sectionCount) {
   return Number.isInteger(offset) && offset >= 0 && offset < sectionCount ? offset + 1 : void 0;
 }
 function compilePrefix(outline, drafts, options) {
+  return compileAndValidateLessonPlan(prefixPlan(outline, drafts, options), { ...options, construction_rules: "explicit-v1" });
+}
+function prefixPlan(outline, drafts, options) {
   const sectionCount = drafts.length;
   let focus;
   for (let section = sectionCount; section >= 1 && !focus; section -= 1) {
@@ -28735,8 +28738,7 @@ function compilePrefix(outline, drafts, options) {
     close: { summary: lessonText(options?.language, "\u8BFE\u7A0B\u5185\u5BB9\u4ECD\u5728\u7EE7\u7EED\u751F\u6210\u3002"), focus: [focus] }
   };
   const normalized = normalizeExecutableNumberInteractions(prefixOutline, drafts);
-  const prefixPlan = assembleLessonPlan(normalized.outline, normalized.drafts, options);
-  return compileAndValidateLessonPlan(prefixPlan, { ...options, construction_rules: "explicit-v1" });
+  return assembleLessonPlan(normalized.outline, normalized.drafts, options);
 }
 function withdrawSectionVisual(outline, section, capability2, expectedRequestParts, keepSectionItem = false) {
   const visuals = outline.course_visuals ?? [];
@@ -29269,15 +29271,91 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     return void 0;
   };
   const drafts = [];
-  const faultingPicture = (error) => {
+  const faultSite = (error, section) => {
+    if (!(error instanceof LessonPlanError) || !outline) return void 0;
+    const at2 = /^\$lessonPlan\.sections\[(\d+)\]\.moments\[(\d+)\]\.actions\[(\d+)\](\.content\b|\.end_value$)/u.exec(error.path);
+    if (!at2) return void 0;
+    let plan;
+    try {
+      plan = prefixPlan(outline, drafts.slice(0, section), options.compile);
+    } catch {
+      return void 0;
+    }
+    const [sectionAt, momentAt, actionAt] = [Number(at2[1]), Number(at2[2]), Number(at2[3])];
+    const action = plan.sections[sectionAt]?.moments[momentAt]?.actions[actionAt];
+    const creates = (from) => plan.sections.slice(0, from + 1).flatMap((each, index) => each.moments.flatMap((moment) => moment.actions.flatMap((item) => item.action === "create" && item.kind === "visual" ? [{ section: index + 1, content: item.content }] : [])));
+    if (at2[4] === ".content" && action?.action === "create" && action.kind === "visual") {
+      const content = action.content;
+      return { kind: "create", section: sectionAt + 1, capability: content.capability, numbers: [...content.numbers ?? []], in: sectionAt + 1, moment: momentAt, action: actionAt };
+    }
+    if (at2[4] === ".end_value" && action?.action === "animate") {
+      const drawn = creates(sectionAt).filter((each) => (each.content.numbers ?? []).includes(action.number)).at(-1);
+      return drawn ? {
+        kind: "animate",
+        section: drawn.section,
+        capability: drawn.content.capability,
+        numbers: [...drawn.content.numbers ?? []],
+        in: sectionAt + 1,
+        moment: momentAt,
+        action: actionAt,
+        move: { number: action.number, end_value: action.end_value }
+      } : void 0;
+    }
+    return void 0;
+  };
+  const faultingPicture = (error, section) => {
     if (!(error instanceof LessonPlanError)) return void 0;
     if (error.capability) return error.capability;
     if (!isOutlineOwnedFault(error)) return void 0;
-    const at2 = /^\$lessonPlan\.sections\[(\d+)\]\.moments\[(\d+)\]\.actions\[(\d+)\]/u.exec(error.path);
-    const action = at2 ? drafts[Number(at2[1])]?.moments[Number(at2[2])]?.actions[Number(at2[3])] : void 0;
-    const capability2 = action?.action === "create" && action.kind === "visual" ? action.content.capability : void 0;
-    return capability2 !== void 0 && outline && outlineCapabilities(outline).has(capability2) ? capability2 : void 0;
+    const site = faultSite(error, section);
+    return site?.kind === "create" && outline && outlineCapabilities(outline).has(site.capability) ? site.capability : void 0;
   };
+  const leaveOutEarlierPictureMoves = (error, section) => {
+    const site = faultSite(error, section);
+    const draft = drafts[section - 1];
+    if (!site || !draft || site.section >= section) return void 0;
+    const keyOf = (moment, action) => `${moment}:${action}`;
+    const candidates = /* @__PURE__ */ new Set();
+    if (site.kind === "animate") {
+      const own = draft.moments[site.moment]?.actions[site.action];
+      if (site.in === section && own?.action === "animate" && own.number === site.move?.number && own.end_value === site.move.end_value && site.numbers.includes(own.number)) candidates.add(keyOf(site.moment, site.action));
+    } else {
+      draft.moments.forEach((moment, momentAt) => moment.actions.forEach((action, actionAt) => {
+        if (action.action === "animate" && site.numbers.includes(action.number)) candidates.add(keyOf(momentAt, actionAt));
+      }));
+    }
+    if (!candidates.size || !outline) return void 0;
+    const without = (removed2) => ({
+      ...draft,
+      moments: draft.moments.map((moment, momentAt) => ({ ...moment, actions: moment.actions.filter((_action, actionAt) => !removed2.has(keyOf(momentAt, actionAt))) }))
+    });
+    const attempt = (removed2) => {
+      try {
+        return compilePrefix(outline, [...drafts.slice(0, section - 1), without(removed2)], options.compile);
+      } catch {
+        return void 0;
+      }
+    };
+    const removed = new Set(candidates);
+    let compiled2 = attempt(removed);
+    if (!compiled2) return void 0;
+    for (const key of candidates) {
+      removed.delete(key);
+      const kept = attempt(removed);
+      if (kept) compiled2 = kept;
+      else removed.add(key);
+    }
+    leftOutMoves = [...removed].map((key) => {
+      const [momentAt, actionAt] = key.split(":").map(Number);
+      const action = draft.moments[momentAt].actions[actionAt];
+      return `$lessonPlan.sections[${section - 1}].moments[${momentAt}].actions[${actionAt}]: the ${site.capability} visual cannot show lesson number ${action.action === "animate" ? action.number : "?"} at ${action.action === "animate" ? action.end_value : "?"}; left out`;
+    });
+    draft.moments.forEach((moment, momentAt) => {
+      moment.actions = moment.actions.filter((_action, actionAt) => !removed.has(keyOf(momentAt, actionAt)));
+    });
+    return compiled2;
+  };
+  let leftOutMoves = [];
   const withdrawLaterSectionVisual = async (section, capability2, reason, detail, reported2) => {
     const withdrawn = section > 1 && !withdrawnNotes.has(section) && outline ? withdrawSectionVisual(outline, section, capability2, fixedRequestParts.length) : void 0;
     if (!withdrawn) return false;
@@ -29570,7 +29648,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
         const previousError = sectionErrors.get(section);
         if (unsupportedSectionResponse(error, previousError, input.language)) throw error;
         if ((sectionAttempts.get(section) ?? 0) >= maxAttempts) {
-          const capability2 = faultingPicture(error);
+          const capability2 = faultingPicture(error, section);
           const withdrawn = capability2 !== void 0 && await withdrawLaterSectionVisual(
             section,
             capability2,
@@ -29581,6 +29659,15 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
             }
           );
           if (!withdrawn) {
+            const kept = leaveOutEarlierPictureMoves(error, section);
+            if (kept) {
+              await options.on_rejected_part?.({ label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error) });
+              sectionErrors.delete(section);
+              for (const detail of leftOutMoves) await options.on_program_adjustment?.({ kind: "plot_view_adjusted", section, reason: "animation_left_out", detail });
+              await reportDraftAdjustments(drafts[section - 1]);
+              await options.on_playable_prefix?.({ completed_sections: section, compiled: kept });
+              return;
+            }
             const shorter = capability2 !== void 0 && outline ? endOutlineBefore(outline, section, fixedRequestParts.length) : void 0;
             if (!shorter) throw error;
             await options.on_rejected_part?.({ label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error) });
@@ -29631,7 +29718,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
       const dropCard = sharesTapCard && (sharedRestarts > 0 || excludedCapabilities.has(error.capability));
       const capability2 = dropCard ? error.tapCard : error instanceof LessonPlanError ? error.capability : void 0;
       const spentOnPicture = capability2 !== void 0 && !excludedCapabilities.has(capability2) && (numbersMissing || sharesTapCard || (sectionAttempts.get(1) ?? 0) >= maxAttempts);
-      const picture = capability2 ?? faultingPicture(error);
+      const picture = capability2 ?? faultingPicture(error, 1);
       if (outlineRestarts >= 2 && picture !== void 0 && !withdrawnNotes.has(1) && outline && (isOutlineOwnedFault(error) || numbersMissing || sharesTapCard || (sectionAttempts.get(1) ?? 0) >= maxAttempts)) {
         const withdrawn = withdrawSectionVisual(outline, 1, picture, fixedRequestParts.length, true);
         if (!withdrawn) throw error;
