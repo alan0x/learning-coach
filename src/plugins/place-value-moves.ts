@@ -87,6 +87,19 @@ export function placeValueStartFault(values: readonly number[], given: string): 
   return undefined;
 }
 
+/**
+ * Why the chart cannot start on the outline's numbers ([the question's number, the practice number], as the outline
+ * declares them), or undefined: the recipe's `outline_fault`. Only the question's number declared as 0 is the
+ * outline's alone to fix: whatever the card gives, there is nothing to build or pull apart, and a section cannot change
+ * an outline number (review 2 and the chart bisect, 2026-11-27: PV-03/04/05/08 declared the chart's empty start, 0,
+ * and spent four section attempts each before the chart went).
+ */
+export function placeValueChartOutlineFault(values: readonly number[]): string | undefined {
+  const number = values[0];
+  if (number === undefined || !Number.isFinite(number) || Math.round(number * 1000) !== 0) return undefined;
+  return "the question's number is 0: there is nothing to build or pull apart. Write the number itself as its value (for example 50304 or 0.309), not 0: the chart starts empty by itself";
+}
+
 const PLACES = Array.from({ length: PLACE_VALUE_MAX_PLACE - PLACE_VALUE_MIN_PLACE + 1 }, (_, i) => PLACE_VALUE_MAX_PLACE - i);
 
 /** The places (6 to -3), highest first, that hold a digit in `with` and none in `without`. */

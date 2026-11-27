@@ -18335,6 +18335,11 @@ function placeValueStartFault(values, given) {
   }
   return void 0;
 }
+function placeValueChartOutlineFault(values) {
+  const number = values[0];
+  if (number === void 0 || !Number.isFinite(number) || Math.round(number * 1e3) !== 0) return void 0;
+  return "the question's number is 0: there is nothing to build or pull apart. Write the number itself as its value (for example 50304 or 0.309), not 0: the chart starts empty by itself";
+}
 var PLACES = Array.from({ length: PLACE_VALUE_MAX_PLACE - PLACE_VALUE_MIN_PLACE + 1 }, (_, i) => PLACE_VALUE_MAX_PLACE - i);
 function placesOnlyIn(withDigits, without) {
   return PLACES.filter((place5) => placeValueDigitAt(withDigits, place5) && !placeValueDigitAt(without, place5));
@@ -21595,7 +21600,11 @@ var MATH_HOOKS = {
       return /* @__PURE__ */ new Map();
     },
     // Building, the chart's number is the value on the chart, from 0; pulling apart, what is still on it.
-    number_moves: { state: placeValueState, moves: placeValueMoves }
+    number_moves: { state: placeValueState, moves: placeValueMoves },
+    // The question's number declared as 0 (the chart's empty start) is the outline's to fix: the outline is written
+    // once more with the fact, the chart still offered; only if it is 0 again does the chart go.
+    outline_fault: placeValueChartOutlineFault,
+    outline_rewrite: true
   },
   place_value_trade: {
     // The card's numbers have no control: the learner works it by its own taps (OLL 0026; owner, 2026-11-24:
@@ -30547,7 +30556,7 @@ function outlineNumbersMissing(outline, section) {
     }
     const check = RECIPE_HOOKS[visual.capability]?.outline_fault;
     const limit = LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[visual.capability] ?? 0;
-    if (!check || visual !== firstNumbered || declared !== limit) continue;
+    if (!check || visual !== firstNumbered || declared > limit) continue;
     const fault = check(outline.numbers.slice(0, limit).map((number) => number.initial), outline.numbers.slice(0, limit));
     if (fault) {
       return new LessonPlanError(
@@ -31496,6 +31505,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   let outlineRestarts = 0;
   let endedEarly = false;
   let sharedRestarts = 0;
+  const rewrittenNumbers = /* @__PURE__ */ new Set();
   const acceptFirstSection = async () => {
     try {
       await acceptSection(1, bootstrappedFirstSection);
@@ -31505,7 +31515,9 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       const sharesTapCard = error instanceof LessonPlanError && error.withdrawAtOnce === true;
       const dropCard = sharesTapCard && (sharedRestarts > 0 || excludedCapabilities.has(error.capability));
       const capability2 = dropCard ? error.tapCard : error instanceof LessonPlanError ? error.capability : void 0;
-      const spentOnPicture = capability2 !== void 0 && !excludedCapabilities.has(capability2) && (numbersMissing || sharesTapCard || (sectionAttempts.get(1) ?? 0) >= maxAttempts);
+      const rewriteNumbers = numbersMissing && error.code === OUTLINE_NUMBERS_REFUSED && capability2 !== void 0 && RECIPE_HOOKS[capability2]?.outline_rewrite === true && !rewrittenNumbers.has(capability2) && outlineRestarts < 2;
+      if (rewriteNumbers) rewrittenNumbers.add(capability2);
+      const spentOnPicture = !rewriteNumbers && capability2 !== void 0 && !excludedCapabilities.has(capability2) && (numbersMissing || sharesTapCard || (sectionAttempts.get(1) ?? 0) >= maxAttempts);
       const picture = capability2 ?? faultingPicture(error, 1);
       if (outlineRestarts >= 2 && picture !== void 0 && !withdrawnFrom(1, picture) && outline && (isOutlineOwnedFault(error) || numbersMissing || sharesTapCard || (sectionAttempts.get(1) ?? 0) >= maxAttempts)) {
         const withdrawn = withdrawSectionVisual(outline, 1, picture, fixedRequestParts.length, true);
@@ -31523,7 +31535,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         sectionAttempts.set(1, maxAttempts - 1);
         return acceptFirstSection();
       }
-      if (!(isOutlineOwnedFault(error) || spentOnPicture) || outlineRestarts >= 2) throw error;
+      if (!(isOutlineOwnedFault(error) || spentOnPicture || rewriteNumbers) || outlineRestarts >= 2) throw error;
       outlineRestarts += 1;
       await options.on_rejected_part?.({ label: "lesson-plan-section", section: 1, attempt: sectionAttempts.get(1) ?? 1, error: rejectionDetails(error) });
       if (spentOnPicture) {
@@ -31541,7 +31553,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         else if (isNumberLineCapability(capability2)) {
           for (const name of LESSON_PLAN_CAPABILITY_NAMES) if (isNumberLineCapability(name)) excludedCapabilities.add(name);
         } else excludedCapabilities.add(capability2);
-      } else if (outline) excludeFaulting(outline, error);
+      } else if (outline && !rewriteNumbers) excludeFaulting(outline, error);
       outlineError = error;
       outline = void 0;
       withdrawnNotes.clear();
