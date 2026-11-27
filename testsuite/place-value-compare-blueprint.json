@@ -1,0 +1,60 @@
+{
+ "note": "Comparing two numbers by place, from the largest place down: blueprint for need 35P-06 of the frozen K-12 component map (Grades 3-5 place value, row 6), 2026-11-26. One row per idea, from the Common Core standards: 4.NBT.A.2 (compare two multi-digit numbers based on meanings of the digits in each place, using >, = and < to record the results; to 1,000,000 by the domain footnote) and 5.NBT.A.3.b (compare two decimals to thousandths based on meanings of the digits in each place, using >, = and < to record the results). Each row's teacher picture says what a good teacher draws, written without reference to any card or component. The idea in every row: line the two numbers up by place (the ones under the ones, the points lined up), look from the largest place down, and the first place where they differ decides; the places after it cannot change the result. Two mistakes the picture must not let survive: 'more digits means bigger' for decimals, and lining the numbers up by their last digit (or, for whole numbers, by their first digit). Equal values (row C6) are part of the standard's '='; there every place matches. Neighbours, not this need: building and pulling apart a number (35P-05); one place is ten of the next (35P-04); rounding (35P-01); adding and subtracting on the chart (35P-07); multiplying and dividing by powers of 10 (35P-11); K-2 comparing two- and three-digit numbers by place (K2N-24, 1.NBT.B.3, 2.NBT.A.4); comparing decimals to hundredths by area on a hundred grid (FR-16, 4.NF.C.7); comparing fractions (FR-07 to FR-09). Cases (development and scoring) are written from these rows, worded as learners ask, in English and Chinese. Never taken from the question set.",
+ "rows": [
+  {
+   "id": "C1",
+   "idea": "Whole numbers with the same number of digits: the first place that differs, from the left, decides",
+   "standards": [
+    "4.NBT.A.2"
+   ],
+   "grades": "4",
+   "teacher_picture": "4,530 and 4,503 as disks on one place-value chart, one number per row, the thousands over the thousands; thousands: 4 and 4, the same; hundreds: 5 and 5, the same; tens: 3 and 0, different, so the tens decide: 4,530 > 4,503. The ones (0 and 3) come after and do not matter. In Chinese: 位数相同，从最高位比起."
+  },
+  {
+   "id": "C2",
+   "idea": "Whole numbers with different numbers of digits: lined up by the ones, the longer one has a place the shorter one is empty in",
+   "standards": [
+    "4.NBT.A.2"
+   ],
+   "grades": "4",
+   "teacher_picture": "10,200 and 9,876 on the chart, lined up by the ones (not by their first digits); the ten-thousands column: 1 disk against none; it decides at once, though 9,876 has more disks in every other column: 10,200 > 9,876. Lining them up by the first digit would put the 1 over the 9, which is the mistake."
+  },
+  {
+   "id": "C3",
+   "idea": "Large numbers to the hundred thousands, the difference late: big digits after the deciding place cannot catch up",
+   "standards": [
+    "4.NBT.A.2"
+   ],
+   "grades": "4",
+   "teacher_picture": "607,198 and 607,912 on the chart; hundred thousands, ten thousands and thousands all the same; hundreds: 1 and 9, different, so 607,912 is greater, even though 607,198 has 9 tens and 8 ones against 1 ten and 2 ones."
+  },
+  {
+   "id": "C4",
+   "idea": "Decimals of different lengths: more digits does not mean bigger",
+   "standards": [
+    "5.NBT.A.3.b"
+   ],
+   "grades": "5",
+   "teacher_picture": "0.625 and 0.7 on the chart, points lined up; ones: 0 and 0; tenths: 6 and 7, different, so 0.7 is greater, though 0.625 has three digits and more disks (13 against 7); its hundredths and thousandths come after the deciding place and do not matter. Also 0.45 and 0.405: the tenths match, the hundredths are 5 and 0, so 0.45 is greater."
+  },
+  {
+   "id": "C5",
+   "idea": "Decimals with whole parts or a zero place: line up the points, not the last digits",
+   "standards": [
+    "5.NBT.A.3.b"
+   ],
+   "grades": "5",
+   "teacher_picture": "2.35 and 2.305 with the points lined up (not their last digits); ones: 2 and 2; tenths: 3 and 3; hundredths: 5 and 0, different, so 2.35 is greater. Also 3.09 and 3.1: the tenths are 0 and 1, so 3.1 is greater. Also 12.4 and 9.87: the tens column has 1 against nothing, so 12.4 is greater; lined up by the last digit, the 4 would sit under the 7."
+  },
+  {
+   "id": "C6",
+   "idea": "Equal values written differently: every place matches",
+   "standards": [
+    "5.NBT.A.3.b",
+    "4.NBT.A.2"
+   ],
+   "grades": "5",
+   "teacher_picture": "0.7 and 0.70 on the chart: ones, tenths and hundredths all the same (the empty hundredths of 0.7 is 0, like the 0 in 0.70), so 0.7 = 0.70. A zero written at the end of a decimal adds no disks."
+  }
+ ]
+}

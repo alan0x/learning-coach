@@ -462,7 +462,7 @@ test("a stubbed generation run: the outline's four numbers, the program's counte
     assert.deepEqual(result.beats, [["write", "focus"], [10], [1]], `${outlineNumbers}`);
     assert.deepEqual([result.card.amount, result.card.target, result.card.counted_in, result.card.moved_once, result.card.moved_twice], [200, 1, 100, 0, 0], `${outlineNumbers}`);
     assert.deepEqual(result.tasks.map((task) => [task.completion.kind, task.completion.fact]), [["card_fact", "complete"], ["numeric_row", undefined]], `${outlineNumbers}`);
-    assert.deepEqual(result.plugins, { math: "0.11.0", shared: "0.1.0" });
+    assert.deepEqual(result.plugins, { math: "0.12.0", shared: "0.1.0" });
     assert.deepEqual(result.verdict.checks.filter((check) => !check.pass), [], `${outlineNumbers}`);
     assert.deepEqual(result.verdict.notes.filter((note) => !note.pass), [], `${outlineNumbers}`);
     assert.deepEqual(result.adjustments, [], `${outlineNumbers}`);

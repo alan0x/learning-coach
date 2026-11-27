@@ -139,7 +139,7 @@ test("a compiled lesson records the plugins that built its visuals", () => {
   assert.deepEqual(lessonPlanPlugins(plan("spring_and_mass")), { physics: "0.1.0", shared: "0.1.0" });
   // The math plugin's installed version (0.10.0 since the make-ten card, OLL 0027). Learn reads only the names;
   // a player checks the versions a lesson's features need (a number line still needs math 0.2.0).
-  assert.deepEqual(lessonPlanPlugins(plan("unit_circle_projection")), { math: "0.11.0", shared: "0.1.0" });
+  assert.deepEqual(lessonPlanPlugins(plan("unit_circle_projection")), { math: "0.12.0", shared: "0.1.0" });
   assert.equal(typeof compileLessonPlan, "function");
 });
 

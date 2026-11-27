@@ -371,7 +371,7 @@
         "do": {"enum": ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate", "hide", "view", "tap"]},
         "when": {"enum": ["before_speech", "during_speech", "after_speech"]},
         "as": {"$ref": "#/$defs/alias"},
-        "kind": {"enum": ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model", "base_ten_trade", "place_value_chart", "place_value_trade", "make_ten", "place_value_times_ten"]},
+        "kind": {"enum": ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model", "base_ten_trade", "place_value_chart", "place_value_trade", "make_ten", "place_value_times_ten", "place_value_compare"]},
         "role": {"type": "string"},
         "content": {"type": "object"},
         "place": {"$ref": "#/$defs/placement"},
@@ -492,6 +492,13 @@
             "properties": {"do": {"const": "write"}, "kind": {"const": "place_value_times_ten"}}
           },
           "then": {"properties": {"content": {"$ref": "#/$defs/placeValueTimesTenContent"}}}
+        },
+        {
+          "if": {
+            "required": ["do", "kind"],
+            "properties": {"do": {"const": "write"}, "kind": {"const": "place_value_compare"}}
+          },
+          "then": {"properties": {"content": {"$ref": "#/$defs/placeValueCompareContent"}}}
         },
         {
           "if": {"properties": {"do": {"const": "revise"}}},
@@ -869,6 +876,27 @@
         }
       }
     },
+    "placeValueCompareContent": {
+      "type": "object",
+      "required": ["a", "b", "compared", "marked", "signed"],
+      "additionalProperties": false,
+      "properties": {
+        "language": {"enum": ["en-US", "zh-CN"]},
+        "a": {"type": "integer", "minimum": 0, "maximum": 9999999999},
+        "b": {"type": "integer", "minimum": 0, "maximum": 9999999999},
+        "a_decimals": {"type": "integer", "minimum": 0, "maximum": 3},
+        "b_decimals": {"type": "integer", "minimum": 0, "maximum": 3},
+        "compared": {"type": "integer", "minimum": 0, "maximum": 8},
+        "marked": {"type": "integer", "minimum": 0, "maximum": 7},
+        "signed": {"type": "integer", "minimum": 0, "maximum": 1},
+        "bindings": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {"$ref": "#/$defs/valueBinding"}
+        }
+      }
+    },
     "scene3dContent": {
       "type": "object",
       "required": ["objects", "camera", "fallback"],
@@ -1012,7 +1040,7 @@
       "required": ["target", "expression"],
       "additionalProperties": false,
       "properties": {
-        "target": {"type": "string", "pattern": "^(?:[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*|target|a|b|finished|filled|moved|amount|counted_in|moved_once|moved_twice)$"},
+        "target": {"type": "string", "pattern": "^(?:[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*|target|a|b|finished|filled|moved|amount|counted_in|moved_once|moved_twice|a_decimals|b_decimals|compared|marked|signed)$"},
         "expression": {"type": "string", "minLength": 1, "maxLength": 256},
         "allow_zero": {"const": true},
         "hide_when_undefined": {"const": true},
