@@ -303,6 +303,8 @@ test("section facts: the card in its own terms, once it is drawn, in the lesson'
     numbers: [1, 2, 3, 4, 5], operation: "add", pair: [3486, 2739], answer: 6225,
     columns: ["Thousands", "Hundreds", "Tens", "Ones"],
     columns_finished: 2,
+    // Where the demonstration goes: every column, to the answer (owner, 2026-11-27, PT-12; information only).
+    demonstration_to: { columns_finished: 4, answer: 6225 },
     // 6 + 9 = 15 ones: 5 stay, a ten carried; 8 + 3 + 1 = 12 tens: 2 stay, a hundred waits above the hundreds.
     chart_now: [
       { column: "Thousands", row_1: 3, row_2: 2 },
@@ -320,6 +322,7 @@ test("section facts: the card in its own terms, once it is drawn, in the lesson'
   const sub = { ...established, parameters: { operation: "subtract" } };
   const done = facts({ section: 3, mode: "reuse", established: sub, numbers: decimals, state: new Map([[5, 3]]), language: "zh-CN" }).facts;
   assert.deepEqual([done.pair, done.answer, done.columns, done.every_column_finished, "next" in done, done.practice_pair], [[8.2, 3.75], 4.45, ["个位", "十分位", "百分位"], true, false, [9.3, 4.68]]);
+  assert.deepEqual(done.demonstration_to, { columns_finished: 3, answer: 4.45 });
   // Nothing done yet: the next value finishes the hundredths, borrowing from the tenths.
   const fresh = facts({ section: 2, mode: "reuse", established: sub, numbers: decimals, state: new Map(), language: "en-US" }).facts;
   assert.deepEqual(fresh.chart_now, [{ column: "Ones", row_1: 8, take_away: 3 }, { column: "Tenths", row_1: 2, take_away: 7 }, { column: "Hundredths", row_1: 0, take_away: 5 }]);
@@ -596,4 +599,7 @@ test("the trial's guidance asks for the card's numbers in the outline (default r
     console.log(JSON.stringify(api.LESSON_PLAN_CAPABILITY_REGISTRY.place_value_trade.model_guidance));
   `);
   assert.match(guidance, /outline 的 numbers 依次写这五个数（不动的也要写）/u);
+  // The demonstration works through every column to the answer (owner, 2026-11-27, PT-12); no check enforces it.
+  assert.match(guidance, /演示做完每一列，一直到得数/u);
+  assert.doesNotMatch(guidance, /可以只演示几列/u);
 });

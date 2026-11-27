@@ -603,6 +603,8 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
       const actions: AuthoringAction[] = [];
       // A replayed number of such a visual replays the whole card: its other numbers and its own variables.
       const replayed = new Set((moment.restart_numbers ?? []).map(variableAlias));
+      // Cards whose opening this moment's replay already plays (a replay naming two of a card's numbers fills it once).
+      const reopened = new Set<CompiledVisual>();
       for (const number of moment.restart_numbers ?? []) {
         const mover = movers.get(number);
         const state = mover && moverStates.get(mover.visual);
@@ -622,6 +624,12 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
           else replayed.add(variableAlias(other));
         }
         for (const variable of mover.visual.variables ?? []) replayed.add(variable.as);
+        // The replay resets the card's variables to their written start; a card drawn in another state fills again,
+        // once however many of its numbers the replay names.
+        if (!reopened.has(mover.visual)) {
+          reopened.add(mover.visual);
+          actions.push(...(mover.visual.mover!.opening ?? []).map((action) => ({ ...action, ...actionWhen("before_speech") })));
+        }
       }
       // This moment's animations of such a visual are one teaching step: applied lowest place first, and
       // played where the first of them stands. Worked out at that first animation, so a card drawn earlier
@@ -701,11 +709,12 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
             } else {
               reusableVisuals.set(identity, visual);
               for (const variable of visual.variables ?? []) if (!visualVariables.has(variable.as)) visualVariables.set(variable.as, variable);
-              actions.push(...visual.actions.map((action) => ({ ...action, ...actionWhen(item.timing) })));
+              actions.push(...[...visual.actions, ...(visual.mover?.opening ?? [])].map((action) => ({ ...action, ...actionWhen(item.timing) })));
               writtenHere.set(visual, item.timing);
               if (visual.mover && RECIPE_HOOKS[visualContent.capability]?.number_moves) {
                 const start = visual.mover.numbers.map((number) => plan.numbers![number - 1]!.initial);
-                const state = RECIPE_HOOKS[visualContent.capability]!.number_moves!.state(start, visualContent);
+                const drawnWith = section.moments.slice(momentOffset).flatMap((each) => each.actions);
+                const state = RECIPE_HOOKS[visualContent.capability]!.number_moves!.state(start, visualContent, drawnWith);
                 moverStates.set(visual, { start: state, now: [...state] });
                 visual.mover.numbers.forEach((number, position) => movers.set(number, { visual, capability: visualContent.capability, position }));
                 if (visual.mover.unbound) for (const number of visual.mover.numbers) unboundNumbers.add(number);
