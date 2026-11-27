@@ -3193,8 +3193,11 @@ export async function generateLessonPlanWithModel(
   let stableCameraObservation: CameraLessonObservation | undefined;
   const sectionErrors = new Map<number, unknown>();
   const sectionAttempts = new Map<number, number>();
-  // Sections written again after their picture was withdrawn, with what the request tells the model.
-  const withdrawnNotes = new Map<number, string>();
+  // Sections written again after a picture was withdrawn, by section and the picture's recipe, with what the request
+  // tells the model. A section may lose more than one picture (a picture on a card's own number after another that
+  // broke its limits); never the same recipe twice, since a withdrawn recipe is no longer offered to the section.
+  const withdrawnNotes = new Map<number, Map<string, string>>();
+  const withdrawnFrom = (section: number, capability: string | undefined) => capability !== undefined && withdrawnNotes.get(section)?.has(capability) === true;
 
   const admissionCourse = (
     parsed: unknown,
@@ -3604,7 +3607,7 @@ export async function generateLessonPlanWithModel(
   let leftOutMoves: Array<{ detail: string; narration_only_moment?: true }> = [];
   // A later section's picture is taken out of the outline, and the section is written without it, told why.
   const withdrawLaterSectionVisual = async (section: number, capability: string, reason: string, detail: string, reported?: () => Promise<void>): Promise<boolean> => {
-    const withdrawn = section > 1 && !withdrawnNotes.has(section) && outline
+    const withdrawn = section > 1 && !withdrawnFrom(section, capability) && outline
       ? withdrawSectionVisual(outline, section, capability, fixedRequestParts.length)
       : undefined;
     if (!withdrawn) return false;
@@ -3616,7 +3619,8 @@ export async function generateLessonPlanWithModel(
   // The outline without the picture replaces the outline, and the section is told the picture is gone.
   const applyWithdrawal = async (section: number, capability: string, withdrawn: LessonPlanOutline, reason: string, detail: string, reported?: () => Promise<void>): Promise<void> => {
     // The outline's purposes and strategies were written around the picture and still name it.
-    withdrawnNotes.set(section, `A picture this lesson was planned around in section ${section} (${LESSON_PLAN_CAPABILITY_REGISTRY[capability as keyof typeof LESSON_PLAN_CAPABILITIES]?.required_features.join(", ") ?? capability}) could not show the lesson's numbers and has been taken out of the lesson. Write this section without it: do not mention it or anything it would have drawn, and do not invite the learner to use it. Teach with the pictures in visuals_for_section, written math and words.`);
+    if (!withdrawnNotes.has(section)) withdrawnNotes.set(section, new Map());
+    withdrawnNotes.get(section)!.set(capability, `A picture this lesson was planned around in section ${section} (${LESSON_PLAN_CAPABILITY_REGISTRY[capability as keyof typeof LESSON_PLAN_CAPABILITIES]?.required_features.join(", ") ?? capability}) could not show the lesson's numbers and has been taken out of the lesson. Write this section without it: do not mention it or anything it would have drawn, and do not invite the learner to use it. Teach with the pictures in visuals_for_section, written math and words.`);
     // The only way the section gains a note is the empty slot withdrawSectionVisual adds (`keepSectionItem`).
     const slotAdded = outline !== undefined && notesIn(withdrawn, section) > notesIn(outline, section);
     outline = withdrawn;
@@ -3659,7 +3663,7 @@ export async function generateLessonPlanWithModel(
         }
       }
       const cardsIn = (from: LessonPlanOutline) => (from.course_visuals ?? []).filter((each) => each.capability === card).length;
-      const withdrawn = withdrawnNotes.has(section) ? undefined : withdrawSectionVisual(unlinked, section, capability, fixedRequestParts.length, section === 1);
+      const withdrawn = withdrawnFrom(section, capability) ? undefined : withdrawSectionVisual(unlinked, section, capability, fixedRequestParts.length, section === 1);
       if (!withdrawn || cardsIn(withdrawn) !== cardsIn(outline)) return;
       await withdrawBeforePublishing(section, capability, withdrawn, "shares_tap_card_numbers",
         `the ${capability} visual starts on at least ${recipeMinLessonNumbers(capability)} lesson numbers and the ${card} card on ${recipeMinLessonNumbers(card)}, and the outline declares ${outline.numbers?.length ?? 0}: they would share one`);
@@ -3770,7 +3774,7 @@ export async function generateLessonPlanWithModel(
           assigned_request_parts: assignedRequestParts(section),
           // The note stays for later sections too: their purposes may also name the picture (review of this change).
           ...([...withdrawnNotes.keys()].some((from) => from <= section)
-            ? { removed_picture: [...withdrawnNotes].filter(([from]) => from <= section).map(([, note]) => note).join(" ") } : {}),
+            ? { removed_picture: [...withdrawnNotes].filter(([from]) => from <= section).flatMap(([, notes]) => [...notes.values()]).join(" ") } : {}),
           ...(sectionErrors.has(section)
             ? { previous_validation_error: errorFeedback(sectionErrors.get(section)) }
             : {}),
@@ -3882,7 +3886,7 @@ export async function generateLessonPlanWithModel(
             }
           }
           const trial = unlinked ? withdrawSectionVisual(unlinked, section, error.capability, fixedRequestParts.length) : undefined;
-          const cardSurvives = !withdrawnNotes.has(section) && trial !== undefined && cardsIn(trial) === cardsIn(outline);
+          const cardSurvives = !withdrawnFrom(section, error.capability) && trial !== undefined && cardsIn(trial) === cardsIn(outline);
           if (cardSurvives) outline = unlinked;
           const withdrawn = cardSurvives && await withdrawLaterSectionVisual(
             section, error.capability, "shares_tap_card_numbers", error.message,
@@ -4001,7 +4005,7 @@ export async function generateLessonPlanWithModel(
       // A fault the outline owns that names no recipe (a number line's tick limits) is about the picture at its path:
       // restarts still exclude the whole number-line family, as before; the rewrite takes out that picture.
       const picture = capability ?? faultingPicture(error, 1);
-      if (outlineRestarts >= 2 && picture !== undefined && !withdrawnNotes.has(1) && outline
+      if (outlineRestarts >= 2 && picture !== undefined && !withdrawnFrom(1, picture) && outline
         && (isOutlineOwnedFault(error) || numbersMissing || sharesTapCard || (sectionAttempts.get(1) ?? 0) >= maxAttempts)) {
         // Both restarts spent and section 1 still faults on a picture (35P-04 objective run, PF-09: the mat, then the
         // chart, then the times-ten card): section 1 is written once more without it, as a later section is, so a

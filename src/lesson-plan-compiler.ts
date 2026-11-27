@@ -990,10 +990,9 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
   }
   const closeFocus = plan.close.focus.map((_item, index) => reference(`$lessonPlan.close.focus[${index}]`));
   // A lesson number is declared only once the lesson uses it: a picture binds it, a move or a replay names it, a task
-  // works it, or the learner has a control on it. A number declared in an earlier part and gone from a later one
-  // changes the lesson Learn holds, and the class starts over: a card first drawn in section 2 reads its numbers
-  // unbound, so section 1's part declared them for nothing (Coach design note runs/cross/second-example-design.md §1;
-  // the web runtime's lessonOpenCanExtend). Adding a variable later is allowed.
+  // works it, or the learner has a control on it. A later part may add a variable, never drop or change one (the web
+  // runtime's lessonOpenCanExtend): Learn rebuilds its runtime when lesson.open changes, and the class started over
+  // when a card first drawn in section 2 read, unbound, numbers section 1's part had declared for nothing (2026-11-27).
   const used = new Set([...JSON.stringify({ steps: steps.map((step) => step.beats.map(({ actions, start }) => ({ actions, start }))), tasks })
     .matchAll(/\bnumber_(\d{2,})\b/gu)].map((match) => Number(match[1])));
   const declared = (index: number) => !unboundNumbers.has(index)

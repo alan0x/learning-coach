@@ -25806,6 +25806,8 @@ function compileLessonPlan(value2, options = {}) {
     fail2("LESSON_PLAN_BOARD_CONTEXT", "$options.board_context", "host references require board context");
   }
   const closeFocus = plan.close.focus.map((_item, index) => reference(`$lessonPlan.close.focus[${index}]`));
+  const used = new Set([...JSON.stringify({ steps: steps.map((step) => step.beats.map(({ actions, start }) => ({ actions, start }))), tasks }).matchAll(/\bnumber_(\d{2,})\b/gu)].map((match) => Number(match[1])));
+  const declared = (index) => !unboundNumbers.has(index) && (used.has(index) || plan.numbers?.[index - 1]?.student_control !== void 0);
   const lesson = {
     dsl: "octos.lesson",
     version: "0.1",
@@ -25837,8 +25839,8 @@ function compileLessonPlan(value2, options = {}) {
           ...options.adaptation_context_refs?.length ? { context_refs: [...options.adaptation_context_refs] } : {}
         }
       } : {},
-      ...plan.numbers?.length || visualVariables.size ? {
-        variables: [...(plan.numbers ?? []).flatMap((number, index) => (unboundNumbers.has(index + 1) ? [] : [number]).map((number2) => ({
+      ...(plan.numbers ?? []).some((_number, index) => declared(index + 1)) || visualVariables.size ? {
+        variables: [...(plan.numbers ?? []).flatMap((number, index) => (declared(index + 1) ? [number] : []).map((number2) => ({
           as: variableAlias(index + 1),
           initial: number2.initial,
           min: number2.min,
@@ -25964,9 +25966,14 @@ function compileAndValidateLessonPlan(value2, options = {}) {
   if (!schemaResult.valid) {
     const first = schemaResult.errors[0];
     const overVariables = first?.instancePath === "/lesson/variables" && first?.keyword === "maxItems";
-    const written = new Set(compiled.lesson.steps.flatMap((step) => step.beats.flatMap((beat) => beat.actions)).filter((action) => action.do === "write").map((action) => action.kind));
-    const heavy = overVariables ? Object.entries(LESSON_PLAN_CAPABILITY_REGISTRY).find(([name, recipe]) => recipeDeclares(name, "binds_many_variables") && (recipe.output_kinds ?? []).some((kind) => written.has(kind)))?.[0] : void 0;
-    fail2("LESSON_PLAN_OLL_SCHEMA", first?.instancePath ?? "$lesson", first?.message ?? "compiled OLL failed schema validation", heavy);
+    const recipes = Object.entries(LESSON_PLAN_CAPABILITY_REGISTRY);
+    const kindsIn = (steps) => steps.flatMap((step) => step.beats.flatMap((beat) => beat.actions)).filter((action) => action.do === "write").map((action) => action.kind);
+    const recipeOf = (kind) => recipes.find(([, recipe]) => (recipe.output_kinds ?? []).includes(kind))?.[0];
+    const isHeavy = (name) => name !== void 0 && recipeDeclares(name, "binds_many_variables");
+    const lastDrawn = kindsIn(compiled.lesson.steps.slice(-1)).map(recipeOf).filter((name) => name !== void 0);
+    const anywhere = new Set(kindsIn(compiled.lesson.steps).map(recipeOf));
+    const blamed = !overVariables ? void 0 : lastDrawn.find(isHeavy) ?? lastDrawn.at(-1) ?? recipes.map(([name]) => name).find((name) => isHeavy(name) && anywhere.has(name));
+    fail2("LESSON_PLAN_OLL_SCHEMA", first?.instancePath ?? "$lesson", first?.message ?? "compiled OLL failed schema validation", blamed);
   }
   const resourceContext = {
     assets: (options.image_resources ?? []).map((resource) => ({ asset_id: resource.asset_id }))
@@ -29128,6 +29135,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   const sectionErrors = /* @__PURE__ */ new Map();
   const sectionAttempts = /* @__PURE__ */ new Map();
   const withdrawnNotes = /* @__PURE__ */ new Map();
+  const withdrawnFrom = (section, capability2) => capability2 !== void 0 && withdrawnNotes.get(section)?.has(capability2) === true;
   const admissionCourse = (parsed, observeCamera) => {
     if (!admissionInput) return { course: parsed };
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
@@ -29480,14 +29488,15 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   };
   let leftOutMoves = [];
   const withdrawLaterSectionVisual = async (section, capability2, reason, detail, reported2) => {
-    const withdrawn = section > 1 && !withdrawnNotes.has(section) && outline ? withdrawSectionVisual(outline, section, capability2, fixedRequestParts.length) : void 0;
+    const withdrawn = section > 1 && !withdrawnFrom(section, capability2) && outline ? withdrawSectionVisual(outline, section, capability2, fixedRequestParts.length) : void 0;
     if (!withdrawn) return false;
     await applyWithdrawal(section, capability2, withdrawn, reason, detail, reported2);
     return true;
   };
   const notesIn = (from, section) => (from.sections[section - 1]?.reusable_items ?? []).filter((item) => item.kind === "board_item" && item.board_kind === "note").length;
   const applyWithdrawal = async (section, capability2, withdrawn, reason, detail, reported2) => {
-    withdrawnNotes.set(section, `A picture this lesson was planned around in section ${section} (${LESSON_PLAN_CAPABILITY_REGISTRY[capability2]?.required_features.join(", ") ?? capability2}) could not show the lesson's numbers and has been taken out of the lesson. Write this section without it: do not mention it or anything it would have drawn, and do not invite the learner to use it. Teach with the pictures in visuals_for_section, written math and words.`);
+    if (!withdrawnNotes.has(section)) withdrawnNotes.set(section, /* @__PURE__ */ new Map());
+    withdrawnNotes.get(section).set(capability2, `A picture this lesson was planned around in section ${section} (${LESSON_PLAN_CAPABILITY_REGISTRY[capability2]?.required_features.join(", ") ?? capability2}) could not show the lesson's numbers and has been taken out of the lesson. Write this section without it: do not mention it or anything it would have drawn, and do not invite the learner to use it. Teach with the pictures in visuals_for_section, written math and words.`);
     const slotAdded = outline !== void 0 && notesIn(withdrawn, section) > notesIn(outline, section);
     outline = withdrawn;
     await reported2?.();
@@ -29530,7 +29539,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         }
       }
       const cardsIn = (from) => (from.course_visuals ?? []).filter((each) => each.capability === card).length;
-      const withdrawn = withdrawnNotes.has(section) ? void 0 : withdrawSectionVisual(unlinked, section, capability2, fixedRequestParts.length, section === 1);
+      const withdrawn = withdrawnFrom(section, capability2) ? void 0 : withdrawSectionVisual(unlinked, section, capability2, fixedRequestParts.length, section === 1);
       if (!withdrawn || cardsIn(withdrawn) !== cardsIn(outline)) return;
       await withdrawBeforePublishing(
         section,
@@ -29635,7 +29644,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
           visuals_for_section: visualsForSection(section, currentNumbers),
           assigned_request_parts: assignedRequestParts(section),
           // The note stays for later sections too: their purposes may also name the picture (review of this change).
-          ...[...withdrawnNotes.keys()].some((from) => from <= section) ? { removed_picture: [...withdrawnNotes].filter(([from]) => from <= section).map(([, note]) => note).join(" ") } : {},
+          ...[...withdrawnNotes.keys()].some((from) => from <= section) ? { removed_picture: [...withdrawnNotes].filter(([from]) => from <= section).flatMap(([, notes]) => [...notes.values()]).join(" ") } : {},
           ...sectionErrors.has(section) ? { previous_validation_error: errorFeedback(sectionErrors.get(section)) } : {}
         }),
         response_schema: buildLessonPlanSectionDraftJsonSchema(outline, section, allowedNumberIndexes)
@@ -29723,7 +29732,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
             }
           }
           const trial = unlinked ? withdrawSectionVisual(unlinked, section, error.capability, fixedRequestParts.length) : void 0;
-          const cardSurvives = !withdrawnNotes.has(section) && trial !== void 0 && cardsIn(trial) === cardsIn(outline);
+          const cardSurvives = !withdrawnFrom(section, error.capability) && trial !== void 0 && cardsIn(trial) === cardsIn(outline);
           if (cardSurvives) outline = unlinked;
           const withdrawn = cardSurvives && await withdrawLaterSectionVisual(
             section,
@@ -29822,7 +29831,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       const capability2 = dropCard ? error.tapCard : error instanceof LessonPlanError ? error.capability : void 0;
       const spentOnPicture = capability2 !== void 0 && !excludedCapabilities.has(capability2) && (numbersMissing || sharesTapCard || (sectionAttempts.get(1) ?? 0) >= maxAttempts);
       const picture = capability2 ?? faultingPicture(error, 1);
-      if (outlineRestarts >= 2 && picture !== void 0 && !withdrawnNotes.has(1) && outline && (isOutlineOwnedFault(error) || numbersMissing || sharesTapCard || (sectionAttempts.get(1) ?? 0) >= maxAttempts)) {
+      if (outlineRestarts >= 2 && picture !== void 0 && !withdrawnFrom(1, picture) && outline && (isOutlineOwnedFault(error) || numbersMissing || sharesTapCard || (sectionAttempts.get(1) ?? 0) >= maxAttempts)) {
         const withdrawn = withdrawSectionVisual(outline, 1, picture, fixedRequestParts.length, true);
         if (!withdrawn) throw error;
         await withdrawBeforePublishing(
