@@ -452,6 +452,8 @@ function lowerModelOutlineNumber(entry: unknown, index: number): unknown {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
   const number = { ...(entry as Record<string, unknown>) };
   delete number.student_control;
+  // The written decimals are the program's (read from the model's own mantissa and scale), never the model's word.
+  delete number.written_decimals;
   if (typeof number.unit === "string" && !number.unit.trim()) delete number.unit;
   if (typeof number.label === "string" && !number.label.trim()) delete number.label;
   const written = { initial: number.initial, min: number.min, max: number.max };
@@ -3085,7 +3087,7 @@ function outlineNumbersMissing(outline: LessonPlanOutline, section: number): Les
     const check = RECIPE_HOOKS[visual.capability as keyof typeof RECIPE_HOOKS]?.outline_fault;
     const limit = LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[visual.capability as keyof typeof LESSON_PLAN_CAPABILITY_NUMBER_LIMITS] ?? 0;
     if (!check || visual !== firstNumbered || declared !== limit) continue;
-    const fault = check(outline.numbers!.slice(0, limit).map((number) => number.initial));
+    const fault = check(outline.numbers!.slice(0, limit).map((number) => number.initial), outline.numbers!.slice(0, limit));
     if (fault) {
       return new LessonPlanError(OUTLINE_NUMBERS_REFUSED, `$lessonPlanOutline.course_visuals[${index}]`,
         `the ${visual.capability} visual cannot start on the outline's numbers: ${fault}; a section cannot change them`, visual.capability);
@@ -3389,10 +3391,10 @@ export async function generateLessonPlanWithModel(
     }
     const bootstrap = course as Record<string, unknown>;
     outline = validateLessonPlanOutline(
-      lowerModelOutline(
-        withWrittenDecimals(bootstrap.outline, coerceLessonPlanOutlineModelNumbers(bootstrap.outline, fixedRequestParts.length)),
+      withWrittenDecimals(bootstrap.outline, lowerModelOutline(
+        coerceLessonPlanOutlineModelNumbers(bootstrap.outline, fixedRequestParts.length),
         fixedRequestParts.length,
-      ),
+      )),
       fixedRequestParts.length,
     );
     programNumberCard = supplyProgramNumbers(outline, input.language)?.capability ?? soleProgramNumberCard(outline);
@@ -3464,10 +3466,10 @@ export async function generateLessonPlanWithModel(
       if (partialOutline !== undefined) {
         try {
           outline = validateLessonPlanOutline(
-            lowerModelOutline(
-              withWrittenDecimals(partialOutline, coerceLessonPlanOutlineModelNumbers(partialOutline, fixedRequestParts.length)),
+            withWrittenDecimals(partialOutline, lowerModelOutline(
+              coerceLessonPlanOutlineModelNumbers(partialOutline, fixedRequestParts.length),
               fixedRequestParts.length,
-            ),
+            )),
             fixedRequestParts.length,
           );
           sectionErrors.set(1, error);
@@ -3541,10 +3543,10 @@ export async function generateLessonPlanWithModel(
       const admitted = admissionCourse(parsed, observeCamera);
       if (admitted.result) return admitted.result;
       const candidateOutline = validateLessonPlanOutline(
-        lowerModelOutline(
-          withWrittenDecimals(admitted.course, coerceLessonPlanOutlineModelNumbers(admitted.course, fixedRequestParts.length)),
+        withWrittenDecimals(admitted.course, lowerModelOutline(
+          coerceLessonPlanOutlineModelNumbers(admitted.course, fixedRequestParts.length),
           fixedRequestParts.length,
-        ),
+        )),
         fixedRequestParts.length,
       );
       try {

@@ -1,4 +1,4 @@
-import type { LessonPlan, LessonPlanAction, LessonPlanMathExpression, LessonPlanOutline, LessonPlanSectionDraft, LessonPlanVisualContent } from "../lesson-plan.js";
+import type { LessonPlan, LessonPlanAction, LessonPlanMathExpression, LessonPlanNumber, LessonPlanOutline, LessonPlanSectionDraft, LessonPlanVisualContent } from "../lesson-plan.js";
 import { MATH_HOOKS, MATH_PLUGIN_HOOKS } from "./math-hooks.js";
 import { SHARED_HOOKS } from "./shared-hooks.js";
 
@@ -67,7 +67,7 @@ export interface RecipeHooks {
    * is the outline's first numbered picture, so those are its numbers. A section cannot change an outline number,
    * so the visual goes at once, before any section is written for it.
    */
-  outline_fault?(values: readonly number[]): string | undefined;
+  outline_fault?(values: readonly number[], definitions?: readonly LessonPlanNumber[]): string | undefined;
   /**
    * The lesson variables the card will bind on these starting values (its lesson numbers, in its order, as the outline
    * declares them with the program's own), at most: the worst case of what its create decides later (the column card's

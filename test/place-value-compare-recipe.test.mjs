@@ -67,7 +67,15 @@ test("compared moves forward from 0 to the sign; a value past the end is the end
   const left = moves.moves(start, [{ position: 0, to: 4000 }, { position: 4, to: 2 }]);
   assert.deepEqual(left.steps.map((step) => step.to[4]), [2]);
   assert.match(left.ignored[0].reason, /stay as written: the demonstration moves only compared/);
-  assert.equal(api.RECIPE_HOOKS.place_value_compare.outline_fault([0.7, 0.7, 0.4, 0.4, 0]), undefined, "values alone cannot tell 0.7 from 0.70: the compiler decides");
+  // The outline's numbers carry their written decimals: 0.7 twice is refused as the outline is read; 0.7 and 0.70 are a pair.
+  const decimals = (...written) => written.map((written_decimals) => (written_decimals ? { written_decimals } : {}));
+  assert.match(api.RECIPE_HOOKS.place_value_compare.outline_fault([0.7, 0.7, 0.4, 0.5, 0], decimals()), /the same numeral, 0\.7/);
+  assert.equal(api.RECIPE_HOOKS.place_value_compare.outline_fault([0.7, 0.7, 0.4, 0.4, 0], decimals(0, 2, 2, 0)), undefined);
+  // Compared is the program's: an outline that writes 8 there (the guidance's last value) keeps the card (review of #198).
+  assert.equal(api.RECIPE_HOOKS.place_value_compare.outline_fault([4530, 4503, 6281, 6218, 8]), undefined);
+  // An equal pair's sign is at 4 to 5 (its written decimals are the compiler's): 8 then 4 are both the sign.
+  assert.deepEqual(to(moves.state([0.7, 0.7, 0.4, 0.4, 0]), 8, 4).steps.map((step) => step.to[4]), [5, 4]);
+  assert.match(to(moves.state([0.7, 0.7, 0.4, 0.4, 0]), 4, 3).refused.reason, /never back/);
   assert.match(api.RECIPE_HOOKS.place_value_compare.outline_fault([4530, 4503, 4503, 4530, 0]), /the same two numbers in the other order are the same pair/);
   assert.match(api.RECIPE_HOOKS.place_value_compare.outline_fault([1234567, 0.5, 1, 2, 0]), /too_wide/);
 });
@@ -229,7 +237,7 @@ test("with the trial on, the model's first request describes the card; without i
 
 // A stubbed generation run: the outline declares the card's four numbers, the second written with its zero (0.70 as
 // mantissa 70, scale 2); the program supplies compared, reads the written decimals, the section draws the card.
-const stubbedRun = ({ outlineNumbers = 4, trial = "place_value_compare", numbers = ["0.7", "0.70"], practice = ["0.40", "0.4"], steps = [8] } = {}) => withTrial(`
+const stubbedRun = ({ outlineNumbers = 4, trial = "place_value_compare", numbers = ["0.7", "0.70"], practice = ["0.40", "0.4"], steps = [8], modelKey = false } = {}) => withTrial(`
   const api = await import(${here("../lesson-plan.js")});
   const { comparePlan, makeSamplePlanModelCompatible } = await import(${here("./sample-plans.mjs")});
   const { modelResponseHelpers } = await import(${here("./model-responses.mjs")});
@@ -247,6 +255,7 @@ const stubbedRun = ({ outlineNumbers = 4, trial = "place_value_compare", numbers
     if (text === undefined) return;
     const frac = text.split(".")[1] ?? "";
     number.initial = { mantissa: Number(text.replace(".", "")), scale: frac.length };
+    if (${JSON.stringify(modelKey)}) number.written_decimals = 2;
   });
   const requests = [], adjustments = [];
   let generated, error;
@@ -358,4 +367,33 @@ test("a picture before the card on the same numbers: the card draws its copies w
   `);
   assert.deepEqual([result.card.a, result.card.b, result.card.a_decimals, result.card.b_decimals], [700, 700, 1, 2]);
   assert.deepEqual(result.verdict.checks.filter((check) => !check.pass), []);
+});
+
+test("review of #198: the outline's compared is read over; a demonstration past the sign twice plays the sign once; a model's written_decimals key is dropped", () => {
+  const result = withTrial(compileScript([
+    ["eight", { numbers: ["4530", "4503"], practice: ["6281", "6218"], steps: [8] }, "en-US", null],
+    ["equal-8-4", { numbers: ["0.7", "0.70"], practice: ["0.40", "0.4"], steps: [8, 4] }, "en-US", null],
+  ]).replace("comparePlan(options)", "(() => { const plan = comparePlan(options); plan.numbers[4].initial = 8; return plan; })()"));
+  for (const id of ["eight", "equal-8-4"]) assert.ok(!result[id].error, `${id}: ${result[id].message}`);
+  assert.equal(result.eight.lesson.steps[0].beats[0].actions[0].content.compared, 0, "the card opens at 0 whatever the outline wrote");
+  const values = (id) => result[id].lesson.steps[0].beats.flatMap((beat) => beat.actions).filter((action) => action.do === "animate").map((action) => action.value);
+  assert.deepEqual(values("equal-8-4"), [4]);
+  // The model's own written_decimals key is never read: only its mantissa and scale are.
+  const stub = stubbedRun({ numbers: ["4530", "4503"], practice: ["6281", "6218"], modelKey: true });
+  assert.ok(!stub.error, stub.error);
+  assert.equal("a_decimals" in stub.card, false);
+});
+
+test("review of #198: the words for the sign give the practice's answer too", async () => {
+  const words = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    const { comparePlan } = await import(${here("./sample-plans.mjs")});
+    const out = {};
+    for (const prompt of ["6281 is greater than 6218.", "6,218 is less than 6,281", "6281 大于 6218", "6218 小于 6281。", "6281 比 6218 大", "Is 6281 greater than 6218?", "Compare 6281 and 6218."]) {
+      const compiled = api.compileAndValidateLessonPlan(comparePlan({ numbers: ["4530", "4503"], practice: ["6281", "6218"], prompt }), { language: "en-US" });
+      out[prompt] = (compiled.lesson.lesson.tasks ?? []).length;
+    }
+    console.log(JSON.stringify(out));
+  `);
+  assert.deepEqual(Object.values(words), [0, 0, 0, 0, 0, 0, 1]);
 });

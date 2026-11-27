@@ -18570,16 +18570,13 @@ function compareNumberOf(value2, written) {
   return placeValueCompareFromDecimal(thousandths, 3) ? { value: thousandths, dec } : void 0;
 }
 var compareNumeral = (n) => `${Math.floor(n.value / 1e3)}${n.dec ? `.${String(n.value % 1e3).padStart(3, "0").slice(0, n.dec)}` : ""}`;
-function compareStartProblem(values, written = [], { decimalsUnknown = false } = {}) {
+function compareStartProblem(values, written = []) {
   if (values.length !== 5) {
-    return { fault: "the card takes five lesson numbers, in order: the two numbers to compare (as the question writes them: 0.70 keeps its zero), the practice pair (another pair, for the learner) and compared (0)" };
+    return { fault: "the card takes five lesson numbers, in order: the two numbers to compare (as the question writes them: 0.70 keeps its zero), the practice pair (another pair, for the learner) and compared (the program's: the card opens at 0)" };
   }
   const numbers = values.slice(0, 4).map((value2, i) => compareNumberOf(value2, written[i]));
   if (numbers.some((n) => n === void 0)) return { fault: "the two numbers and the practice pair are numbers from 0 to 9,999,999 with at most three decimal places (thousandths)" };
   const [a, b, pa, pb] = numbers;
-  const sameNumeral = (x, y) => decimalsUnknown && x.value === y.value;
-  if (sameNumeral(a, b)) b.dec = Math.min(3, Math.max(a.dec, b.dec) + 1);
-  if (sameNumeral(pa, pb)) pb.dec = Math.min(3, Math.max(pa.dec, pb.dec) + 1);
   const fault = placeValueCompareFault(a, b);
   if (fault) {
     return { fault: fault === "same_numeral" ? `the two numbers are the same numeral, ${compareNumeral(a)}: there is nothing to compare (0.7 and 0.70 are a pair: 0.70 is mantissa 70, scale 2)` : `the question's pair: ${placeValueCompareFaultText(fault, a, b)}` };
@@ -18592,18 +18589,21 @@ function compareStartProblem(values, written = [], { decimalsUnknown = false } =
   if ([[pa, pb], [pb, pa]].some(([x, y]) => x.value === a.value && y.value === b.value)) {
     return { fault: "the practice pair is the learner's own: other numbers than the question's, not the same values written another way" };
   }
-  if (values[COMPARE_NUMBER.compared] !== 0) return { fault: `compared starts at 0, not ${values[COMPARE_NUMBER.compared]}: the card opens with no column judged` };
   return { pair, practice: placeValueComparePairOf(pa, pb), numbers: [a, b, pa, pb] };
 }
-var compareOutlineFault = (values) => {
-  const found = compareStartProblem(values.length === 4 ? [...values, 0] : values, [], { decimalsUnknown: true });
+var compareOutlineFault = (values, definitions = []) => {
+  const found = compareStartProblem(values.length === 4 ? [...values, 0] : values, definitions.map((definition) => definition?.written_decimals));
   return "fault" in found ? found.fault : void 0;
 };
-function compareEndOf(values, written = []) {
-  const a = compareNumberOf(values[0] ?? Number.NaN, written[0]), b = compareNumberOf(values[1] ?? Number.NaN, written[1]);
-  if (!a || !b) return COMPARE_MOST;
-  if (a.value === b.value && written[0] === void 0 && written[1] === void 0) return COMPARE_MOST;
-  return placeValueCompareDemoEnd(placeValueComparePairOf(a, b));
+function compareEndOf(values) {
+  const a = compareNumberOf(values[0] ?? Number.NaN), b = compareNumberOf(values[1] ?? Number.NaN);
+  if (!a || !b) return { first: COMPARE_MOST, last: COMPARE_MOST };
+  if (a.value !== b.value) {
+    const end = placeValueCompareDemoEnd(placeValueComparePairOf(a, b));
+    return { first: end, last: end };
+  }
+  const wider = (dec) => placeValueCompareDemoEnd(placeValueComparePairOf(a, { value: b.value, dec }));
+  return { first: wider(Math.min(3, Math.max(a.dec, b.dec) + 1)), last: wider(3) };
 }
 function compareState(start) {
   return [...start.slice(0, 4), 0];
@@ -18613,8 +18613,8 @@ function compareMove(state, position, to) {
   const from = state[COMPARE_NUMBER.compared];
   if (!Number.isInteger(to) || to < 0) return `compared counts the columns judged from the left, then the sign: a whole number from 0, not ${to}; from ${from}, the next value is ${from + 1}`;
   const end = compareEndOf(state);
-  const value2 = Math.min(to, end);
-  if (value2 < from) return `compared goes forward, never back: from ${from} it can be ${from} to ${end}`;
+  const value2 = Math.min(to, end.last);
+  if (Math.min(value2, end.first) < Math.min(from, end.first)) return `compared goes forward, never back: from ${from} it can be ${Math.min(from, end.first)} to ${end.last}`;
   const moved = [...state];
   moved[COMPARE_NUMBER.compared] = value2;
   return moved;
@@ -18645,8 +18645,14 @@ function compareWordsGiveAnswer(words, practice) {
   const text5 = halfWidth3(String(words)).replace(/(\d),(?=\d{3})/gu, "$1");
   const x = compareNumeral({ value: practice.a, dec: practice.aDec }), y = compareNumeral({ value: practice.b, dec: practice.bDec });
   const flip = { ">": "<", "<": ">", "=": "=" };
+  const between = {
+    ">": [">", "is (?:greater|bigger|larger|more) than", "greater than", "\u5927\u4E8E", "\u6BD4\\s*Q\\s*(?:\u5927|\u591A)"],
+    "<": ["<", "is (?:less|smaller|fewer) than", "less than", "\u5C0F\u4E8E", "\u6BD4\\s*Q\\s*(?:\u5C0F|\u5C11)"],
+    "=": ["=", "equals", "is equal to", "is the same as", "\u7B49\u4E8E", "\u548C\\s*Q\\s*(?:\u4E00\u6837\u5927|\u76F8\u7B49)"]
+  };
   const esc = (s) => s.replace(/\./gu, "\\.");
-  const said = (p, sign, q) => new RegExp(`(?<!\\d)(?<!\\d\\.)${esc(p)}\\s*${sign}\\s*${esc(q)}(?!\\d)(?!\\.\\d)`, "u").test(text5);
+  const num = (s) => `(?<!\\d)(?<!\\d\\.)${esc(s)}(?!\\d)(?!\\.\\d)`;
+  const said = (p, sign, q) => between[sign].some((part) => (part.includes("Q") ? new RegExp(`${num(p)}\\s*${part.replace("Q", num(q))}`, "iu") : new RegExp(`${num(p)}\\s*(?:${part})\\s*${num(q)}`, "iu")).test(text5));
   return said(x, practice.relation, y) || said(y, flip[practice.relation], x);
 }
 
@@ -28217,6 +28223,7 @@ function lowerModelOutlineNumber(entry, index) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
   const number = { ...entry };
   delete number.student_control;
+  delete number.written_decimals;
   if (typeof number.unit === "string" && !number.unit.trim()) delete number.unit;
   if (typeof number.label === "string" && !number.label.trim()) delete number.label;
   const written = { initial: number.initial, min: number.min, max: number.max };
@@ -30224,7 +30231,7 @@ function outlineNumbersMissing(outline, section) {
     const check = RECIPE_HOOKS[visual.capability]?.outline_fault;
     const limit = LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[visual.capability] ?? 0;
     if (!check || visual !== firstNumbered || declared !== limit) continue;
-    const fault = check(outline.numbers.slice(0, limit).map((number) => number.initial));
+    const fault = check(outline.numbers.slice(0, limit).map((number) => number.initial), outline.numbers.slice(0, limit));
     if (fault) {
       return new LessonPlanError(
         OUTLINE_NUMBERS_REFUSED,
@@ -30456,10 +30463,10 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     }
     const bootstrap = course;
     outline = validateLessonPlanOutline(
-      lowerModelOutline(
-        withWrittenDecimals(bootstrap.outline, coerceLessonPlanOutlineModelNumbers(bootstrap.outline, fixedRequestParts.length)),
+      withWrittenDecimals(bootstrap.outline, lowerModelOutline(
+        coerceLessonPlanOutlineModelNumbers(bootstrap.outline, fixedRequestParts.length),
         fixedRequestParts.length
-      ),
+      )),
       fixedRequestParts.length
     );
     programNumberCard = supplyProgramNumbers(outline, input.language)?.capability ?? soleProgramNumberCard(outline);
@@ -30527,10 +30534,10 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       if (partialOutline !== void 0) {
         try {
           outline = validateLessonPlanOutline(
-            lowerModelOutline(
-              withWrittenDecimals(partialOutline, coerceLessonPlanOutlineModelNumbers(partialOutline, fixedRequestParts.length)),
+            withWrittenDecimals(partialOutline, lowerModelOutline(
+              coerceLessonPlanOutlineModelNumbers(partialOutline, fixedRequestParts.length),
               fixedRequestParts.length
-            ),
+            )),
             fixedRequestParts.length
           );
           sectionErrors.set(1, error);
@@ -30584,10 +30591,10 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         const admitted = admissionCourse(parsed, observeCamera);
         if (admitted.result) return admitted.result;
         const candidateOutline = validateLessonPlanOutline(
-          lowerModelOutline(
-            withWrittenDecimals(admitted.course, coerceLessonPlanOutlineModelNumbers(admitted.course, fixedRequestParts.length)),
+          withWrittenDecimals(admitted.course, lowerModelOutline(
+            coerceLessonPlanOutlineModelNumbers(admitted.course, fixedRequestParts.length),
             fixedRequestParts.length
-          ),
+          )),
           fixedRequestParts.length
         );
         try {
