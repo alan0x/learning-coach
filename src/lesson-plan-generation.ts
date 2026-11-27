@@ -3,7 +3,7 @@ import {
   isNumberLineCapability,
   recipeDeclares,
   recipeInitialCamera,
-  recipeMinLessonNumbers,
+  recipeMinLessonNumbers, recipeNumberRole,
   recipeProgramNumbers,
   recipeGuidance,
   LESSON_PLAN_CAPABILITY_NAMES,
@@ -1368,12 +1368,19 @@ function lowerIntegerDecimal(record: Record<string, unknown>, prefix: string, pa
   return Number(mantissa) / 10 ** Number(scale);
 }
 
-/** Lesson numbers bound to a card that moves them by its own rules (recipe hook `number_moves`). */
+/**
+ * Lesson numbers bound to a card that moves them by its own rules (recipe hook `number_moves`). A card's problem
+ * number (`number_roles`) is not one: the card only reads it, and another picture that shows it moves its own copy
+ * (the compiler's `separateCardProblemNumbers`), so a move of that number is that picture's, and the state a later
+ * section is told follows it (design note "second example and copies", 2026-11-27).
+ */
 function cardMovedNumbers(actions: readonly unknown[]): number[] {
   return actions.flatMap((action) => {
     const entry = action as { action?: string; kind?: string; content?: { capability?: string; numbers?: number[] } };
     if (entry.action !== "create" || entry.kind !== "visual" || !entry.content?.capability) return [];
-    return RECIPE_HOOKS[entry.content.capability as keyof typeof RECIPE_HOOKS]?.number_moves ? entry.content.numbers ?? [] : [];
+    if (!RECIPE_HOOKS[entry.content.capability as keyof typeof RECIPE_HOOKS]?.number_moves) return [];
+    const capability = entry.content.capability;
+    return (entry.content.numbers ?? []).filter((_number, position) => recipeNumberRole(capability, position) !== "problem");
   });
 }
 
@@ -3062,9 +3069,14 @@ export function certainNumberSharing(outline: LessonPlanOutline | undefined): { 
   for (const [index, other] of visuals.entries()) {
     const fewer = recipeMinLessonNumbers(other.capability);
     if (!fewer) continue;
+    // The overlap a card's problem numbers can take is no sharing: the other picture gets a copy of its own (the
+    // compiler's `separateCardProblemNumbers`; PF-10's chart on the times-ten card's amount, PT-15's on the column card's
+    // first number). Only an overlap beyond them is certain to share a number the card keeps.
+    const problems = (capability: string) => Array.from({ length: LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[capability as keyof typeof LESSON_PLAN_CAPABILITY_NUMBER_LIMITS] ?? 0 },
+      (_unused, position) => recipeNumberRole(capability, position)).filter((role) => role === "problem").length;
     const card = visuals.find((each) => {
       const more = recipeMinLessonNumbers(each.capability);
-      return each.capability !== other.capability && more > fewer && more <= declared && more + fewer > declared;
+      return each.capability !== other.capability && more > fewer && more <= declared && more + fewer - declared > problems(each.capability);
     });
     if (card) return { visual: index + 1, capability: other.capability, card: card.capability };
   }

@@ -462,7 +462,7 @@ test("a chart to build that its own section never builds is drawn showing its nu
   assert.deepEqual([part.steps.map((step) => step.to[0]), part.ignored.map((each) => each.index)], [[60408], [0, 1]]);
   assert.match(part.ignored[0].reason, /the chart has shown all of 60408 since it was drawn \(the section that drew it put none of it on\), so 60000 is on it already/);
   assert.match(to(drawn, 60409).refused.reason, /from 60408 it can be only 60408: the number is built/);
-  assert.match(moves.moves(drawn, [{ position: 1, to: 0 }]).refused.reason, /practice number is the learner's/);
+  assert.match(moves.moves(drawn, [{ position: 1, to: 0 }]).ignored[0].reason, /practice number is the learner's/);
   // A chart built the normal way and then written a part again is still refused (objective check 1, unchanged).
   assert.match(to([60408, 30705, 60408, 1], 60000).refused.reason, /the number is built/);
 

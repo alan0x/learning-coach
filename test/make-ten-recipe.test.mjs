@@ -44,8 +44,10 @@ test("make_ten is a trial, off by default: built, not offered; its guidance and 
   assert.deepEqual(offered.ranges, [[0, 10], [0, 0, 4]]);
   assert.deepEqual([offered.min, offered.many, offered.controls], [6, true, []]);
   // Short guidance (tracked, not capped): the pair, the practice pair, the target 10; no control named.
-  assert.equal(Buffer.byteLength(offered.guidance), 1025);
-  assert.ok(offered.guidance.includes("只画这张卡片，不再画数轴"), "used alone for its sum (make-ten objective check 1)");
+  assert.equal(Buffer.byteLength(offered.guidance), 1103);
+  // The card is the sum's picture; a later section may walk the same sum on a number line, never instead of the card
+  // (lead, 2026-11-27: a second view is fine; the line draws on copies of the pair).
+  assert.ok(offered.guidance.includes("这道加法的画面是这张卡片；后面的节可以再用数轴把同一道加法走一遍，数轴不代替这张卡片"));
   // It answers "which number should I split" with the quick way only (owner, 2026-11-27; MT-07 drew the number line),
   // and the demonstration reaches ten (owner, 2026-11-27: "可以只到9" is gone; a lesson that stops at 9 still plays).
   assert.ok(offered.guidance.includes("应该拆哪个数") && offered.guidance.includes("慢的拆法只用话说，不画"));
@@ -333,10 +335,11 @@ test("with the trial on, the model's first request describes the card; without i
   assert.ok(on.text.includes("make_ten_to_add"));
   assert.ok(on.text.includes("凑十（两个十格框）"));
   assert.equal(off.text.includes("make_ten"), false);
-  // Beside the card, the number line in steps no longer claims making ten with two one-digit numbers (MT-07); without
-  // the trial its text is exactly its own guidance.
+  // Beside the card, the number line in steps no longer claims making ten with two one-digit numbers (MT-07): the card
+  // is that sum's picture, and the line only a second view in a later section (lead, 2026-11-27); without the trial its
+  // text is exactly its own guidance.
   const steps = (text) => JSON.parse(JSON.parse(text).prompt).visual_recipes.find((row) => row[0].includes("number_steps"))[2];
-  assert.ok(steps(on.text).includes("不用于两个一位数相加的凑十") && !steps(on.text).includes("如凑十"));
+  assert.ok(steps(on.text).includes("题目的画面是凑十卡片，数轴分步只在卡片之后的节里作第二种看法") && !steps(on.text).includes("如凑十"));
   assert.equal(steps(off.text), api.LESSON_PLAN_CAPABILITY_REGISTRY.number_line_steps.model_guidance);
   assert.ok(steps(off.text).includes("如凑十"));
   console.log(`first request with the trial on: +${on.bytes - off.bytes} B (${off.bytes} -> ${on.bytes})`);

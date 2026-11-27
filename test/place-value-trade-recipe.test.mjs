@@ -564,9 +564,10 @@ test("a create naming four numbers is not bound to an outline number beyond the 
   assert.equal(later.numbers.at(-1).label, "another picture's number");
 });
 
-test("PT-14's shape beside a later picture: the card's four numbers lead, the fifth is supplied and the card drawn; the picture sharing its number goes", () => {
+test("PT-14's shape beside a later picture: the card's four numbers lead, the fifth is supplied and the card drawn; the chart on its first number draws on a copy", () => {
   // The card is the outline's first numbered picture, so its numbers lead; a place-value chart in section 2 shows
-  // lesson number 1, the card's. The card is the served question's picture: the chart is the one lost.
+  // lesson number 1, the card's first number, which the card only reads: the chart gets a copy of its own and both are
+  // drawn (copies, 2026-11-27; before, the chart was the one lost).
   for (const refs of [[1, 2, 3, 4], [1, 2, 3, 4, 5]]) {
     const result = stubbedRun(`
       outline.numbers = outline.numbers.slice(0, 4);
@@ -577,9 +578,9 @@ test("PT-14's shape beside a later picture: the card's four numbers lead, the fi
     `);
     assert.equal(result.error, undefined, String(refs));
     assert.deepEqual(result.numbers.at(-1), { initial: 0, min: 0, max: 6, label: "columns finished" });
-    // It goes at once, with no repair spent on it (make-ten objective check 1).
-    assert.deepEqual(result.adjustments, [{ kind: "visual_removed", section: 2, capability: "place_value_chart", reason: "shares_tap_card_numbers" }]);
+    assert.deepEqual(result.adjustments.map(({ kind, section, reason }) => [kind, section, reason]), [["plot_view_adjusted", 2, "number_copied"]]);
     assert.match(result.lesson, /"kind":"place_value_trade"/u);
+    assert.match(result.lesson, /"kind":"place_value_chart"/u);
   }
 });
 

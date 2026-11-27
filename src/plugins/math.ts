@@ -285,7 +285,7 @@ export const MATH_RECIPES = {
     // fixed text says how it is used.
     student_controls: [],
     required_features: ["make_ten_to_add"],
-    model_guidance: "凑十（两个十格框）：两个一位数相加、和大于10（如8+6），小数分出一部分把大数补成十。也用于问“应该拆哪个数”“怎样拆算得快”：卡片画快的拆法（拆小数补大数，如4+9拆4补9），慢的拆法只用话说，不画。不用于和正好是10、接着数、破十减、两位数加一位数、三个数相加。这道加法只画这张卡片，不再画数轴。outline 的 numbers 依次写四个数：题目的两个数、练习的两个数（另一对，也是一位数、和大于10，不是题目的，换顺序也不算）。程序再补两个数：大数那一框里有几个（开始就是大数）、移过去几个（0）。演示时把第五个数动画到10，一直到大数那一框满十，程序一个一个地移圆片；别的数不动画。练习：对第五个数写一个数值目标题（数值写10），孩子自己补满十，程序再出一行空（8+6=8+__+__=10+__=__）；题目和提示不写练习的和。不说怎么点卡片",
+    model_guidance: "凑十（两个十格框）：两个一位数相加、和大于10（如8+6），小数分出一部分把大数补成十。也用于问“应该拆哪个数”“怎样拆算得快”：卡片画快的拆法（拆小数补大数，如4+9拆4补9），慢的拆法只用话说，不画。不用于和正好是10、接着数、破十减、两位数加一位数、三个数相加。这道加法的画面是这张卡片；后面的节可以再用数轴把同一道加法走一遍，数轴不代替这张卡片。outline 的 numbers 依次写四个数：题目的两个数、练习的两个数（另一对，也是一位数、和大于10，不是题目的，换顺序也不算）。程序再补两个数：大数那一框里有几个（开始就是大数）、移过去几个（0）。演示时把第五个数动画到10，一直到大数那一框满十，程序一个一个地移圆片；别的数不动画。练习：对第五个数写一个数值目标题（数值写10），孩子自己补满十，程序再出一行空（8+6=8+__+__=10+__=__）；题目和提示不写练习的和。不说怎么点卡片",
   },
   // OLL decision 0028 (a trial): the same amount counted in another unit on the place-value chart, a count (3 tenths =
   // ? thousandths) or a times pair (700 is ? times 70). The model writes the amount, the unit asked and a practice of
@@ -445,7 +445,7 @@ export const MATH_RECIPES = {
     model_guidance: "数轴分步：两到三步的加减（数轴加减是一步），如凑十、先整十再个位、上下移动；数值依次是起点和各步移动量（两步写两个），落点和终点由程序算；往回走的一步不讲一格一格",
     // Beside the make-ten card (a trial, OLL 0027) the line does not claim making ten with two one-digit numbers
     // (MT-07: "4 + 9, which number should I split?" drew the line in 2 of 2 runs). Without the trial its text is unchanged.
-    model_guidance_with: { make_ten: "数轴分步：两到三步的加减（数轴加减是一步），如先整十再个位、上下移动、两位数加一位数先凑整十（38+5）；不用于两个一位数相加的凑十（4+9、8+6，也包括问拆哪个数）；数值依次是起点和各步移动量（两步写两个），落点和终点由程序算；往回走的一步不讲一格一格" },
+    model_guidance_with: { make_ten: "数轴分步：两到三步的加减（数轴加减是一步），如先整十再个位、上下移动、两位数加一位数先凑整十（38+5）；两个一位数相加的凑十（4+9、8+6，也包括问拆哪个数），题目的画面是凑十卡片，数轴分步只在卡片之后的节里作第二种看法；数值依次是起点和各步移动量（两步写两个），落点和终点由程序算；往回走的一步不讲一格一格" },
   },
 } as const;
 

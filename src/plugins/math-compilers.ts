@@ -1714,7 +1714,7 @@ function compileBaseTenTrade(
     // number line in section 2 on the numbers of a mat section 1 already showed (BT-32, check 4).
     const matAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
     const sharingCapability = (sharing.content as LessonPlanVisualContent).capability;
-    failSharedTapCardNumbers(`${path}.numbers`, sharedNumberFact("base_ten_trade", "trading mat", numbers, (sharing.content as LessonPlanVisualContent).numbers ?? [], sharingCapability), "base_ten_trade", sharingCapability, sharingAt, matAt);
+    failSharedTapCardNumbers(`${path}.numbers`, sharedNumberFact("base_ten_trade", "trading mat", numbers, (sharing.content as LessonPlanVisualContent).numbers ?? [], sharingCapability, "is a count on the trading mat, which changes only by its trades"), "base_ten_trade", sharingCapability, sharingAt, matAt);
   }
   // Checked after sharing, so numbers borrowed from another visual are named as such, not as a pile too big
   // (BT-32, check 3: the number line's 46, 30 and 7 were refused three times as "at most 19 tens").
