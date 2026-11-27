@@ -106,3 +106,84 @@ test("a number line in steps after the make-ten card is given the walk's three n
   assert.ok(result.written.includes("make_ten") && result.written.includes("number_line"), JSON.stringify(result.written));
   assert.deepEqual(result.variables.filter(([as]) => as.startsWith("number_")).map(([as, initial]) => [as, initial]), [["number_07", 8], ["number_08", 2], ["number_09", 3]]);
 });
+
+// Review of #197, B1: once the repairs are spent, every move of the card's own fixed numbers in the section is left
+// out (each put back when the section compiles with it), wherever the compiled offsets fall; the card and the lesson are kept.
+const spent = (scenario, trial = "make_ten,place_value_trade") => run(`
+  const note = { action: "create", kind: "note", timing: "during_speech", content: { title: "凑十", items: ["8 + 2 = 10"] }, role: "explanation", placement: { relation: "new_region" } };
+  const scenarios = {
+    two1: () => { const p = sp.makeTenPlan({ numbers: [8, 5], practice: [7, 6], steps: [10] }); p.sections[0].moments.push({ narration: "8 满十，5 剩 3。", actions: [animate(1, 10), animate(2, 3)] }); return p; },
+    two2: () => { const p = sp.makeTenPlan({ numbers: [8, 5], practice: [7, 6], steps: [10] }); p.sections[1].moments.push({ narration: "8 满十，5 剩 3。", actions: [animate(1, 10), animate(2, 3)] }); return p; },
+    dup2: () => { const p = sp.makeTenPlan({ numbers: [8, 5], practice: [7, 6], steps: [10] }); p.sections[1].moments.push({ narration: "8 满十。", actions: [structuredClone(note), structuredClone(note), animate(1, 10)] }); return p; },
+    dup1: () => { const p = sp.makeTenPlan({ numbers: [8, 5], practice: [7, 6], steps: [10] }); p.sections[0].moments.push({ narration: "8 满十。", actions: [structuredClone(note), structuredClone(note), animate(1, 10)] }); return p; },
+    tradetwo2: () => { const p = sp.placeValueTradePlan({ operation: "subtract", numbers: [8.2, 3.75], practice: [6.4, 2.85] }); p.sections[1].moments.push({ narration: "变一变。", actions: [animate(1, 8.3), animate(2, 3.8)] }); return p; },
+  };
+  const log = await generate(staged(scenarios[${JSON.stringify(scenario)}]()));
+  console.log(JSON.stringify({ error: log.error, sections: log.lesson?.steps.length, ended: log.lesson?.ended_early,
+    left: log.adjustments.filter(([, , reason]) => reason === "animation_left_out").map(([, section, , detail]) => [section, detail]),
+    removed: log.adjustments.filter(([kind]) => kind === "visual_removed" || kind === "sections_removed"), written: written(log.lesson) }));
+`, trial);
+
+for (const [scenario, section, card, count] of [["two1", 1, "make_ten", 2], ["two2", 2, "make_ten", 2], ["dup1", 1, "make_ten", 1], ["dup2", 2, "make_ten", 1], ["tradetwo2", 2, "place_value_trade", 2]]) {
+  test(`${scenario}: the repairs spent, every move of the card's fixed numbers in section ${section} is left out; the card and the lesson stay`, () => {
+    const result = spent(scenario);
+    assert.equal(result.error, undefined, result.error);
+    assert.deepEqual(result.removed, []);
+    assert.ok(result.sections >= 2, JSON.stringify(result));
+    assert.ok(result.written.includes(card), JSON.stringify(result.written));
+    assert.equal(result.left.filter(([at]) => at === section).length, count, JSON.stringify(result.left));
+    // Recorded with the card's fact, not a generic "cannot show".
+    for (const [, detail] of result.left) assert.match(detail, /which stays as written; left out$/u);
+  });
+}
+
+// Review of #197, B2: the walk's numbers a later section gets never take a published copy's variable (copies are
+// numbered after every number an outline can hold), so each part only adds variables.
+const parts = (scenario) => run(`
+  const { normalizeAuthoringLesson } = await import("octos-lesson-language");
+  const line = (capability, numbers, slot) => {
+    const { reusable_item: _slot, ...picture } = structuredClone(sp.samplePlan(capability).sections[0].moments[0].actions.find((action) => action.action === "create"));
+    return { ...picture, content: { ...picture.content, numbers }, role: "supporting_visual", placement: { relation: "new_region" }, reusable_item: slot };
+  };
+  const p = sp.makeTenPlan({ numbers: [8, 5], practice: [7, 6] });
+  // The card and a number line on the card's pair (copies), in section 1 or 2; a number line in steps after them.
+  const copyAt = ${JSON.stringify(scenario)} === "cpsame" ? 0 : 1, stepsAt = copyAt + 1;
+  if (stepsAt === 2) p.sections[2] = { purpose: "steps", moments: [{ narration: "分步。", actions: [] }] };
+  for (const [at, capability, numbers] of [[copyAt, "number_line", [1, 2]], [stepsAt, "number_line_steps", [7, 8, 9]]]) {
+    p.sections[at].reusable_items = [...(p.sections[at].reusable_items ?? []), { kind: "board_item", board_kind: "visual", capability }];
+    p.sections[at].moments.push({ narration: "数轴。", actions: [line(capability, numbers, p.sections[at].reusable_items.length)] });
+  }
+  p.close = { summary: "Review.", focus: [{ source: "reusable", section: 1, item: 1 }] };
+  const stage = staged(p);
+  stage.outline.numbers = stage.outline.numbers.slice(0, 4);
+  const published = [];
+  const log = { requests: [], rejected: [] };
+  try {
+    await api.generateLessonPlanWithModel(async (request) => {
+      log.requests.push(request.label + (request.section ?? ""));
+      if (request.label === "lesson-plan-bootstrap") return H.bootstrapModelResponse(request, stage.outline, H.bootstrapSectionFromExact(stage.outline, stage.drafts[0]));
+      const draft = structuredClone(stage.drafts[request.section - 1]);
+      // The section with the steps line names the walk's numbers the program gave it, by their labels.
+      const numbers = JSON.parse(request.prompt).course_and_section.numbers;
+      const ids = ["数轴的起点（大数）", "补成十的一步", "剩下的一步"].map((label) => numbers.find((number) => number.label === label)?.number);
+      for (const entry of Object.values(draft.course_visual_creates ?? {})) if (JSON.stringify(entry.content.numbers) === "[7,8,9]" && ids.every(Boolean)) entry.content.numbers = ids;
+      return JSON.stringify(draft);
+    }, { turn_id: "parts", learner_request: "8 + 5 怎么凑十？", language: "zh-CN" }, {
+      max_attempts_per_part: 3, on_rejected_part: (part) => log.rejected.push(part.error.message.slice(0, 160)),
+      on_playable_prefix: ({ compiled }) => published.push(normalizeAuthoringLesson(compiled.lesson, { lessonId: "p", boardId: "b", baseRevision: 0, regionIntent: "new_topic" })[0].lesson.variables ?? []),
+    });
+  } catch (caught) { log.error = caught.message.slice(0, 300); }
+  // Every variable a part declared is declared the same in the next part.
+  const changed = published.slice(1).flatMap((now, k) => published[k].filter((before) => JSON.stringify(now.find((each) => each.as === before.as)) !== JSON.stringify(before)).map((before) => (k + 1) + "->" + (k + 2) + ":" + before.as));
+  console.log(JSON.stringify({ error: log.error, rejected: log.rejected, parts: published.map((each) => each.map((variable) => variable.as)), changed }));
+`);
+
+for (const scenario of ["cpsame", "cpthen"]) {
+  test(`${scenario}: copies of the card's pair published early keep their variables when the walk's numbers arrive`, () => {
+    const result = parts(scenario);
+    assert.equal(result.error, undefined, result.error);
+    assert.deepEqual(result.changed, []);
+    // The copies are numbered after every number an outline can hold; the walk's numbers follow the outline's own.
+    assert.ok(result.parts.at(-1).includes("number_17") && result.parts.at(-1).includes("number_07"), JSON.stringify(result.parts));
+  });
+}

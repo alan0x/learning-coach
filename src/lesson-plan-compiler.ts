@@ -542,6 +542,9 @@ function resolveMetNumberTargets(plan: LessonPlan): void {
  * learner changes) is never copied: the card's own check refuses the other picture, as before. One copy per number.
  * The model never sees a copy: it keeps writing the outline's number.
  */
+/** The most lesson numbers an outline declares (`validateLessonPlanNumbers`): copies are numbered after them. */
+const MAX_OUTLINE_NUMBERS = 16;
+
 /** A copy `separateCardProblemNumbers` made: the outline's number, and whether the moves of it from `from` on are the copy's. */
 export interface CardNumberCopy { number: number; routed: boolean; from: readonly [number, number, number] }
 
@@ -579,6 +582,10 @@ export function separateCardProblemNumbers(plan: Pick<LessonPlan, "numbers" | "s
       if (held.picture === picture || copied.has(number) || (held.role !== "problem" && role !== "problem")) return;
       const definition = outlineDefinitions[number - 1];
       if (!definition) return;
+      // Copies are numbered after every number an outline can hold (16), never next to the outline's last: a later
+      // section may append outline numbers (a program's own, before it is written), and a published copy must keep its
+      // variable (review of #197, B2). The places in between are never declared (no picture uses them).
+      while (numbers.length < MAX_OUTLINE_NUMBERS) numbers.push({ initial: 0, min: 0, max: 1 });
       numbers.push(structuredClone(definition));
       const copy = numbers.length;
       copied.add(number);

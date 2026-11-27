@@ -426,6 +426,30 @@ function defaultCoverageSection(
   );
 }
 
+/**
+ * The outline's numbers with the decimals the model wrote them with (OLL 0029: 0.70 is not 0.7), read from the raw
+ * reply's own mantissa and scale before they are divided away, kept only when more than the value needs and at most
+ * three, and only while a recipe that keeps them is offered (`keeps_written_decimals`: the compare card): without one
+ * an outline is exactly as before.
+ */
+function withWrittenDecimals(raw: unknown, coerced: unknown): unknown {
+  if (!LESSON_PLAN_CAPABILITY_NAMES.some((capability) => recipeDeclares(capability, "keeps_written_decimals"))) return coerced;
+  const rawNumbers = (raw as { numbers?: unknown } | null)?.numbers;
+  const numbers = (coerced as { numbers?: unknown } | null)?.numbers;
+  if (!Array.isArray(rawNumbers) || !Array.isArray(numbers)) return coerced;
+  numbers.forEach((entry, index) => {
+    const written = (rawNumbers[index] as { initial?: unknown } | null)?.initial as { mantissa?: unknown; scale?: unknown } | null | undefined;
+    if (!entry || typeof entry !== "object" || !written || typeof written !== "object") return;
+    const { mantissa, scale } = written;
+    if (!Number.isInteger(mantissa) || !Number.isInteger(scale) || Number(scale) < 1 || Number(scale) > 3 || Number(mantissa) < 0) return;
+    // The value's own decimals: its mantissa without trailing zeros.
+    let own = Number(scale);
+    for (let m = Number(mantissa); own > 0 && m % 10 === 0; m /= 10) own -= 1;
+    if (Number(scale) > own) (entry as Record<string, unknown>).written_decimals = Number(scale);
+  });
+  return coerced;
+}
+
 /** An outline number as the model wrote it, lowered: its range normalized, and its slider step the program's. */
 function lowerModelOutlineNumber(entry: unknown, index: number): unknown {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
@@ -3382,7 +3406,7 @@ export async function generateLessonPlanWithModel(
     const bootstrap = course as Record<string, unknown>;
     outline = validateLessonPlanOutline(
       lowerModelOutline(
-        coerceLessonPlanOutlineModelNumbers(bootstrap.outline, fixedRequestParts.length),
+        withWrittenDecimals(bootstrap.outline, coerceLessonPlanOutlineModelNumbers(bootstrap.outline, fixedRequestParts.length)),
         fixedRequestParts.length,
       ),
       fixedRequestParts.length,
@@ -3457,7 +3481,7 @@ export async function generateLessonPlanWithModel(
         try {
           outline = validateLessonPlanOutline(
             lowerModelOutline(
-              coerceLessonPlanOutlineModelNumbers(partialOutline, fixedRequestParts.length),
+              withWrittenDecimals(partialOutline, coerceLessonPlanOutlineModelNumbers(partialOutline, fixedRequestParts.length)),
               fixedRequestParts.length,
             ),
             fixedRequestParts.length,
@@ -3534,7 +3558,7 @@ export async function generateLessonPlanWithModel(
       if (admitted.result) return admitted.result;
       const candidateOutline = validateLessonPlanOutline(
         lowerModelOutline(
-          coerceLessonPlanOutlineModelNumbers(admitted.course, fixedRequestParts.length),
+          withWrittenDecimals(admitted.course, coerceLessonPlanOutlineModelNumbers(admitted.course, fixedRequestParts.length)),
           fixedRequestParts.length,
         ),
         fixedRequestParts.length,
@@ -3639,7 +3663,20 @@ export async function generateLessonPlanWithModel(
     if (!site || !draft || (site.section >= section && !(ownCard && site.section === section))) return undefined;
     const keyOf = (moment: number, action: number) => `${moment}:${action}`;
     const candidates = new Set<string>();
-    if (site.kind === "animate") {
+    // The card's own problem and practice numbers, by its roles: a move of any of them is one the card keeps as written.
+    const fixed = (number: number) => {
+      const position = site.numbers.indexOf(number);
+      const role = position < 0 ? undefined : recipeNumberRole(site.capability, position);
+      return role === "problem" || role === "practice";
+    };
+    if (ownCard) {
+      // Every move in the section's draft of a number the card keeps as written: the section may hold several, and the
+      // compiled plan's action offsets need not be the draft's (a duplicate it removes). Each goes back in below when
+      // the section compiles with it (review of #197, B1).
+      draft.moments.forEach((moment, momentAt) => moment.actions.forEach((action, actionAt) => {
+        if (action.action === "animate" && fixed(action.number)) candidates.add(keyOf(momentAt, actionAt));
+      }));
+    } else if (site.kind === "animate") {
       // The fault's own move, read in the section's draft at the same place (the compiled plan is assembled from it).
       // Only this section's own move, the same move in its draft at the same place as in the plan compile saw.
       const own = draft.moments[site.moment]?.actions[site.action];
@@ -3672,8 +3709,16 @@ export async function generateLessonPlanWithModel(
       const action = draft.moments[momentAt]!.actions[actionAt]!;
       // Trace only: a moment left with its narration alone (every action it had was a move left out).
       const narrationOnly = draft.moments[momentAt]!.actions.every((_each, offset) => removed.has(keyOf(momentAt, offset)));
+      const at = `$lessonPlan.sections[${section - 1}].moments[${momentAt}].actions[${actionAt}]`;
+      // A card's own number: the fact the refusal stated (what the number is to the card).
+      const entry = LESSON_PLAN_CAPABILITY_REGISTRY[site.capability as keyof typeof LESSON_PLAN_CAPABILITY_REGISTRY] as { card_name?: string; number_names?: readonly string[] };
+      const number = action.action === "animate" ? action.number : undefined;
+      const position = number === undefined ? -1 : site.numbers.indexOf(number);
+      const fact = ownCard && number !== undefined && position >= 0
+        ? `lesson number ${number} is the ${entry.card_name ?? site.capability}'s ${entry.number_names?.[position] ?? "number"} ${outline!.numbers?.[number - 1]?.initial}, which stays as written`
+        : `the ${site.capability} visual cannot show lesson number ${number ?? "?"} at ${action.action === "animate" ? action.end_value : "?"}`;
       return {
-        detail: `$lessonPlan.sections[${section - 1}].moments[${momentAt}].actions[${actionAt}]: the ${site.capability} visual cannot show lesson number ${action.action === "animate" ? action.number : "?"} at ${action.action === "animate" ? action.end_value : "?"}; left out`,
+        detail: `${at}: ${fact}; left out`,
         ...(narrationOnly ? { narration_only_moment: true as const } : {}),
       };
     });
