@@ -26,6 +26,14 @@ export interface CompiledVisual {
     /** The visual's lesson numbers, in its number order. */
     numbers: number[];
     /**
+     * A card drawn on fewer lesson numbers than its kind takes (a second card: the one number its demonstration moves):
+     * each number's position in the kind's order, and the card's full starting values in that order.
+     */
+    positions?: number[];
+    start?: number[];
+    /** A second card of its kind, on its own example: its practice is the first card's. */
+    example?: boolean;
+    /**
      * Actions the card plays right after it is written, and again after a replay resets its variables, so it shows
      * the state the mover starts from (a place-value chart to build that its own section never builds: OLL refuses a
      * build chart written already holding its number, so it is written empty and filled at once).

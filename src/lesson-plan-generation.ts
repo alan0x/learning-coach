@@ -110,6 +110,8 @@ export interface GenerateLessonPlanOptions {
   on_outline_ready?: (event: {
     sections: number;
     course_visuals: number;
+    /** Later course visuals of a kind whose first card the outline draws earlier (a second card on its own example). */
+    second_cards?: number;
     request_parts: number;
     camera_observation: boolean;
   }) => void | Promise<void>;
@@ -1758,7 +1760,8 @@ function numberStateAfter(
   const shown = (number: number) => copies.get(number)?.number ?? number;
   const state = new Map(numbers.map((number, index) => [index + 1, number.initial]));
   // Cards that move their own numbers (the trading mat): one number's animation changes the others too.
-  const cards: Array<{ numbers: number[]; hook: NonNullable<RecipeHooks["number_moves"]>; started: number[] }> = [];
+  // `positions`: each lesson number's place in the card's state (a second card's one number is its demonstration's).
+  const cards: Array<{ numbers: number[]; positions: number[]; hook: NonNullable<RecipeHooks["number_moves"]>; started: number[] }> = [];
   // A card's numbers do not move before the card is drawn, and a card never moves its problem numbers: the compiler
   // leaves such an animation out.
   const cardNumbers = new Set(cardMovedNumbers(sections.flatMap((draft) => draft.moments).flatMap((moment) => moment.actions)));
@@ -1771,28 +1774,31 @@ function numberStateAfter(
         // The card's state when it is drawn: its lesson numbers as the card reads them there (a chart to build
         // starts empty, whatever number it is to show, unless the section drawing it never builds it), then what its
         // start adds (a hundreds column).
+        const second = RECIPE_HOOKS[content.capability]?.second_card?.(content, sections, numbers);
         const initial = content.numbers.map((number) => numbers[number - 1]!.initial);
         // A state shorter than the card's numbers (a mat whose hundreds start at 0) keeps the rest as written.
-        const started = [...hook.state(initial, content, draft.moments.slice(momentAt).flatMap((each) => each.actions))];
-        initial.forEach((value, position) => { if (started[position] === undefined) started[position] = value; });
-        cards.push({ numbers: [...content.numbers], hook, started });
-        content.numbers.forEach((number, position) => state.set(number, started[position]!));
+        const started = second?.started ?? [...hook.state(initial, content, draft.moments.slice(momentAt).flatMap((each) => each.actions))];
+        if (!second) initial.forEach((value, position) => { if (started[position] === undefined) started[position] = value; });
+        const positions = second?.positions ?? content.numbers.map((_number, position) => position);
+        cards.push({ numbers: [...content.numbers], positions, hook, started });
+        content.numbers.forEach((number, index) => state.set(number, started[positions[index]!]!));
       }
     }
     for (const number of moment.restart_numbers ?? []) {
       const card = cards.find((each) => each.numbers.includes(number));
-      if (card) card.numbers.forEach((each, position) => state.set(each, card.started[position]!));
+      if (card) card.numbers.forEach((each, index) => state.set(each, card.started[card.positions[index]!]!));
       else state.set(number, numbers[number - 1]!.initial);
     }
     const drawn = afterMoment ? new Map(state) : undefined;
     for (const card of cards) {
       const moves = moment.actions.flatMap((action) => (action.action === "animate" && card.numbers.includes(action.number)
-        ? [{ position: card.numbers.indexOf(action.number), to: action.end_value }] : []));
+        ? [{ position: card.positions[card.numbers.indexOf(action.number)]!, to: action.end_value }] : []));
       if (!moves.length) continue;
-      // The card's state: its lesson numbers first, as they stand, then what its start adds (a hundreds column).
-      const now = [...card.numbers.map((number) => state.get(number)!), ...card.started.slice(card.numbers.length)];
+      // The card's state: its lesson numbers where they stand, the rest as it started (a hundreds column).
+      const now = [...card.started];
+      card.numbers.forEach((number, index) => { now[card.positions[index]!] = state.get(number)!; });
       const result = card.hook.moves(now, moves);
-      if ("steps" in result && result.steps.length) card.numbers.forEach((number, position) => state.set(number, result.steps.at(-1)!.to[position]!));
+      if ("steps" in result && result.steps.length) card.numbers.forEach((number, index) => state.set(number, result.steps.at(-1)!.to[card.positions[index]!]!));
     }
     for (const action of moment.actions) {
       if (action.action === "animate" && !cardNumbers.has(action.number)) state.set(action.number, action.end_value);
@@ -2009,6 +2015,15 @@ function lowerModelSectionDraft(
       }
       entry.course_visual = position;
       entry.content = { capability: visual.capability, ...(rawContent as Record<string, unknown>) };
+      // A later card of a kind whose first card the outline draws earlier (a second card, on the section's own
+      // example): drawn on the one lesson number the program gave its demonstration (`prepare_section`), found by the
+      // label the program wrote, whatever numbers the create names.
+      const secondLabel = (LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability] as { second_card_label?: string }).second_card_label;
+      const earlier = (outline.course_visuals ?? []).slice(0, position - 1).some((each) => each.capability === visual.capability);
+      if (secondLabel !== undefined && earlier) {
+        const index = (outline.numbers ?? []).findIndex((number) => number.label === lessonText(language, secondLabel));
+        if (index >= 0) (entry.content as Record<string, unknown>).numbers = [index + 1];
+      }
       entry = withProgramCreateDefaults(entry, "visual", visual.relation);
       const entries = fixedCourseCreates.get(moment) ?? [];
       entries.push(entry);
@@ -3740,6 +3755,12 @@ export async function generateLessonPlanWithModel(
     await options.on_outline_ready?.({
       sections: outline.sections.length,
       course_visuals: outline.course_visuals?.length ?? 0,
+      ...(() => {
+        const visuals = outline!.course_visuals ?? [];
+        const second = visuals.filter((visual, index) => (LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability] as { second_card_label?: string }).second_card_label !== undefined
+          && visuals.slice(0, index).some((each) => each.capability === visual.capability)).length;
+        return second ? { second_cards: second } : {};
+      })(),
       request_parts: fixedRequestParts.length,
       camera_observation: stableCameraObservation !== undefined,
     });

@@ -44,7 +44,7 @@ test("make_ten is a trial, off by default: built, not offered; its guidance and 
   assert.deepEqual(offered.ranges, [[0, 10], [0, 0, 4]]);
   assert.deepEqual([offered.min, offered.many, offered.controls], [6, true, []]);
   // Short guidance (tracked, not capped): the pair, the practice pair, the target 10; no control named.
-  assert.equal(Buffer.byteLength(offered.guidance), 1291);
+  assert.equal(Buffer.byteLength(offered.guidance), 1754);
   // The card is the sum's picture; a later section may walk the same sum on a number line, never instead of the card
   // (lead, 2026-11-27: a second view is fine; the line draws on copies of the pair).
   assert.ok(offered.guidance.includes("这道加法的画面是这张卡片；后面的节可以再用数轴把同一道加法走一遍，数轴不代替这张卡片"));

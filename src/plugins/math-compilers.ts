@@ -14,7 +14,7 @@ import {
   PLACE_VALUE_TIMES_TEN_MAX_ROWS,
   type BuiltRecipe, type RearrangementConstruction, type Solid, type SolidMeasureKind,
 } from "octos-lesson-language/plugin-math";
-import { compileText, lessonTextLanguage } from "../lesson-text.js";
+import { compileText, lessonText, lessonTextLanguage } from "../lesson-text.js";
 import { type CompiledVisual } from "../compiled-visual-reuse.js";
 import { baseTenStartFault, baseTenState, baseTenTapTask } from "./base-ten-moves.js";
 import { PLACE_VALUE_GIVENS, placeValueBuiltWhereDrawn, placeValuePlain, placeValueStepPlaces, placeValueStartFault, placeValueWordsWrite } from "./place-value-moves.js";
@@ -23,6 +23,7 @@ import {
 } from "./place-value-trade-moves.js";
 import { MAKE_TEN_NUMBER, makeTenStartFault, makeTenStartValues, makeTenSum, makeTenWordsGiveAnswer } from "./make-ten-moves.js";
 import { TIMES_TEN_NUMBER, placeValueTimesTenWordsGiveAnswer, timesTenStartProblem } from "./place-value-times-ten-moves.js";
+import { SECOND_CARDS, cardName, exampleOf, exampleStart, isSecondCard, type SecondCardKind } from "./second-card.js";
 import { placeValueThousandths } from "./place-value-moves.js";
 import { plotCurveNumbers, plotSampleNumbers } from "./plot-bindings.js";
 import { planPlotView, type PlotView } from "../plot-view-planner.js";
@@ -2018,6 +2019,8 @@ function compilePlaceValueTrade(
   plan: LessonPlan,
   path: string,
 ): CompiledVisual {
+  const second = secondCard("place_value_trade", base, content, role, placement, plan, path);
+  if (second) return second;
   const input = parameters(content);
   allowParameterKeys(input, ["operation"], path);
   const operation = input.operation as typeof PLACE_VALUE_TRADE_OPERATIONS[number];
@@ -2042,7 +2045,8 @@ function compilePlaceValueTrade(
   if (fault) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault, "place_value_trade");
   // One card per lesson: a later card on other numbers is refused at its own path (as the chart's is).
   const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions)
-    .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "place_value_trade");
+    .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "place_value_trade"
+      && !exampleOf("place_value_trade", (action.content as LessonPlanVisualContent).parameters));
   if (first && (JSON.stringify((first.content as LessonPlanVisualContent).numbers ?? []) !== JSON.stringify(numbers)
     || (first.content as LessonPlanVisualContent).parameters?.operation !== operation)) {
     fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `a lesson has one place-value trade card: this lesson's is on lesson numbers ${((first.content as LessonPlanVisualContent).numbers ?? []).join(", ")}`, "place_value_trade");
@@ -2144,6 +2148,8 @@ function compileMakeTen(
   plan: LessonPlan,
   path: string,
 ): CompiledVisual {
+  const second = secondCard("make_ten", base, content, role, placement, plan, path);
+  if (second) return second;
   allowParameterKeys(parameters(content), [], path);
   const numbers = content.numbers ?? [];
   // The two counts start where the pair puts them whatever the outline declared for them (the program's own
@@ -2164,7 +2170,8 @@ function compileMakeTen(
   if (fault) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault, "make_ten");
   // One card per lesson: a later card on other numbers is refused at its own path.
   const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions)
-    .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "make_ten");
+    .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "make_ten"
+      && !exampleOf("make_ten", (action.content as LessonPlanVisualContent).parameters));
   if (first && JSON.stringify((first.content as LessonPlanVisualContent).numbers ?? []) !== JSON.stringify(numbers)) {
     fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `a lesson has one make-ten card: this lesson's is on lesson numbers ${((first.content as LessonPlanVisualContent).numbers ?? []).join(", ")}`, "make_ten");
   }
@@ -2259,6 +2266,8 @@ function compilePlaceValueTimesTen(
   plan: LessonPlan,
   path: string,
 ): CompiledVisual {
+  const second = secondCard("place_value_times_ten", base, content, role, placement, plan, path);
+  if (second) return second;
   allowParameterKeys(parameters(content), [], path);
   const numbers = content.numbers ?? [];
   const values = numbers.map((number, index) => numberDefinition(plan, number, `${path}.numbers[${index}]`).initial);
@@ -2278,7 +2287,8 @@ function compilePlaceValueTimesTen(
   const { problem, practice } = found as Exclude<typeof found, { fault: string }>;
   // One card per lesson: a later card on other numbers is refused at its own path.
   const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions)
-    .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "place_value_times_ten");
+    .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "place_value_times_ten"
+      && !exampleOf("place_value_times_ten", (action.content as LessonPlanVisualContent).parameters));
   if (first && JSON.stringify((first.content as LessonPlanVisualContent).numbers ?? []) !== JSON.stringify(numbers)) {
     fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `a lesson has one times-ten card: this lesson's is on lesson numbers ${((first.content as LessonPlanVisualContent).numbers ?? []).join(", ")}`, "place_value_times_ten");
   }
@@ -2347,6 +2357,99 @@ function compilePlaceValueTimesTen(
           }],
         };
       },
+    },
+  };
+}
+
+/**
+ * A second card of a kind on the section's own example (second-card.ts; design note "second example and copies", PR 3):
+ * a create that writes the example's two numbers, after the lesson's first card of the kind. Undefined for any other
+ * create, whose example parameters (a first card's, written by mistake) are read over. The card is a demonstration
+ * only: its pair is drawn as written, its demonstration number is the program's (bound as the create's one lesson
+ * number), and the practice stays on the first card. Faults are facts, at the create, naming the card.
+ */
+function secondCard(
+  capability: SecondCardKind,
+  base: string,
+  content: LessonPlanVisualContent,
+  role: string,
+  placement: ReturnType<typeof place>,
+  plan: LessonPlan,
+  path: string,
+): CompiledVisual | undefined {
+  const example = exampleOf(capability, content.parameters);
+  const creates = plan.sections.flatMap((section, sectionAt) => section.moments.flatMap((moment) => moment.actions)
+    .flatMap((action) => (action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === capability
+      ? [{ sectionAt, content: action.content as LessonPlanVisualContent }] : [])));
+  const first = creates.find((each) => !exampleOf(capability, each.content.parameters));
+  // A later card of the kind drawn on the program's one number (the lowering binds a second card there) that writes no
+  // example: a fact, at the create.
+  if (!example && first && first.content !== content && content.numbers?.length === 1 && (first.content.numbers?.length ?? 0) > 1
+    && plan.numbers?.[content.numbers[0]! - 1]?.label === lessonText(lessonTextLanguage(plan), SECOND_CARDS[capability].label)) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${SECOND_CARDS[capability].parameters[0]}`, `the second ${cardName(capability)} shows an example of its own, and this create writes none (${SECOND_CARDS[capability].parameters.join(", ")})`, capability);
+  }
+  if (!example || !first || !isSecondCard(capability, content, plan.sections)) {
+    // A first card (or one with no example): its example parameters, if any, are read over.
+    if (content.parameters) for (const name of SECOND_CARDS[capability].parameters) delete (content.parameters as Record<string, unknown>)[name];
+    return undefined;
+  }
+  const examples = creates.filter((each) => exampleOf(capability, each.content.parameters));
+  if (examples[0]!.content !== content && JSON.stringify(examples[0]!.content.parameters) !== JSON.stringify(content.parameters)) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${SECOND_CARDS[capability].parameters[0]}`, `a lesson has one second ${cardName(capability)}: this lesson's is on ${exampleOf(capability, examples[0]!.content.parameters)!.join(" and ")}`, capability);
+  }
+  const firstValues = (first.content.numbers ?? []).map((number) => plan.numbers?.[number - 1]?.initial ?? Number.NaN);
+  const found = exampleStart(capability, example, firstValues, first.content.parameters as Record<string, unknown> | undefined);
+  if ("fault" in found) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${SECOND_CARDS[capability].parameters[0]}`, found.fault, capability);
+  const start = (found as { start: number[] }).start;
+  const demonstration = content.numbers?.[0];
+  if (demonstration === undefined || !plan.numbers?.[demonstration - 1]) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, `the second ${cardName(capability)} is drawn on the number the program gives its demonstration`, capability);
+  }
+  const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
+  const stem = base.replace(/[^A-Za-z0-9]+/gu, "_").toLowerCase();
+  const field = `${stem}_${capability === "make_ten" ? "filled" : capability === "place_value_trade" ? "finished" : "counted_in"}`;
+  const common = { as: base, role, place: placement, ...(language === "zh-CN" ? { language } : {}) };
+  let built: BuiltRecipe;
+  let variable: NonNullable<CompiledVisual["variables"]>[number];
+  let toValue = (value: number) => value;
+  if (capability === "make_ten") {
+    const [a, b] = start as [number, number];
+    built = buildMakeTen({ ...common, a, b, filled: { expression: field, initial: makeTenFreshCount(a, b) }, moved: 0 });
+    variable = { as: field, initial: makeTenFreshCount(a, b), min: 0, max: MAKE_TEN_PLACES, label: MAKE_TEN_TEXT[language].filled };
+  } else if (capability === "place_value_trade") {
+    const operation = first.content.parameters?.operation as typeof PLACE_VALUE_TRADE_OPERATIONS[number];
+    // The operation is the first card's: the card's state reads it from its content.
+    (content.parameters as Record<string, unknown>).operation = operation;
+    const [a, b] = start.slice(0, 2).map((value) => placeValueTradeThousandths(value)!) as [number, number];
+    const columns = placeValueTradeColumnsOf(operation, a, b);
+    built = buildPlaceValueTrade({ ...common, operation, a, b, finished: { expression: field, initial: 0 }, places: columns.map((column) => ({ place: column, status: 0 })) });
+    variable = { as: field, initial: 0, min: 0, max: columns.length, label: PLACE_VALUE_TRADE_TEXT[language].finished };
+  } else {
+    const found2 = timesTenStartProblem(start);
+    if ("fault" in found2) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${SECOND_CARDS[capability].parameters[0]}`, found2.fault, capability);
+    const { problem } = found2 as Exclude<typeof found2, { fault: string }>;
+    built = buildPlaceValueTimesTen({ ...common, amount: problem.amount, target: problem.target, ...(problem.question === "count" ? { start: problem.start } : {}),
+      counted_in: { expression: field, initial: problem.start }, moved_once: 0, ...(problem.g === 2 ? { moved_twice: 0 } : {}) });
+    const path2 = placeValueTimesTenPath(problem);
+    variable = { as: field, initial: problem.start, min: Math.min(...path2), max: Math.max(...path2) + (Math.min(...path2) === Math.max(...path2) ? 1 : 0), label: TIMES_TEN_TEXT[language].counted_in };
+    toValue = (value) => placeValueThousandths(value)!;
+  }
+  const position = SECOND_CARDS[capability].demonstration;
+  return {
+    actions: built.actions, whole: built.whole, parts: new Map(Object.entries(built.parts)), variables: [variable],
+    mover: {
+      unbound: true,
+      numbers: [demonstration!],
+      positions: [position],
+      start,
+      example: true,
+      // A step moves the demonstration's number forward: the card plays it, as the first card does. Nothing else moves.
+      play(steps) {
+        return steps.filter((step) => step.position === position && step.to[position] !== step.from[position])
+          .map((step) => ({ do: "animate", variable: field, value: toValue(step.to[position]!) } as AuthoringAction));
+      },
+      // The practice is the first card's: the compiler routes a practice on this card's number there.
+      task: () => ({ drop: `the practice is on the lesson's first ${cardName(capability)}`, reason: "practice_on_first_card" }),
     },
   };
 }

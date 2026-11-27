@@ -52,7 +52,7 @@ test("place_value_times_ten is a trial, off by default: built, not offered; its 
   assert.deepEqual([offered.min, offered.many, offered.controls], [5, true, []]);
   // Short guidance (tracked, not capped): the numbers by role, a breaking and a put-together example, the
   // demonstration to the unit asked, the practice; no control named.
-  assert.equal(Buffer.byteLength(offered.guidance), 1958);
+  assert.equal(Buffer.byteLength(offered.guidance), 2383);
   for (const role of ["amount", "unit_asked", "practice_amount", "practice_unit_asked", "start_unit"]) assert.ok(offered.guidance.includes(role), role);
   // PF-11's question, written as the program wants it: a breaking question with no fifth number.
   assert.ok(offered.guidance.includes("7个十分之一=?个百分之一 写0.7、0.01、练习两个数；"));

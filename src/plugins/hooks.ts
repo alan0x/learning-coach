@@ -76,6 +76,13 @@ export interface RecipeHooks {
    */
   planned_variables?(values: readonly number[]): number | undefined;
   /**
+   * A second card of the kind (a demonstration on the section's own example): the position in the kind's number order of
+   * each of its lesson numbers (the one its demonstration moves) and its state when drawn, as `number_moves.state`
+   * gives it. `sections` are the lesson's, in order; `numbers` its lesson numbers. Undefined for any other create.
+   */
+  second_card?(content: LessonPlanVisualContent, sections: ReadonlyArray<{ moments: ReadonlyArray<{ actions: ReadonlyArray<unknown> }> }>, numbers: ReadonlyArray<{ initial: number }>):
+    { positions: number[]; started: number[] } | undefined;
+  /**
    * The model wrote several first-section creates of this course visual (their contents, in order): the
    * index of the one the card is made from, drawn at the first create's moment. Without the hook Coach
    * keeps the first and drops the rest. Out of range or not a whole number: the first.

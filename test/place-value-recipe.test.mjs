@@ -23,7 +23,7 @@ test("place_value_chart is offered by default, last in the catalog (owner, 2026-
   assert.equal(api.RECIPE_PLUGIN.place_value_chart, "math");
   assert.deepEqual(api.RECIPE_SCHEMA_PROPERTIES.place_value_chart, { given: { enum: ["name", "expanded", "expanded_factors", "place_counts", "numeral"] } });
   // In the provider's property order where the trial put it, before the trade trial's operation (OLL 0026).
-  assert.deepEqual(api.SCHEMA_PROPERTY_ORDER.slice(-2), ["given", "operation"]);
+  assert.deepEqual(api.SCHEMA_PROPERTY_ORDER.slice(-8, -6), ["given", "operation"]);
   const moves = api.RECIPE_HOOKS.place_value_chart.number_moves;
   const build = { parameters: { given: "name" } }, apart = { parameters: { given: "numeral" } };
   const to = (state, ...values) => moves.moves(state, values.map((value) => ({ position: 0, to: value })));
