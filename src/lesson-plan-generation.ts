@@ -3734,7 +3734,7 @@ export async function generateLessonPlanWithModel(
         const withdrawn = withdrawSectionVisual(outline, 1, capability, fixedRequestParts.length, true);
         if (!withdrawn) throw error;
         await withdrawBeforePublishing(1, capability, withdrawn,
-          numbersMissing ? "outline_numbers_missing" : sharesTapCard ? "shares_tap_card_numbers" : "visual_limits_after_retries",
+          numbersMissing ? outlineNumbersReason(error as LessonPlanError) : sharesTapCard ? "shares_tap_card_numbers" : "visual_limits_after_retries",
           error instanceof Error ? error.message : String(error),
           async () => { await options.on_rejected_part?.({ label: "lesson-plan-section", section: 1, attempt: sectionAttempts.get(1) ?? 1, error: rejectionDetails(error) }); });
         // Exactly once more, outside the repair budget, whatever the fault (review of #189).

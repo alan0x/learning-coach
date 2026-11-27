@@ -49,6 +49,9 @@ const run = (body) => JSON.parse(execFileSync(process.execPath, ["--input-type=m
     return log;
   };
   const animate = (number, end_value) => ({ action: "animate", number, end_value, duration_intent: "brief", timing: "during_speech" });
+  // A demonstration the card refuses (counted in animated off its path): a fault of the section, which the outline's
+  // numbers do not decide, so the card's \`outline_fault\` (#188) leaves it to the section's repairs.
+  const offPath = (plan) => { for (const moment of plan.sections[0].moments) for (const action of moment.actions) if (action.action === "animate" && action.number === 5) action.end_value = 0.5; return plan; };
   ${body}
 `], {
   env: { ...process.env, LEARNING_COACH_TRIAL_RECIPES: "place_value_times_ten,make_ten" }, cwd: fileURLToPath(new URL("..", import.meta.url)), encoding: "utf8",
@@ -123,7 +126,7 @@ const threeOutlines = (goodCard) => run(`
   mat.numbers[1] = { initial: 33, min: 0, max: 40, label: "tens" };
   const chart = one(sp.placeValuePlan({ number: 300, practice: 73, given: "numeral" }));
   const card = one(sp.timesTenPlan({ amount: 0.3, target: 0.001, practice: [5, 0.01] }));
-  if (!${goodCard}) card.numbers[0] = { initial: 3330, min: 0, max: 3330, label: "the amount" };
+  if (!${goodCard}) offPath(card);
   const stages = [mat, chart, card].map(staged);
   // Written without the card, section 1 fills the note slot it is given.
   const note = staged({ ...structuredClone(card), sections: [{ purpose: "Explain", reusable_items: [{ kind: "board_item", board_kind: "note" }], moments: [{ narration: "Three tenths are three hundred thousandths.",
@@ -272,7 +275,7 @@ test("a note on a picture dropped as an outline was accepted does not outlive th
   // accepted. The card then faults three times and the lesson is planned again, on a clean two-section outline.
   const result = run(`
     const plan = sp.timesTenPlan({ amount: 0.3, target: 0.001, practice: [5, 0.01] });
-    plan.numbers[0] = { initial: 3330, min: 0, max: 3330, label: "the amount" };
+    offPath(plan);
     plan.sections[1] = { purpose: "Build a number", reusable_items: [{ kind: "board_item", board_kind: "visual", capability: "place_value_chart" }], moments: [
       { narration: "A chart.", actions: [{ action: "create", kind: "visual", role: "main_visual", content: { capability: "place_value_chart", parameters: { given: "name" }, numbers: [1] }, placement: { relation: "new_region" }, reusable_item: 1 }] }] };
     const first = staged(plan);
@@ -342,16 +345,18 @@ test("a lesson ended early compiles with a lesson number only the removed sectio
   assert.equal(failing.oll_valid, true);
 });
 
-test("PF-09 on a card the outline gave too few numbers: section 1 is written exactly once more (review of #189)", () => {
-  // Two restarts spent (the mat, then the chart, on their own limits), then a third outline whose card starts on five
-  // numbers and declares three: the card goes at once, and section 1 gets one call, not a new repair budget.
-  const result = run(`
+test("PF-09 on a card the outline's numbers refuse (too few, or #188's outline_fault): section 1 is written exactly once more (review of #189)", () => {
+  // Two restarts spent (the mat, then the chart, on their own limits), then a third outline whose card cannot start on
+  // its numbers: three of the five it takes, or an amount it refuses (3330: one digit in one place, #188). The card goes
+  // at once, and section 1 gets one call, not a new repair budget.
+  const third = (variant) => run(`
     const one = (plan) => { plan.sections = [plan.sections[0]]; plan.close = { summary: "Review.", focus: [{ source: "reusable", section: 1, item: 1 }] }; return plan; };
     const mat = one(sp.samplePlan("base_ten_trade"));
     mat.numbers[1] = { initial: 33, min: 0, max: 40, label: "tens" };
     const chart = one(sp.placeValuePlan({ number: 300, practice: 73, given: "numeral" }));
     const card = staged(one(sp.timesTenPlan({ amount: 0.3, target: 0.001, practice: [5, 0.01] })));
-    card.outline.numbers = card.outline.numbers.slice(0, 3);
+    if (${JSON.stringify(variant)} === "missing") card.outline.numbers = card.outline.numbers.slice(0, 3);
+    else card.outline.numbers[0] = { initial: 3330, min: 0, max: 3330, label: "the amount" };
     const stages = [staged(mat), staged(chart), card];
     let stage = 0;
     const log = await generate((request) => {
@@ -362,11 +367,14 @@ test("PF-09 on a card the outline gave too few numbers: section 1 is written exa
     }, "Why does 300 hold 30 tens?");
     console.log(JSON.stringify(log));
   `);
-  assert.deepEqual(result.adjustments.filter(([kind]) => kind === "visual_removed"), [
-    ["visual_removed", 1, "base_ten_trade", "visual_limits_after_retries"],
-    ["visual_removed", 1, "place_value_chart", "visual_limits_after_retries"],
-    ["visual_removed", 1, "place_value_times_ten", "outline_numbers_missing"],
-  ]);
-  assert.deepEqual(result.requests.slice(result.requests.lastIndexOf("lesson-plan-outline")), ["lesson-plan-outline", "lesson-plan-section1"]);
-  assert.ok(result.error, "the stub's one call faults, and no further call is made");
+  for (const [variant, reason] of [["missing", "outline_numbers_missing"], ["refused", "outline_numbers_refused"]]) {
+    const result = third(variant);
+    assert.deepEqual(result.adjustments.filter(([kind]) => kind === "visual_removed"), [
+      ["visual_removed", 1, "base_ten_trade", "visual_limits_after_retries"],
+      ["visual_removed", 1, "place_value_chart", "visual_limits_after_retries"],
+      ["visual_removed", 1, "place_value_times_ten", reason],
+    ], variant);
+    assert.deepEqual(result.requests.slice(result.requests.lastIndexOf("lesson-plan-outline")), ["lesson-plan-outline", "lesson-plan-section1"], variant);
+    assert.ok(result.error, `${variant}: the stub's one call faults, and no further call is made`);
+  }
 });
