@@ -17725,13 +17725,23 @@ function timesTenStartProblem(values) {
   }
   const [A, T, PA, PT, C] = values.map(placeValueThousandths);
   if ([A, T, PA, PT].some((value2) => value2 === void 0 || value2 <= 0)) return { fault: "the amount, the unit asked and the practice's two numbers are numbers above 0 with at most three decimal places (thousandths)" };
+  const written = timesTenProblemOf(A, T, C);
   const own = timesTenProblemOf(A, T, void 0);
-  const problem = "fault" in own ? timesTenProblemOf(A, T, C) : own;
+  if ("fault" in written && C === T) {
+    const amount = decimal(A), asked = decimal(T);
+    const unitName = (value2) => {
+      const place5 = placeValueTimesTenPlaceOfUnit(value2);
+      return place5 === void 0 ? `units of ${decimal(value2)}` : placeValueColumnName(place5).toLowerCase();
+    };
+    if (!("fault" in own)) {
+      return { fault: `the start unit ${asked} is the unit asked ${asked}: a question that breaks ${amount} into ${unitName(T)} starts at the amount's own place (${decimal(own.start)}) and needs no fifth number; a question that puts ${amount} of ${unitName(T)} together asks for a larger unit (${decimal(own.start)}) and starts at ${asked}` };
+    }
+    const said = placeValueTimesTenFaultText(written.fault, A, T);
+    return { fault: `${said}; the start unit ${asked} is the unit asked ${asked}: the unit asked (the second number) is the unit the question asks for and the start unit (the fifth number) the unit it counts the amount in: 40 hundredths = ? tenths is 0.4, 0.1, then the practice, then 0.01` };
+  }
+  const problem = "fault" in own ? written : own;
   if ("fault" in problem) {
     const said = placeValueTimesTenFaultText(problem.fault, A, T);
-    if (C === T) {
-      return { fault: `${said}; the unit asked (the second number) is the unit the question asks for and the start unit (the fifth number) the unit it counts the amount in: 40 hundredths = ? tenths is 0.4, 0.1, then the practice, then 0.01` };
-    }
     return { fault: problem.fault === "same_unit" || problem.fault === "start_not_unit" ? `${said}; the start unit (the fifth number) is the unit the question counts the amount in, not the unit asked: 40 hundredths starts at 0.01, and 3 tenths at 0.1, which the program supplies` : `the question: ${said}` };
   }
   const practice = placeValueTimesTenPracticeProblem(problem, PA, PT);
@@ -25500,6 +25510,7 @@ function compileLessonPlan(value2, options = {}) {
       const momentPath = `${sectionPath}.moments[${momentOffset}]`;
       const actions = [];
       const replayed = new Set((moment.restart_numbers ?? []).map(variableAlias));
+      const reopened = /* @__PURE__ */ new Set();
       for (const number of moment.restart_numbers ?? []) {
         const mover = movers.get(number);
         const state = mover && moverStates.get(mover.visual);
@@ -25515,7 +25526,10 @@ function compileLessonPlan(value2, options = {}) {
           else replayed.add(variableAlias(other));
         }
         for (const variable of mover.visual.variables ?? []) replayed.add(variable.as);
-        actions.push(...(mover.visual.mover.opening ?? []).map((action) => ({ ...action, ...actionWhen("before_speech") })));
+        if (!reopened.has(mover.visual)) {
+          reopened.add(mover.visual);
+          actions.push(...(mover.visual.mover.opening ?? []).map((action) => ({ ...action, ...actionWhen("before_speech") })));
+        }
       }
       const moved = /* @__PURE__ */ new Set();
       const writtenHere = /* @__PURE__ */ new Map();

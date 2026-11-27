@@ -4,9 +4,10 @@
 // practice of the card's shape (its amount and unit asked) and the start unit, "counted in": the unit the amount is
 // counted in now. Counted in starts at the unit the question names. A breaking question (the amount counted in its own
 // place makes a count toward a smaller unit) and a times pair start at the amount's own place: the program supplies
-// it, and a fifth number the outline writes is read over, never refused (35P-04 run 2, PF-01: 1000, 10, ..., 10 lost
-// the card). Only a put-together question writes its own (40 hundredths: 0.01). The two never compete: a put-together
-// asks for the amount's own place, from which the amount makes no question.
+// it, and a fifth number the outline writes otherwise is read over, never refused; one written as the unit asked is
+// refused, as the numbers cannot then say which question was meant (PF-01 or PF-05, below). Only a put-together
+// question writes its own (40 hundredths: 0.01). The two never compete: a put-together asks for the amount's own
+// place, from which the amount makes no question.
 // The demonstration moves only counted in, along the problem's path toward the target (0.1 -> 0.01 -> 0.001, or
 // 100 -> 70), never back; the card plays each row's move. Values are as the model writes them (0.01); the card holds
 // thousandths. These rules are pure, so the compiler, the model's section facts and the judge agree on every value;
@@ -56,20 +57,30 @@ export function timesTenStartProblem(values: readonly number[]): { problem: Plac
   const [A, T, PA, PT, C] = values.map(placeValueThousandths);
   if ([A, T, PA, PT].some((value) => value === undefined || value <= 0)) return { fault: "the amount, the unit asked and the practice's two numbers are numbers above 0 with at most three decimal places (thousandths)" };
   // The amount counted in its own place decides first: when that makes a question (a breaking count, or a times
-  // pair), the start unit is the program's and the fifth number as written is read over, whatever it is (0, the unit
-  // asked, another start). Only a put-together question, which the amount's own place cannot make, starts where the
-  // fifth number says. A fifth number written as the unit asked is read over too (PF-01, 35P-04 run 2: how many tens
-  // in 1,000 written 1000, 10, ..., 10). Numbers that swap the unit asked and the start unit of a put-together
-  // (objective run 1, PF-05: 40 hundredths = ? tenths written 0.4, 0.01, ..., 0.01) make a legal breaking question,
-  // 4 tenths = ? hundredths, and are drawn as it: the numbers cannot tell the two apart; the roles' names are what
-  // keeps them apart (owner, 2026-11-27).
+  // pair), the start unit is the program's and a fifth number written otherwise is read over (0, or another start).
+  // Only a put-together question, which the amount's own place cannot make, starts where the fifth number says.
+  // Except a fifth number written as the unit asked (and making no question as written): then the numbers cannot
+  // say which question was meant, a breaking one that needed no fifth number (35P-04 run 2, PF-01: how many tens in
+  // 1,000 written 1000, 10, ..., 10) or a put-together one with the unit asked and the start unit swapped (objective
+  // run 1, PF-05: 40 hundredths = ? tenths written 0.4, 0.01, ..., 0.01, which read over would draw the reverse
+  // question). It is refused, and the refusal states both readings in the roles' words (review of #192).
+  const written = timesTenProblemOf(A!, T!, C);
   const own = timesTenProblemOf(A!, T!, undefined);
-  const problem = "fault" in own ? timesTenProblemOf(A!, T!, C) : own;
+  if ("fault" in written && C === T) {
+    const amount = decimal(A!), asked = decimal(T!);
+    const unitName = (value: number) => {
+      const place = placeValueTimesTenPlaceOfUnit(value);
+      return place === undefined ? `units of ${decimal(value)}` : placeValueColumnName(place).toLowerCase();
+    };
+    if (!("fault" in own)) {
+      return { fault: `the start unit ${asked} is the unit asked ${asked}: a question that breaks ${amount} into ${unitName(T!)} starts at the amount's own place (${decimal(own.start)}) and needs no fifth number; a question that puts ${amount} of ${unitName(T!)} together asks for a larger unit (${decimal(own.start)}) and starts at ${asked}` };
+    }
+    const said = placeValueTimesTenFaultText(written.fault as Parameters<typeof placeValueTimesTenFaultText>[0], A, T);
+    return { fault: `${said}; the start unit ${asked} is the unit asked ${asked}: the unit asked (the second number) is the unit the question asks for and the start unit (the fifth number) the unit it counts the amount in: 40 hundredths = ? tenths is 0.4, 0.1, then the practice, then 0.01` };
+  }
+  const problem = "fault" in own ? written : own;
   if ("fault" in problem) {
     const said = placeValueTimesTenFaultText(problem.fault as Parameters<typeof placeValueTimesTenFaultText>[0], A, T);
-    if (C === T) {
-      return { fault: `${said}; the unit asked (the second number) is the unit the question asks for and the start unit (the fifth number) the unit it counts the amount in: 40 hundredths = ? tenths is 0.4, 0.1, then the practice, then 0.01` };
-    }
     return { fault: problem.fault === "same_unit" || problem.fault === "start_not_unit"
       ? `${said}; the start unit (the fifth number) is the unit the question counts the amount in, not the unit asked: 40 hundredths starts at 0.01, and 3 tenths at 0.1, which the program supplies`
       : `the question: ${said}` };

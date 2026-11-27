@@ -603,6 +603,8 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
       const actions: AuthoringAction[] = [];
       // A replayed number of such a visual replays the whole card: its other numbers and its own variables.
       const replayed = new Set((moment.restart_numbers ?? []).map(variableAlias));
+      // Cards whose opening this moment's replay already plays (a replay naming two of a card's numbers fills it once).
+      const reopened = new Set<CompiledVisual>();
       for (const number of moment.restart_numbers ?? []) {
         const mover = movers.get(number);
         const state = mover && moverStates.get(mover.visual);
@@ -622,8 +624,12 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
           else replayed.add(variableAlias(other));
         }
         for (const variable of mover.visual.variables ?? []) replayed.add(variable.as);
-        // The replay resets the card's variables to their written start; a card drawn in another state fills again.
-        actions.push(...(mover.visual.mover!.opening ?? []).map((action) => ({ ...action, ...actionWhen("before_speech") })));
+        // The replay resets the card's variables to their written start; a card drawn in another state fills again,
+        // once however many of its numbers the replay names.
+        if (!reopened.has(mover.visual)) {
+          reopened.add(mover.visual);
+          actions.push(...(mover.visual.mover!.opening ?? []).map((action) => ({ ...action, ...actionWhen("before_speech") })));
+        }
       }
       // This moment's animations of such a visual are one teaching step: applied lowest place first, and
       // played where the first of them stands. Worked out at that first animation, so a card drawn earlier

@@ -488,7 +488,8 @@ test("a chart to build that its own section never builds is drawn showing its nu
     const api = await import(${here("../lesson-plan.js")});
     const { placeValuePlan } = await import(${here("./sample-plans.mjs")});
     const plan = placeValuePlan({ number: 8.2, practice: 6.4, given: "place_counts", steps: [] });
-    plan.sections[1].moments.push({ narration: "Look again.", restart_numbers: [1], actions: [] });
+    // Both of the chart's numbers named: the chart fills once.
+    plan.sections[1].moments.push({ narration: "Look again.", restart_numbers: [1, 2], actions: [] });
     const beat = api.compileAndValidateLessonPlan(plan, { language: "zh-CN" }).lesson.steps[1].beats.at(-1);
     console.log(JSON.stringify({ start: beat.start.kind, actions: beat.actions.map((action) => action.do === "animate" ? action.variable.replace(/^section_01_moment_01_item_01_/u, "") + "=" + action.value + ":" + action.when : action.do) }));
   `);

@@ -300,21 +300,14 @@ test("counted in written where the amount cannot start is read over, never refus
     // A unit the amount can start in decides the problem: 500 thousandths put together into tenths. (The two never
     // compete: a put-together's target is the amount's own place, where the amount's own count has nowhere to go.)
     ["together", { amount: 0.5, target: 0.1, start: 0.001, practice: [0.3, 0.1] }, "en-US"],
-    // A breaking question's start is the program's: a fifth number written as the unit asked is read over (35P-04
-    // run 2, PF-01: how many tens in 1,000 written 1000, 10, 2000, 10, 10 lost the card), and so is a breaking start
-    // other than the amount's own place (40 hundredths for 0.4 counted to thousandths: drawn as 4 tenths, same count).
-    ["PF-01", { amount: 1000, target: 10, start: 10, practice: [2000, 10] }, "en-US"],
+    // A breaking question's start is the program's: a breaking start other than the amount's own place is read over
+    // (40 hundredths for 0.4 counted to thousandths: drawn as 4 tenths, same count). A fifth number written as the
+    // unit asked is not (below: the numbers cannot say which question was meant).
     ["smaller-start", { amount: 0.4, target: 0.001, start: 0.01, practice: [0.6, 0.001] }, "en-US"],
-    // PF-05's numbers (40 hundredths = ? tenths with the unit asked and the start unit both 0.01) make a legal
-    // breaking question, 4 tenths = ? hundredths, and are drawn as it: the numbers cannot tell the two apart (owner,
-    // 2026-11-27: read over, never refused; the roles' names in the guidance are what keeps them apart).
-    ["PF-05", { amount: 0.4, target: 0.01, start: 0.01, practice: [0.6, 0.01] }, "en-US"],
   ]));
   const card = (id) => { const content = result[id].lesson.steps[0].beats[0].actions[0].content; return [content.question, content.toward, content.apart, content.counted_in]; };
   for (const id of ["zero", "on-the-path"]) assert.deepEqual(card(id), ["count", "right", 2, 100], id);
-  assert.deepEqual(card("PF-01"), ["count", "right", 2, 1_000_000]);
   assert.deepEqual(card("smaller-start"), ["count", "right", 2, 100]);
-  assert.deepEqual(card("PF-05"), ["count", "right", 1, 100]);
   assert.deepEqual(card("times"), ["times", "right", 1, 100_000]);
   assert.deepEqual(card("together"), ["count", "left", 2, 1]);
 });
@@ -582,11 +575,12 @@ const outlineRun = (cases) => withTrial(`
 test("numbers the card cannot start on take it out as the outline is read, before any section call (PF-05, PF-15, PF-17)", () => {
   const result = outlineRun([
     // PF-05: the unit asked written as the unit the question names (40 hundredths = ? tenths as 0.4, 0.01, ..., 0.01).
-    // Since 2026-11-27 (owner) a breaking question's start is the program's, and these numbers make one (4 tenths =
-    // ? hundredths): kept, drawn as that question (see "read over" above).
+    // Read over, it would draw the reverse question (4 tenths = ? hundredths), so a fifth number equal to the unit
+    // asked is refused, the refusal stating both readings (review of #192).
     ["PF-05", { amount: 0.4, target: 0.01, start: 0.01, practice: [0.6, 0.01], steps: [0.1] }, 5, "40个百分之一合起来是几个十分之一？为什么？"],
-    // PF-01 (35P-04 run 2): how many tens in 1,000, the fifth number written as the unit asked; kept.
-    ["PF-01", { amount: 1000, target: 10, start: 10, practice: [2000, 10], steps: [100, 10] }, 5, "一千里面有几个十？孩子说是10个。"],
+    // PF-01 (35P-04 run 2): how many tens in 1,000, the fifth number written as the unit asked: the same signature,
+    // refused the same way (the breaking reading needs no fifth number).
+    ["PF-01", { amount: 1000, target: 10, start: 10, practice: [2000, 10], steps: [100, 10] }, 5, "How many tens are in one thousand? My kid insists it's ten."],
     // Numbers no start can fix: a put-together question with the start unit written as the unit asked.
     ["same-unit", { amount: 0.4, target: 0.1, start: 0.1, practice: [0.7, 0.1], steps: [0.1] }, 5, "40个百分之一合起来是几个十分之一？为什么？"],
     // PF-15: the card chosen with no outline numbers at all.
@@ -600,15 +594,18 @@ test("numbers the card cannot start on take it out as the outline is read, befor
     ["shifted", { amount: 0.3, target: 0.001, practice: [5, 0.01], steps: [0.01, 0.001] }, 6, "3个十分之一是几个千分之一？", true],
   ]);
   const removed = (name) => result[name].adjustments.map(({ kind, reason, capability }) => ({ kind, reason, capability }));
-  for (const name of ["same-unit", "PF-17"]) {
+  for (const name of ["same-unit", "PF-17", "PF-05", "PF-01"]) {
     assert.deepEqual(removed(name), [{ kind: "visual_removed", reason: "outline_numbers_refused", capability: "place_value_times_ten" }], name);
     assert.deepEqual(result[name].requests, ["lesson-plan-bootstrap", "lesson-plan-outline"], name);
   }
   assert.match(result["same-unit"].adjustments[0].detail, /cannot start on the outline's numbers: .*the unit asked \(the second number\) is the unit the question asks for/);
   assert.match(result["PF-17"].adjustments[0].detail, /not_one_digit/);
+  // Both readings, in the roles' words.
+  assert.match(result["PF-05"].adjustments[0].detail, /the start unit 0.01 is the unit asked 0.01: a question that breaks 0.4 into hundredths starts at the amount's own place \(0.1\) and needs no fifth number; a question that puts 0.4 of hundredths together asks for a larger unit \(0.1\) and starts at 0.01/);
+  assert.match(result["PF-01"].adjustments[0].detail, /the start unit 10 is the unit asked 10: a question that breaks 1000 into tens starts at the amount's own place \(1000\) and needs no fifth number/);
   assert.deepEqual(removed("PF-15"), [{ kind: "visual_removed", reason: "outline_numbers_missing", capability: "place_value_times_ten" }]);
   assert.deepEqual(result["PF-15"].requests, ["lesson-plan-bootstrap", "lesson-plan-outline"]);
-  for (const name of ["kept", "shifted", "PF-05", "PF-01"]) {
+  for (const name of ["kept", "shifted"]) {
     assert.deepEqual(result[name].adjustments, [], name);
     assert.ok(!result[name].requests.includes("lesson-plan-outline"), `${name}: ${JSON.stringify(result[name].requests)}`);
   }
