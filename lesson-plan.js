@@ -18987,6 +18987,11 @@ var MATH_RECIPES = {
     parts: ["whole"],
     number_inputs: ["first", "second", "practice_first", "practice_second", "compared"],
     number_roles: ["problem", "problem", "practice", "practice", "demonstration"],
+    // A move of the pair or the practice pair is refused with what the number is to the card (as #197's cards): the
+    // card would sit still while the narration moved it.
+    wrong_number_moves: "refused",
+    card_name: "compare card",
+    number_names: ["first number", "second number", "practice first number", "practice second number", "places compared"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
     // Compared starts at 0 whatever the outline holds (the card opens with no column judged), so the program
     // supplies it: an outline that declares only the four numbers before it gets it, from 0 to the most any pair can

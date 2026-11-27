@@ -397,3 +397,21 @@ test("review of #198: the words for the sign give the practice's answer too", as
   `);
   assert.deepEqual(Object.values(words), [0, 0, 0, 0, 0, 0, 1]);
 });
+
+test("a move of the pair or the practice pair is refused with what the number is to the card (#197)", () => {
+  const result = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    const { comparePlan } = await import(${here("./sample-plans.mjs")});
+    const out = {};
+    for (const [number, value] of [[1, 4600], [3, 7000]]) {
+      const plan = comparePlan({ numbers: ["4530", "4503"], practice: ["6281", "6218"] });
+      plan.sections[0].moments.push({ narration: "Change it.", actions: [{ action: "animate", number, end_value: value, duration_intent: "brief", timing: "during_speech" }] });
+      try { api.compileAndValidateLessonPlan(plan, { language: "en-US" }); out[number] = "compiled"; }
+      catch (error) { out[number] = [error.code, error.capability, error.message]; }
+    }
+    console.log(JSON.stringify(out));
+  `);
+  assert.deepEqual(result[1].slice(0, 2), ["LESSON_PLAN_CARD_NUMBER_STAYS", "place_value_compare"]);
+  assert.match(result[1][2], /lesson number 1 is the compare card's first number 4530, which stays as written; the demonstration moves lesson number 5, the places compared/);
+  assert.match(result[3][2], /the compare card's practice first number 6281, which stays as written/);
+});
