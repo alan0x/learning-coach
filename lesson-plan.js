@@ -20648,7 +20648,14 @@ var MATH_HOOKS = {
       return /* @__PURE__ */ new Map();
     },
     // Columns finished moves forward from 0; the two numbers and the practice pair never move.
-    number_moves: { state: placeValueTradeState2, moves: placeValueTradeMoves2 }
+    number_moves: { state: placeValueTradeState2, moves: placeValueTradeMoves2 },
+    // The pair, columns finished and one status a column: the more columns of adding or subtracting the pair.
+    planned_variables(values) {
+      const [a, b] = values.slice(0, 2).map(placeValueTradeThousandths);
+      if (a === void 0 || b === void 0) return void 0;
+      const columns = ["add", "subtract"].filter((operation) => operation === "add" || a >= b).map((operation) => placeValueTradeColumnsOf(operation, a, b).length);
+      return 3 + Math.max(...columns);
+    }
   },
   make_ten: {
     // The card's numbers have no control: the learner works it by its own taps (OLL 0027; owner, 2026-11-24: the
@@ -20667,7 +20674,9 @@ var MATH_HOOKS = {
       return /* @__PURE__ */ new Map();
     },
     // The count in the bigger frame moves forward from the bigger number to 10; nothing else moves.
-    number_moves: { state: makeTenState2, moves: makeTenMoves }
+    number_moves: { state: makeTenState2, moves: makeTenMoves },
+    // The pair, the count in the bigger frame and the count moved.
+    planned_variables: () => 4
   },
   place_value_times_ten: {
     // The card's numbers have no control: the learner works it by its own taps (OLL 0028; the model never names a
@@ -20692,7 +20701,12 @@ var MATH_HOOKS = {
     // number is left out and recorded).
     number_moves: { state: placeValueTimesTenState2, moves: placeValueTimesTenMoves },
     // Numbers the card cannot start on go with the outline, before any section is written for them.
-    outline_fault: timesTenOutlineFault
+    outline_fault: timesTenOutlineFault,
+    // The amount, the unit asked, the start unit and one or two row sets (two when the count crosses two places).
+    planned_variables(values) {
+      const found = timesTenStartProblem(values.slice(0, 5));
+      return "fault" in found ? 5 : 4 + (found.problem.g === 2 ? 1 : 0);
+    }
   },
   number_line: { fit_numbers: fitNumberLineNumbers },
   number_line_compare: { fit_numbers: fitComparedNumbers },
@@ -25480,9 +25494,10 @@ function resolveMetNumberTargets(plan) {
     }
   }
 }
-function separateCardProblemNumbers(plan, adjustments) {
+function separateCardProblemNumbers(plan, adjustments = []) {
+  const copyOf = /* @__PURE__ */ new Map();
   const numbers = plan.numbers;
-  if (!numbers?.length) return;
+  if (!numbers?.length) return copyOf;
   const outlineDefinitions = numbers.map((definition) => structuredClone(definition));
   const before = (left, right) => left[0] - right[0] || left[1] - right[1] || left[2] - right[2];
   const first = /* @__PURE__ */ new Map();
@@ -25500,7 +25515,6 @@ function separateCardProblemNumbers(plan, adjustments) {
       return;
     }
     const map = /* @__PURE__ */ new Map();
-    const card = recipeNumberRole(content.capability, 0) !== void 0;
     content.numbers.forEach((number, position) => {
       const role = recipeNumberRole(content.capability, position);
       const held = first.get(number);
@@ -25514,8 +25528,9 @@ function separateCardProblemNumbers(plan, adjustments) {
       numbers.push(structuredClone(definition));
       const copy = numbers.length;
       copied.add(number);
+      copyOf.set(copy, { number, routed: role !== "problem", from: [sectionAt, momentAt, actionAt] });
       map.set(number, copy);
-      if (!card) routed.set(number, { copy, from: [sectionAt, momentAt, actionAt] });
+      if (role !== "problem") routed.set(number, { copy, from: [sectionAt, momentAt, actionAt] });
       adjustments.push({
         section: sectionAt + 1,
         reason: "number_copied",
@@ -25525,7 +25540,7 @@ function separateCardProblemNumbers(plan, adjustments) {
     pictures.set(picture, map);
     if (map.size) content.numbers = content.numbers.map((number) => map.get(number) ?? number);
   })));
-  if (!routed.size) return;
+  if (!routed.size) return copyOf;
   plan.sections.forEach((section, sectionAt) => section.moments.forEach((moment, momentAt) => {
     moment.actions.forEach((action, actionAt) => {
       if (action.action !== "animate") return;
@@ -25546,6 +25561,7 @@ function separateCardProblemNumbers(plan, adjustments) {
       if (route && route.from[0] <= sectionAt) control.number = route.copy;
     }
   }));
+  return copyOf;
 }
 function compileLessonPlan(value2, options = {}) {
   const resolved = resolveLessonPlan(value2, options);
@@ -27917,9 +27933,7 @@ function cardMovedNumbers(actions) {
   return actions.flatMap((action) => {
     const entry = action;
     if (entry.action !== "create" || entry.kind !== "visual" || !entry.content?.capability) return [];
-    if (!RECIPE_HOOKS[entry.content.capability]?.number_moves) return [];
-    const capability2 = entry.content.capability;
-    return (entry.content.numbers ?? []).filter((_number, position) => recipeNumberRole(capability2, position) !== "problem");
+    return RECIPE_HOOKS[entry.content.capability]?.number_moves ? entry.content.numbers ?? [] : [];
   });
 }
 function lowerModelActivityNumbers(activity, kind, path, outline, expectedSection, language, exactNumbers = /* @__PURE__ */ new Set(), cardNumbers = /* @__PURE__ */ new Set()) {
@@ -28176,16 +28190,21 @@ function practiceCard(draft) {
   return questionCard ?? lastCard;
 }
 function numberStateAfter(outline, drafts, afterMoment) {
-  const state = new Map((outline.numbers ?? []).map((number, index) => [index + 1, number.initial]));
+  const walked = { numbers: structuredClone(outline.numbers ?? []), sections: structuredClone(drafts) };
+  const copies = separateCardProblemNumbers(walked);
+  const numbers = walked.numbers;
+  const sections = walked.sections;
+  const shown = (number) => copies.get(number)?.number ?? number;
+  const state = new Map(numbers.map((number, index) => [index + 1, number.initial]));
   const cards = [];
-  const cardNumbers = new Set(cardMovedNumbers(drafts.flatMap((draft) => draft.moments).flatMap((moment) => moment.actions)));
-  for (const [draftAt, draft] of drafts.entries()) for (const [momentAt, moment] of draft.moments.entries()) {
+  const cardNumbers = new Set(cardMovedNumbers(sections.flatMap((draft) => draft.moments).flatMap((moment) => moment.actions)));
+  for (const [draftAt, draft] of sections.entries()) for (const [momentAt, moment] of draft.moments.entries()) {
     for (const action of moment.actions) {
       if (action.action !== "create" || action.kind !== "visual") continue;
       const content = action.content;
       const hook = RECIPE_HOOKS[content.capability]?.number_moves;
       if (hook && content.numbers?.length && !cards.some((card) => card.numbers.join() === content.numbers.join())) {
-        const initial = content.numbers.map((number) => outline.numbers[number - 1].initial);
+        const initial = content.numbers.map((number) => numbers[number - 1].initial);
         const started = [...hook.state(initial, content, draft.moments.slice(momentAt).flatMap((each) => each.actions))];
         initial.forEach((value2, position) => {
           if (started[position] === void 0) started[position] = value2;
@@ -28197,7 +28216,7 @@ function numberStateAfter(outline, drafts, afterMoment) {
     for (const number of moment.restart_numbers ?? []) {
       const card = cards.find((each) => each.numbers.includes(number));
       if (card) card.numbers.forEach((each, position) => state.set(each, card.started[position]));
-      else state.set(number, outline.numbers[number - 1].initial);
+      else state.set(number, numbers[number - 1].initial);
     }
     const drawn = afterMoment ? new Map(state) : void 0;
     for (const card of cards) {
@@ -28210,9 +28229,12 @@ function numberStateAfter(outline, drafts, afterMoment) {
     for (const action of moment.actions) {
       if (action.action === "animate" && !cardNumbers.has(action.number)) state.set(action.number, action.end_value);
     }
-    afterMoment?.(draftAt, momentAt, drawn, state);
+    afterMoment?.(draftAt, momentAt, drawn, state, moment, shown);
   }
-  return state;
+  const current = new Map((outline.numbers ?? []).map((_number, index) => [index + 1, state.get(index + 1)]));
+  const drawnBy = sections.length;
+  for (const [copy, { number, routed, from }] of copies) if (routed && from[0] < drawnBy) current.set(number, state.get(copy));
+  return { state, current, shown };
 }
 function boardText(content) {
   if ("latex" in content) return content.latex;
@@ -28229,11 +28251,12 @@ function earlierSectionsRecord(outline, drafts, dropped, slots) {
     const slot = writtenSlot.get(`${section}:${action.reusable_item}`) ?? action.reusable_item;
     return (outline.course_visuals ?? []).findIndex((visual) => visual.create_section === section && visual.reusable_item === slot && visual.capability === capability2) + 1;
   };
-  const values = (numbers, state) => (numbers ?? []).map((number) => ({ number, value: state.get(number) }));
+  let shown = (number) => number;
+  const values = (numbers, state) => (numbers ?? []).map((number) => ({ number: shown(number), value: state.get(number) }));
   const sections = drafts.map(() => ({ taught: [] }));
   const pictures = [];
-  const end = numberStateAfter(outline, drafts, (draftAt, momentAt, drawn, after) => {
-    const moment = drafts[draftAt].moments[momentAt];
+  const walk = numberStateAfter(outline, drafts, (draftAt, momentAt, drawn, after, moment, walkShown) => {
+    shown = walkShown;
     const wrote = [];
     const drew = [];
     for (const action of moment.actions) {
@@ -28253,15 +28276,17 @@ function earlierSectionsRecord(outline, drafts, dropped, slots) {
         ...content.numbers?.length ? { numbers: values(content.numbers, drawn) } : {}
       });
     }
-    const moved = [...after].filter(([number, value2]) => drawn.get(number) !== value2).map(([number, to]) => ({ number, to }));
+    const moved = [...after].filter(([number, value2]) => drawn.get(number) !== value2).map(([number, to]) => ({ number: shown(number), to }));
     sections[draftAt].taught.push({
       ...moment.narration ? { narration: moment.narration } : {},
       ...wrote.length ? { wrote } : {},
       ...drew.length ? { drew } : {},
-      ...moment.restart_numbers?.length ? { restarted: moment.restart_numbers } : {},
+      ...moment.restart_numbers?.length ? { restarted: moment.restart_numbers.map((number) => shown(number)) } : {},
       ...moved.length ? { moved } : {}
     });
   });
+  shown = walk.shown;
+  const end = walk.state;
   drafts.forEach((draft, draftAt) => {
     const kept = (draft.student_activities ?? []).filter((_activity, index) => !dropped(draftAt + 1)?.has(index));
     if (kept.length) sections[draftAt].learner_turn = kept.map((activity) => ({ kind: activity.kind, prompt: activity.prompt }));
@@ -29210,6 +29235,21 @@ function certainNumberSharing(outline) {
   }
   return void 0;
 }
+function plannedCardOverflow(outline, sectionOne, declared) {
+  const visuals = outline.course_visuals ?? [];
+  const owner = visuals.filter((visual) => RECIPE_HOOKS[visual.capability]?.planned_variables).reduce((best, visual) => !best || recipeMinLessonNumbers(visual.capability) > recipeMinLessonNumbers(best.capability) ? visual : best, void 0);
+  if (!owner || owner.create_section === 1) return void 0;
+  const limit = LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[owner.capability] ?? 0;
+  if ((outline.numbers?.length ?? 0) < limit) return void 0;
+  const planned = RECIPE_HOOKS[owner.capability].planned_variables(outline.numbers.slice(0, limit).map((number) => number.initial));
+  if (planned === void 0 || declared + planned <= 16) return void 0;
+  const heavy = sectionOne.moments.flatMap((moment) => moment.actions).flatMap((action) => action.action === "create" && action.kind === "visual" ? [action.content.capability] : []).filter((capability2) => capability2 !== owner.capability && recipeDeclares(capability2, "binds_many_variables")).at(-1);
+  return heavy === void 0 ? void 0 : {
+    capability: heavy,
+    card: owner.capability,
+    detail: `the lesson holds at most 16 numbers (OLL): section 1 uses ${declared} and the ${owner.capability} card planned for section ${owner.create_section} needs up to ${planned}`
+  };
+}
 var OUTLINE_OWNED_FAULT = "LESSON_PLAN_OUTLINE_VISUAL";
 var isOutlineOwnedFault = (error) => error instanceof LessonPlanError && error.code === OUTLINE_OWNED_FAULT;
 var outlineCapabilities = (outline) => new Set((outline.course_visuals ?? []).map((visual) => visual.capability));
@@ -29750,7 +29790,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   if (earlyOutlineResult) return earlyOutlineResult;
   const outlineResult = await acceptOutline();
   if (outlineResult) return outlineResult;
-  const currentNumbersBefore = (section) => numberStateAfter(outline, drafts.slice(0, section - 1));
+  const currentNumbersBefore = (section) => numberStateAfter(outline, drafts.slice(0, section - 1)).current;
   const visualsForSection = (section, state) => (outline.course_visuals ?? []).flatMap((visual, index) => {
     if (!visual.use_sections.includes(section)) return [];
     const source = visual.create_section < section ? drafts[visual.create_section - 1]?.moments.flatMap((m) => m.actions).find((a) => a.action === "create" && a.kind === "visual" && a.reusable_item === visual.reusable_item && a.content.capability === visual.capability) : void 0;
@@ -29895,19 +29935,19 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
           if (section === 1 && outlineRestarts < 2) throw error;
         }
         if (section > 1 && error instanceof LessonPlanError && error.withdrawAtOnce && error.capability) {
-          const cardsIn = (from) => (from?.course_visuals ?? []).filter((visual) => visual.capability === error.tapCard).length;
-          const unlinked = outline ? structuredClone(outline) : void 0;
-          for (const visual of unlinked?.course_visuals ?? []) {
-            const related = visual.related_visual === void 0 ? void 0 : unlinked.course_visuals[visual.related_visual - 1];
+          const cardsIn2 = (from) => (from?.course_visuals ?? []).filter((visual) => visual.capability === error.tapCard).length;
+          const unlinked2 = outline ? structuredClone(outline) : void 0;
+          for (const visual of unlinked2?.course_visuals ?? []) {
+            const related = visual.related_visual === void 0 ? void 0 : unlinked2.course_visuals[visual.related_visual - 1];
             if (visual.capability === error.tapCard && visual.create_section === section && related?.capability === error.capability) {
               delete visual.related_visual;
               visual.relation = "primary";
             }
           }
-          const trial = unlinked ? withdrawSectionVisual(unlinked, section, error.capability, fixedRequestParts.length) : void 0;
-          const cardSurvives = !withdrawnFrom(section, error.capability) && trial !== void 0 && cardsIn(trial) === cardsIn(outline);
-          if (cardSurvives) outline = unlinked;
-          const withdrawn = cardSurvives && await withdrawLaterSectionVisual(
+          const trial = unlinked2 ? withdrawSectionVisual(unlinked2, section, error.capability, fixedRequestParts.length) : void 0;
+          const cardSurvives = !withdrawnFrom(section, error.capability) && trial !== void 0 && cardsIn2(trial) === cardsIn2(outline);
+          if (cardSurvives) outline = unlinked2;
+          const withdrawn2 = cardSurvives && await withdrawLaterSectionVisual(
             section,
             error.capability,
             "shares_tap_card_numbers",
@@ -29916,7 +29956,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
               await options.on_rejected_part?.({ label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error) });
             }
           );
-          if (withdrawn) {
+          if (withdrawn2) {
             sectionErrors.delete(section);
             sectionAttempts.set(section, Math.max(0, (sectionAttempts.get(section) ?? 1) - 1));
             candidate = void 0;
@@ -29932,7 +29972,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
           const capability2 = faultingPicture(error, section);
           const site = faultSite(error, section);
           const withdrawable = site ? site.section === section : error instanceof LessonPlanError && error.capability !== void 0;
-          const withdrawn = withdrawable && capability2 !== void 0 && await withdrawLaterSectionVisual(
+          const withdrawn2 = withdrawable && capability2 !== void 0 && await withdrawLaterSectionVisual(
             section,
             capability2,
             "visual_limits_after_retries",
@@ -29941,7 +29981,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
               await options.on_rejected_part?.({ label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error) });
             }
           );
-          if (!withdrawn) {
+          if (!withdrawn2) {
             const kept = leaveOutEarlierPictureMoves(error, section);
             if (kept) {
               await options.on_rejected_part?.({ label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error) });
@@ -29981,6 +30021,22 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
           attempt: sectionAttempts.get(section) ?? 1,
           error: rejectionDetails(error)
         });
+        candidate = void 0;
+        continue;
+      }
+      const overflow = section === 1 && outline ? plannedCardOverflow(outline, candidate, prefix.lesson.lesson.variables?.length ?? 0) : void 0;
+      const unlinked = overflow && outline ? structuredClone(outline) : void 0;
+      for (const visual of unlinked?.course_visuals ?? []) {
+        const related = visual.related_visual === void 0 ? void 0 : unlinked.course_visuals[visual.related_visual - 1];
+        if (visual.capability === overflow.card && related?.capability === overflow.capability) {
+          delete visual.related_visual;
+          visual.relation = "primary";
+        }
+      }
+      const cardsIn = (from) => (from?.course_visuals ?? []).filter((visual) => visual.capability === overflow?.card).length;
+      const withdrawn = overflow && unlinked && !withdrawnFrom(1, overflow.capability) ? withdrawSectionVisual(unlinked, 1, overflow.capability, fixedRequestParts.length, true) : void 0;
+      if (overflow && withdrawn && cardsIn(withdrawn) === cardsIn(outline)) {
+        await withdrawBeforePublishing(1, overflow.capability, withdrawn, "planned_card_budget", overflow.detail);
         candidate = void 0;
         continue;
       }
@@ -30260,6 +30316,7 @@ export {
   offeredRecipes,
   placeValueThousandths,
   placeValueWordsWrite,
+  plannedCardOverflow,
   praiseArithmetic,
   programNumberDefinitions,
   promptSlot,
@@ -30272,6 +30329,7 @@ export {
   resolveLessonPlan,
   roundingPlaces,
   roundingTolerance,
+  separateCardProblemNumbers,
   soleProgramNumberCard,
   supplyProgramNumbers,
   validateLessonPlan,

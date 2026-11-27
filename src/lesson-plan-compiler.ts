@@ -534,15 +534,22 @@ function resolveMetNumberTargets(plan: LessonPlan): void {
  * demonstration moves them. So another picture that names one is given a copy of its own, a new lesson number with the
  * same start, range and label, instead of being refused; the card's number and the copy are then fitted, moved and
  * declared each for its own picture. The first picture in the plan that names the number keeps it, and the later one
- * gets the copy: a published section never changes. When the copy is a card's (it reads it unbound), nothing else
- * changes; when it is another picture's, that picture's moves, replays and practice of the number from its create on
- * are its copy's. A number in any other role (a practice number, the number a demonstration moves, a count only the
+ * gets the copy: a published section never changes. When the copy is read by a card as its own problem number, nothing
+ * else changes (that card never moves it, so the first picture keeps the moves); otherwise the copy is the picture's
+ * that moves the number, and that picture's moves, replays and practice of it from its create on are its copy's,
+ * whatever kind of picture it is. Generation walks the same copies (`numberStateAfter`), so a later section is told
+ * the values each picture shows. A number in any other role (a practice number, the number a demonstration moves, a count only the
  * learner changes) is never copied: the card's own check refuses the other picture, as before. One copy per number.
  * The model never sees a copy: it keeps writing the outline's number.
  */
-function separateCardProblemNumbers(plan: LessonPlan, adjustments: CompiledLessonPlan["view_adjustments"]): void {
+/** A copy `separateCardProblemNumbers` made: the outline's number, and whether the moves of it from `from` on are the copy's. */
+export interface CardNumberCopy { number: number; routed: boolean; from: readonly [number, number, number] }
+
+export function separateCardProblemNumbers(plan: Pick<LessonPlan, "numbers" | "sections">, adjustments: CompiledLessonPlan["view_adjustments"] = []): Map<number, CardNumberCopy> {
+  // Each copy, by its own index.
+  const copyOf = new Map<number, CardNumberCopy>();
   const numbers = plan.numbers;
-  if (!numbers?.length) return;
+  if (!numbers?.length) return copyOf;
   const outlineDefinitions = numbers.map((definition) => structuredClone(definition));
   type Place = readonly [number, number, number];
   const before = (left: Place, right: Place) => left[0] - right[0] || left[1] - right[1] || left[2] - right[2];
@@ -563,7 +570,6 @@ function separateCardProblemNumbers(plan: LessonPlan, adjustments: CompiledLesso
       return;
     }
     const map = new Map<number, number>();
-    const card = recipeNumberRole(content.capability, 0) !== undefined;
     content.numbers.forEach((number, position) => {
       const role = recipeNumberRole(content.capability, position);
       const held = first.get(number);
@@ -576,15 +582,19 @@ function separateCardProblemNumbers(plan: LessonPlan, adjustments: CompiledLesso
       numbers.push(structuredClone(definition));
       const copy = numbers.length;
       copied.add(number);
+      copyOf.set(copy, { number, routed: role !== "problem", from: [sectionAt, momentAt, actionAt] });
       map.set(number, copy);
-      if (!card) routed.set(number, { copy, from: [sectionAt, momentAt, actionAt] });
+      // The picture that moves the number holds it from its create on: its moves, replays and practice of the number are
+      // its copy's, whatever kind of picture it is (a chart drawn after the column card builds its copy; review of
+      // #194, B3). A card that reads the copy as its own problem never moves it: the first picture keeps those moves.
+      if (role !== "problem") routed.set(number, { copy, from: [sectionAt, momentAt, actionAt] });
       adjustments.push({ section: sectionAt + 1, reason: "number_copied",
         detail: `$lessonPlan.sections[${sectionAt}].moments[${momentAt}].actions[${actionAt}]: the ${content.capability} visual shows lesson number ${number} on a copy of its own (number ${copy}): a card reads that number as its problem` });
     });
     pictures.set(picture, map);
     if (map.size) content.numbers = content.numbers.map((number) => map.get(number) ?? number);
   })));
-  if (!routed.size) return;
+  if (!routed.size) return copyOf;
   // From the picture's create on, the outline's number is the picture's copy: its moves and replays.
   plan.sections.forEach((section, sectionAt) => section.moments.forEach((moment, momentAt) => {
     moment.actions.forEach((action, actionAt) => {
@@ -607,6 +617,7 @@ function separateCardProblemNumbers(plan: LessonPlan, adjustments: CompiledLesso
       if (route && route.from[0] <= sectionAt) control.number = route.copy;
     }
   }));
+  return copyOf;
 }
 
 export function compileLessonPlan(value: unknown, options: CompileLessonPlanOptions = {}): CompiledLessonPlan {
