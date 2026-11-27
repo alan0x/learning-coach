@@ -57,10 +57,10 @@ test("make ten's shape: both trailing numbers supplied, filled from the bigger a
   const swapped = fakeOutline(structuredClone([declared[1], declared[0], ...declared.slice(2)]));
   api.supplyProgramNumbers(swapped, "en-US", recipe);
   assert.equal(swapped.numbers[4].initial, 8);
-  // Five declared (the model wrote filled, its demonstration target 10): its own is kept and only moved is supplied.
-  const five = fakeOutline(structuredClone([...declared, number(10, "the model's filled")]));
+  // Five declared (the model declared filled itself): its own is kept and only moved is supplied.
+  const five = fakeOutline(structuredClone([...declared, number(8, "the model's filled")]));
   assert.deepEqual(api.supplyProgramNumbers(five, "en-US", recipe), { capability: "fake_make_ten", first: 6, count: 1 });
-  assert.deepEqual(shape(five.numbers.slice(4)), [[10, 0, 10, "the model's filled"], [0, 0, 4, "moved"]]);
+  assert.deepEqual(shape(five.numbers.slice(4)), [[8, 0, 8, "the model's filled"], [0, 0, 4, "moved"]]);
   // Six declared, or three: nothing supplied.
   for (const numbers of [[...declared, number(10, "f"), number(0, "m")], declared.slice(0, 3)]) {
     const other = fakeOutline(structuredClone(numbers));
