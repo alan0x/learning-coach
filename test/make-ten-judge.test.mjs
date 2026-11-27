@@ -153,7 +153,7 @@ test("the card or a task that is not the question's, or a goal the learner canno
   assert.deepEqual(noted(bare), ["the learner has a task on the card", "a row of blanks follows"]);
 });
 
-test("the lesson plays through OLL; a practice start of another kind fails; a row elsewhere and a second card's task are noted", () => {
+test("the lesson plays through OLL; a practice start of another kind fails; a row elsewhere is noted; a second card on the question's pair, with a task, fails", () => {
   // Every hand-written lesson above plays (OLL #122's SPEC shape).
   assert.ok(judgeMakeTen(byId["MT-01"], makeTenLesson({ a: 8, b: 6, practice: [[7, 5]], filled: [10] })).checks.find((check) => check.check === "the lesson plays").pass);
   const replay = makeTenLesson({ a: 8, b: 6, practice: [[7, 5]] });
@@ -166,11 +166,13 @@ test("the lesson plays through OLL; a practice start of another kind fails; a ro
   const looseVerdict = judgeMakeTen(byId["MT-01"], loose);
   assert.deepEqual(failed(looseVerdict), []);
   assert.deepEqual(noted(looseVerdict), ["extra: a row by the card asks about the pair on it"]);
-  // A task on a second make-ten card: the judge reads the first card only.
+  // A second make-ten card on the question's own pair, with a task on it: a second card (Coach #199) is judged.
   const twice = makeTenLesson({ a: 8, b: 6, practice: [[7, 5]] });
   const second = structuredClone(twice.steps[0].beats[0].actions[0]);
   second.as = "frames-2";
   twice.steps[0].beats.push({ key: "again", say: "Again.", actions: [second] });
   twice.lesson.tasks.push({ ...structuredClone(twice.lesson.tasks[0]), as: "practice-2", allowed_operations: [{ kind: "card_tap", node: "frames-2" }], completion: { kind: "card_fact", node: "frames-2", fact: "complete" } });
-  assert.ok(noted(judgeMakeTen(byId["MT-01"], twice)).includes("practice-2: a task on the lesson's first make-ten card"));
+  const twiceFailed = failed(judgeMakeTen(byId["MT-01"], twice));
+  assert.ok(twiceFailed.includes("frames-2 (a second card): its example differs from the question and the practice"), JSON.stringify(twiceFailed));
+  assert.ok(twiceFailed.includes("frames-2 (a second card): no task is anchored on it"), JSON.stringify(twiceFailed));
 });

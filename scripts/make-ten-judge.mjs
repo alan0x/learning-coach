@@ -18,6 +18,12 @@
 // - Notes (what the lesson chose to teach; the owner judges lessons): one card; whether the demonstration fills
 //   the frame (a lesson may stop partway: no hard rule); the learner has a task on the card; a row follows,
 //   anchored to the card; the task's words name no control.
+// - Second cards (Coach #199): the first card holds the question and the practice; each later make-ten card is a
+//   demonstration on its own example. Checks: one second card at most; its example is neither the question's pair
+//   nor a practice pair (either order), and stays its example at every state (a revision, a replay, a task's start);
+//   it speaks the lesson's language at every state; it opens fresh; its demonstration plays forward and fills its
+//   frame to 10 by a move forward (an animation or a revision, not a replay); no task is anchored on it. The verdict
+//   lists the second cards and their examples (`second_cards`).
 //
 // The lesson plays through OLL itself (normalized and reduced, as the player plays it), and a pair and its row are
 // judged by the card's own rules (OLL's makeTenFault and makeTenRow). The card is read from the lesson as written,
@@ -25,6 +31,7 @@
 
 import { normalizeAuthoringLesson, reduceCanonicalEvents } from "octos-lesson-language";
 import { makeTenFault, makeTenRow } from "octos-lesson-language/plugin-math";
+import { cardsIn, judgeSecondCards, secondCardsText } from "./judge-cards.mjs";
 
 const KIND = "make_ten";
 /** Cards a served case may draw instead, named in its failure. */
@@ -79,7 +86,8 @@ export function makeTenIn(lesson) {
     error = `${caught.code ?? "error"}: ${String(caught.message).slice(0, 160)}`;
   }
   if (!writes.length) return { cards: 0, instead, tasks, ...(error ? { error } : {}) };
-  const write = writes[0];
+  // The card played first (a beat plays its actions phase by phase) is the question card.
+  const write = cardsIn(lesson, KIND).cards[0]?.write ?? writes[0];
   const declared = Object.fromEntries((lesson.lesson?.variables ?? []).map((variable) => [variable.as, variable.initial]));
   const start = cardAt(write.content, declared);
   // How far the demonstration fills the bigger frame: the furthest value the lesson animates its count to.
@@ -96,7 +104,8 @@ export function judgeMakeTen(item, lesson) {
   const notes = [];
   const check = (name, pass, detail) => checks.push({ check: name, pass: Boolean(pass), ...(pass ? {} : { detail }) });
   const note = (name, holds, detail) => notes.push({ check: name, pass: Boolean(holds), ...(holds ? {} : { detail }) });
-  const done = () => ({ pass: checks.every((each) => each.pass), checks, notes });
+  let seconds = [];
+  const done = () => ({ pass: checks.every((each) => each.pass), checks, notes, second_cards: seconds });
   const card = makeTenIn(lesson);
   check("the lesson plays", !card.error, card.error);
   if (item.expect?.forbid) {
@@ -107,7 +116,8 @@ export function judgeMakeTen(item, lesson) {
     check("a make-ten card is drawn", false, card.instead.length ? `no make-ten card; drawn instead: ${card.instead.join(", ")}` : "no make-ten card");
     return done();
   }
-  note("one make-ten card", card.cards === 1, `${card.cards} make-ten cards`);
+  // A second card is judged by its own checks (at most one, below).
+  note("one make-ten card", card.cards <= 2, `${card.cards} make-ten cards`);
 
   const { start } = card;
   const want = { a: whole(item.expect.numbers?.[0]), b: whole(item.expect.numbers?.[1]) };
@@ -160,9 +170,6 @@ export function judgeMakeTen(item, lesson) {
       check(`${label}: the typed answer after the card's task is its pair's sum`, expected !== undefined && whole(completion.answer) === expected,
         `answer ${completion.answer}, ${holds ? `${pairText(holds)} = ${expected}` : "no pair the card takes"}`);
       note(`${label}: the typed answer is anchored to the card`, task.anchor === card.as, `anchor ${task.anchor}`);
-    } else if (completion.kind === "card_fact" && card.others.includes(completion.node)) {
-      // A task on a second make-ten card: the judge reads the first card only, so this is noted, not judged.
-      note(`${label}: a task on the lesson's first make-ten card`, false, `task on ${completion.node}, a second make-ten card`);
     } else if ((completion.kind === "numeric_row" || completion.kind === "numeric_answer") && task.anchor === card.as) {
       // A row or typed question placed by the card, not right after a task on it, may ask what its own words say:
       // noted against the pair the card holds then, not judged (as the trade judge notes its typed questions).
@@ -177,6 +184,14 @@ export function judgeMakeTen(item, lesson) {
   }
   note("the learner has a task on the card", cardTasks > 0, "no task on the card");
   note("a row of blanks follows", card.tasks.some((task) => task.completion?.kind === "numeric_row"), "no row of blanks in the lesson");
+
+  // Second cards: each a demonstration on its own example (Coach #199).
+  const practices = card.tasks.filter((task) => task.completion?.kind === "card_fact" && task.completion.node === card.as && task.start?.values)
+    .map((task) => cardAt(card.content, { ...card.declared, ...task.start.values }));
+  seconds = judgeSecondCards({
+    cards: cardsIn(lesson, KIND).cards, tasks: card.tasks, question: want, practices, read: cardAt, check, language: zh ? "zh-CN" : "en-US",
+    kind: { example: pairText, same: samePair, fresh: freshFault, position: (state) => state.filled, end: () => PLACES },
+  });
   return done();
 }
 
@@ -204,7 +219,7 @@ if (process.argv[1] && new URL(import.meta.url).pathname === (await import("node
     if (verdict.pass) passed += 1;
     const failed = verdict.checks.filter((each) => !each.pass).map((each) => `${each.check}: ${each.detail}`).join("; ");
     const noted = verdict.notes.filter((each) => !each.pass).map((each) => `note: ${each.check}: ${each.detail}`).join("; ");
-    console.log(`${item.id}\t${verdict.pass ? "pass" : "FAIL"}\t${[failed, noted].filter(Boolean).join("; ")}`);
+    console.log(`${item.id}\t${verdict.pass ? "pass" : "FAIL"}\t${[failed, noted, secondCardsText(verdict.second_cards)].filter(Boolean).join("; ")}`);
   }
   console.log(`${passed}/${cases.length} pass`);
   process.exitCode = passed === cases.length ? 0 : 1;
