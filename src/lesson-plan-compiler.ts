@@ -1170,18 +1170,19 @@ export function compileAndValidateLessonPlan(value: unknown, options: CompileLes
     // beside two other numbers was lost whole).
     // The picture named is one the last section drew, the section being written: a lesson that a later section's
     // pictures push over the limit loses one of them, never a card an earlier, published section drew (that one
-    // cannot be withdrawn, and the lesson would end there). Its heavy picture first; else its last picture of a
-    // recipe; else, as before, a heavy picture anywhere.
+    // cannot be withdrawn, and the lesson would end there). Read from the section's own creates, by recipe: an OLL kind
+    // names no recipe (number_line, geometry, plot and scene3d are each drawn by several; review of #193, B1). Its
+    // heavy picture first; else its last picture on lesson numbers; else its last picture; else, as before, a heavy
+    // picture anywhere.
     const overVariables = first?.instancePath === "/lesson/variables" && first?.keyword === "maxItems";
-    const recipes = Object.entries(LESSON_PLAN_CAPABILITY_REGISTRY as Record<string, { output_kinds?: readonly string[] }>);
-    const kindsIn = (steps: typeof compiled.lesson.steps) => steps.flatMap((step) => step.beats.flatMap((beat) => beat.actions))
-      .filter((action) => action.do === "write").map((action) => (action as { kind?: string }).kind);
-    const recipeOf = (kind: string | undefined) => recipes.find(([, recipe]) => (recipe.output_kinds ?? []).includes(kind as string))?.[0];
-    const isHeavy = (name: string | undefined) => name !== undefined && recipeDeclares(name, "binds_many_variables");
-    const lastDrawn = kindsIn(compiled.lesson.steps.slice(-1)).map(recipeOf).filter((name): name is string => name !== undefined);
-    const anywhere = new Set(kindsIn(compiled.lesson.steps).map(recipeOf));
+    const createsIn = (sections: LessonPlan["sections"]) => sections.flatMap((section) => section.moments.flatMap((moment) => moment.actions))
+      .flatMap((action) => (action.action === "create" && action.kind === "visual" ? [action.content as LessonPlanVisualContent] : []));
+    const isHeavy = (content: LessonPlanVisualContent) => recipeDeclares(content.capability, "binds_many_variables");
+    const sections = compiled.resolved.plan.sections;
+    const lastDrawn = createsIn(sections.slice(-1));
     const blamed = !overVariables ? undefined
-      : lastDrawn.find(isHeavy) ?? lastDrawn.at(-1) ?? recipes.map(([name]) => name).find((name) => isHeavy(name) && anywhere.has(name));
+      : (lastDrawn.filter(isHeavy).at(-1) ?? lastDrawn.filter((content) => (content.numbers?.length ?? 0) > 0).at(-1) ?? lastDrawn.at(-1)
+        ?? createsIn(sections).find(isHeavy))?.capability;
     fail("LESSON_PLAN_OLL_SCHEMA", first?.instancePath ?? "$lesson", first?.message ?? "compiled OLL failed schema validation", blamed);
   }
   const resourceContext: ResourceContext = {

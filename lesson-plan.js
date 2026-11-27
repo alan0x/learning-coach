@@ -25966,13 +25966,11 @@ function compileAndValidateLessonPlan(value2, options = {}) {
   if (!schemaResult.valid) {
     const first = schemaResult.errors[0];
     const overVariables = first?.instancePath === "/lesson/variables" && first?.keyword === "maxItems";
-    const recipes = Object.entries(LESSON_PLAN_CAPABILITY_REGISTRY);
-    const kindsIn = (steps) => steps.flatMap((step) => step.beats.flatMap((beat) => beat.actions)).filter((action) => action.do === "write").map((action) => action.kind);
-    const recipeOf = (kind) => recipes.find(([, recipe]) => (recipe.output_kinds ?? []).includes(kind))?.[0];
-    const isHeavy = (name) => name !== void 0 && recipeDeclares(name, "binds_many_variables");
-    const lastDrawn = kindsIn(compiled.lesson.steps.slice(-1)).map(recipeOf).filter((name) => name !== void 0);
-    const anywhere = new Set(kindsIn(compiled.lesson.steps).map(recipeOf));
-    const blamed = !overVariables ? void 0 : lastDrawn.find(isHeavy) ?? lastDrawn.at(-1) ?? recipes.map(([name]) => name).find((name) => isHeavy(name) && anywhere.has(name));
+    const createsIn = (sections2) => sections2.flatMap((section) => section.moments.flatMap((moment) => moment.actions)).flatMap((action) => action.action === "create" && action.kind === "visual" ? [action.content] : []);
+    const isHeavy = (content) => recipeDeclares(content.capability, "binds_many_variables");
+    const sections = compiled.resolved.plan.sections;
+    const lastDrawn = createsIn(sections.slice(-1));
+    const blamed = !overVariables ? void 0 : (lastDrawn.filter(isHeavy).at(-1) ?? lastDrawn.filter((content) => (content.numbers?.length ?? 0) > 0).at(-1) ?? lastDrawn.at(-1) ?? createsIn(sections).find(isHeavy))?.capability;
     fail2("LESSON_PLAN_OLL_SCHEMA", first?.instancePath ?? "$lesson", first?.message ?? "compiled OLL failed schema validation", blamed);
   }
   const resourceContext = {

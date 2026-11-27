@@ -138,3 +138,50 @@ test("a later section can lose two pictures, each at once: a line, then an array
   ]);
   assert.ok(result.drawn.includes("make_ten"), JSON.stringify(result.drawn));
 });
+
+// Review of #193, B1: an OLL kind names no recipe (number_line is drawn by five, geometry by eight), so the picture
+// blamed is read from the section's own creates. Section 1 publishes a 15-variable chart; section 2's picture on two
+// more lesson numbers goes over 16: that picture goes, and the lesson keeps both sections.
+for (const capability of ["number_line_compare", "rectangle_unit_square_array"]) {
+  test(`too many variables from section 2's ${capability} (an OLL kind other recipes share) names it; the lesson keeps both sections`, () => {
+    const result = run(`
+      const api = await import(${here("../lesson-plan.js")});
+      const { placeValuePlan, samplePlan, makeSamplePlanModelCompatible } = await import(${here("./sample-plans.mjs")});
+      const { modelResponseHelpers } = await import(${here("./model-responses.mjs")});
+      const { bootstrapModelResponse, bootstrapSectionFromExact, stagedOutline, toModelSectionDraft } = modelResponseHelpers(api.LESSON_PLAN_CAPABILITY_REGISTRY);
+      const capability = ${JSON.stringify(capability)};
+      const build = (withPicture) => {
+        const plan = placeValuePlan({ number: 26.075, practice: 18.064, given: "numeral" });
+        plan.numbers.push({ initial: 5, min: 1, max: 10, label: "five" }, { initial: 6, min: 1, max: 10, label: "six" });
+        if (withPicture) {
+          const at = plan.sections[1];
+          const picture = samplePlan(capability).sections[0].moments[0].actions.find((action) => action.action === "create");
+          at.reusable_items = [...(at.reusable_items ?? []), { kind: "board_item", board_kind: "visual", capability }];
+          at.moments.push({ narration: "Two more numbers.", actions: [{ ...structuredClone(picture), content: { ...structuredClone(picture.content), numbers: [3, 4] }, placement: { relation: "new_region" }, reusable_item: at.reusable_items.length }] });
+        }
+        const compatible = makeSamplePlanModelCompatible(plan);
+        const drafts = compatible.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({ section: index + 1, version: compatible.version, moments, student_activities }));
+        return { outline: stagedOutline(compatible, drafts), drafts };
+      };
+      const staged = build(true), without = build(false);
+      const requests = [], adjustments = [];
+      let error, generated;
+      try {
+        generated = await api.generateLessonPlanWithModel(async (request) => {
+          requests.push(request.label + (request.section ?? ""));
+          if (requests.length > 12) throw new Error("too many requests");
+          if (request.label === "lesson-plan-bootstrap") return bootstrapModelResponse(request, staged.outline, bootstrapSectionFromExact(staged.outline, staged.drafts[0]));
+          return JSON.stringify((JSON.parse(request.prompt).removed_picture ? without : staged).drafts[request.section - 1]);
+        }, { turn_id: "blame", learner_request: "26.075 的每一位表示多少？", language: "zh-CN" }, {
+          max_attempts_per_part: 3,
+          on_program_adjustment: (adjustment) => adjustments.push([adjustment.kind, adjustment.section, adjustment.capability, adjustment.reason]),
+        });
+      } catch (caught) { error = caught.message.slice(0, 200); }
+      console.log(JSON.stringify({ error, requests, removed: adjustments.filter(([kind]) => kind === "visual_removed" || kind === "sections_removed"),
+        steps: generated?.lesson.steps.length, drawn: generated ? generated.lesson.steps.flatMap((step) => step.beats.flatMap((beat) => beat.actions.filter((action) => action.do === "write").map((action) => action.kind))) : [] }));
+    `);
+    assert.equal(result.error, undefined, JSON.stringify(result.error));
+    assert.deepEqual(result.removed, [["visual_removed", 2, capability, "visual_limits_after_retries"]]);
+    assert.ok(result.steps >= 2 && result.drawn.includes("place_value_chart"), JSON.stringify(result));
+  });
+}
