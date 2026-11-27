@@ -17833,7 +17833,7 @@ function fail2(code, path, message, capability2) {
   throw new LessonPlanError(code, path, message, capability2);
 }
 function failSharedTapCardNumbers(path, message, card, other, sharingAt, cardAt) {
-  if (sharingAt >= cardAt) throw new LessonPlanError("LESSON_PLAN_SHARED_NUMBER", path, message, other, true);
+  if (sharingAt >= cardAt) throw new LessonPlanError("LESSON_PLAN_SHARED_NUMBER", path, message, other, true, card);
   throw new LessonPlanError("LESSON_PLAN_SHARED_NUMBER", path, message, card);
 }
 function pad2(index) {
@@ -20049,13 +20049,16 @@ var LessonPlanError = class extends Error {
    * times before it went, three calls and about 20 s each).
    */
   withdrawAtOnce;
-  constructor(code, path, message, capability2, withdrawAtOnce) {
+  /** With `withdrawAtOnce`: the tap card whose numbers the picture shows, named instead when the picture cannot go alone. */
+  tapCard;
+  constructor(code, path, message, capability2, withdrawAtOnce, tapCard) {
     super(`${path}: ${message}`);
     this.name = "LessonPlanError";
     this.code = code;
     this.path = path;
     if (capability2) this.capability = capability2;
     if (capability2 && withdrawAtOnce) this.withdrawAtOnce = true;
+    if (capability2 && withdrawAtOnce && tapCard) this.tapCard = tapCard;
   }
 };
 var FORBIDDEN_PARAMETER_KEYS = /* @__PURE__ */ new Set([
@@ -28282,7 +28285,19 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
         if (section === 1 && isOutlineOwnedFault(error)) throw error;
         if (error instanceof LessonPlanError && error.withdrawAtOnce && error.capability) {
           if (section === 1) throw error;
-          const withdrawn = await withdrawLaterSectionVisual(
+          const cardsIn = (from) => (from?.course_visuals ?? []).filter((visual) => visual.capability === error.tapCard).length;
+          const unlinked = outline ? structuredClone(outline) : void 0;
+          for (const visual of unlinked?.course_visuals ?? []) {
+            const related = visual.related_visual === void 0 ? void 0 : unlinked.course_visuals[visual.related_visual - 1];
+            if (visual.capability === error.tapCard && visual.create_section === section && related?.capability === error.capability) {
+              delete visual.related_visual;
+              visual.relation = "primary";
+            }
+          }
+          const trial = unlinked ? withdrawSectionVisual(unlinked, section, error.capability, fixedRequestParts.length) : void 0;
+          const cardSurvives = !withdrawnNotes.has(section) && trial !== void 0 && cardsIn(trial) === cardsIn(outline);
+          if (cardSurvives) outline = unlinked;
+          const withdrawn = cardSurvives && await withdrawLaterSectionVisual(
             section,
             error.capability,
             "shares_tap_card_numbers",
@@ -28297,6 +28312,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
             candidate = void 0;
             continue;
           }
+          if (error.tapCard) error = new LessonPlanError(error.code, error.path, error.message.slice(error.path.length + 2), error.tapCard);
         }
         const previousError = sectionErrors.get(section);
         if (unsupportedSectionResponse(error, previousError, input.language)) throw error;
@@ -28333,14 +28349,16 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
     }
   };
   let outlineRestarts = 0;
+  let sharedRestarts = 0;
   const acceptFirstSection = async () => {
     try {
       await acceptSection(1, bootstrappedFirstSection);
       return void 0;
     } catch (error) {
-      const capability2 = error instanceof LessonPlanError ? error.capability : void 0;
       const numbersMissing = error instanceof LessonPlanError && error.code === OUTLINE_NUMBERS_MISSING;
       const sharesTapCard = error instanceof LessonPlanError && error.withdrawAtOnce === true;
+      const dropCard = sharesTapCard && (sharedRestarts > 0 || excludedCapabilities.has(error.capability));
+      const capability2 = dropCard ? error.tapCard : error instanceof LessonPlanError ? error.capability : void 0;
       const spentOnPicture = capability2 !== void 0 && !excludedCapabilities.has(capability2) && (numbersMissing || sharesTapCard || (sectionAttempts.get(1) ?? 0) >= maxAttempts);
       if (!(isOutlineOwnedFault(error) || spentOnPicture) || outlineRestarts >= 2) throw error;
       outlineRestarts += 1;
@@ -28354,7 +28372,13 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
           detail: error instanceof Error ? error.message : String(error)
         });
       }
-      if (outline) excludeFaulting(outline, error);
+      if (sharesTapCard) {
+        sharedRestarts += 1;
+        if (dropCard) excludedCapabilities.add(capability2);
+        else if (isNumberLineCapability(capability2)) {
+          for (const name of LESSON_PLAN_CAPABILITY_NAMES) if (isNumberLineCapability(name)) excludedCapabilities.add(name);
+        } else excludedCapabilities.add(capability2);
+      } else if (outline) excludeFaulting(outline, error);
       outlineError = error;
       outline = void 0;
       bootstrappedFirstSection = void 0;

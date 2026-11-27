@@ -90,11 +90,14 @@ test("check 4, BT-31: a mat move the card refuses (two piles moved as one) also 
 
 test("check 4, BT-32: a number line in section 2 on the numbers of the mat section 1 showed is the picture withdrawn", async () => {
   // The fault is found at the mat's path in section 1, which is published; the later picture is the one to lose.
+  // A picture on a tap card's numbers goes at once (make-ten objective check 1, #186): the first section-2 reply
+  // draws it and loses it, with no repair spent; the recorded replies after it are section 2's repairs without it.
   const { error, requests, adjustments } = await replay("BT-32-c4");
   assert.match(error.message, /recorded replies exhausted/u);
   assert.deepEqual(requests.map((request) => `${request.part}${request.section ?? ""}`), ["bootstrap", "section1", "section2", "section2", "section2", "section2"]);
-  assert.deepEqual(adjustments.filter((adjustment) => adjustment.kind === "visual_removed").map(({ section, capability }) => ({ section, capability })),
-    [{ section: 2, capability: "number_line_steps" }]);
+  assert.deepEqual(adjustments.filter((adjustment) => adjustment.kind === "visual_removed").map(({ section, capability, reason }) => ({ section, capability, reason })),
+    [{ section: 2, capability: "number_line_steps", reason: "shares_tap_card_numbers" }]);
+  assert.ok(JSON.parse(requests[3].prompt).removed_picture, "the first repair already writes section 2 without the line");
   const last = JSON.parse(requests.at(-1).prompt);
   assert.deepEqual(last.visuals_for_section.map((visual) => visual.capability), ["base_ten_trade"]);
   assert.match(last.removed_picture, /section 2/u);

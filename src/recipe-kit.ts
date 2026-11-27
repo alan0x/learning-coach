@@ -17,7 +17,7 @@ export function fail(code: string, path: string, message: string, capability?: s
  * picture an earlier, published section drew cannot go, so then the card is named, as before.
  */
 export function failSharedTapCardNumbers(path: string, message: string, card: string, other: string, sharingAt: number, cardAt: number): never {
-  if (sharingAt >= cardAt) throw new LessonPlanError("LESSON_PLAN_SHARED_NUMBER", path, message, other, true);
+  if (sharingAt >= cardAt) throw new LessonPlanError("LESSON_PLAN_SHARED_NUMBER", path, message, other, true, card);
   throw new LessonPlanError("LESSON_PLAN_SHARED_NUMBER", path, message, card);
 }
 

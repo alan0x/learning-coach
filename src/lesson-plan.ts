@@ -485,14 +485,17 @@ export class LessonPlanError extends Error {
    * times before it went, three calls and about 20 s each).
    */
   readonly withdrawAtOnce?: boolean;
+  /** With `withdrawAtOnce`: the tap card whose numbers the picture shows, named instead when the picture cannot go alone. */
+  readonly tapCard?: string;
 
-  constructor(code: string, path: string, message: string, capability?: string, withdrawAtOnce?: boolean) {
+  constructor(code: string, path: string, message: string, capability?: string, withdrawAtOnce?: boolean, tapCard?: string) {
     super(`${path}: ${message}`);
     this.name = "LessonPlanError";
     this.code = code;
     this.path = path;
     if (capability) this.capability = capability;
     if (capability && withdrawAtOnce) this.withdrawAtOnce = true;
+    if (capability && withdrawAtOnce && tapCard) this.tapCard = tapCard;
   }
 }
 

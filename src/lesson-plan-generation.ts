@@ -3452,7 +3452,22 @@ export async function generateLessonPlanWithModel(
         // Section 1's by a new outline without it (acceptFirstSection), a later section's from the outline in place.
         if (error instanceof LessonPlanError && error.withdrawAtOnce && error.capability) {
           if (section === 1) throw error;
-          const withdrawn = await withdrawLaterSectionVisual(
+          // The card must survive the withdrawal: a card related to the picture (supporting it) would go with it
+          // (review of #186). Then the card is named, as before, and the section is repaired as usual.
+          const cardsIn = (from: LessonPlanOutline | undefined) => (from?.course_visuals ?? []).filter((visual) => visual.capability === error.tapCard).length;
+          // A card that supports the picture is unlinked from it first, so it stays as a picture of its own.
+          const unlinked = outline ? structuredClone(outline) : undefined;
+          for (const visual of unlinked?.course_visuals ?? []) {
+            const related = visual.related_visual === undefined ? undefined : unlinked!.course_visuals![visual.related_visual - 1];
+            if (visual.capability === error.tapCard && visual.create_section === section && related?.capability === error.capability) {
+              delete visual.related_visual;
+              visual.relation = "primary";
+            }
+          }
+          const trial = unlinked ? withdrawSectionVisual(unlinked, section, error.capability, fixedRequestParts.length) : undefined;
+          const cardSurvives = !withdrawnNotes.has(section) && trial !== undefined && cardsIn(trial) === cardsIn(outline);
+          if (cardSurvives) outline = unlinked;
+          const withdrawn = cardSurvives && await withdrawLaterSectionVisual(
             section, error.capability, "shares_tap_card_numbers", error.message,
             async () => { await options.on_rejected_part?.({ label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error) }); },
           );
@@ -3463,6 +3478,7 @@ export async function generateLessonPlanWithModel(
             candidate = undefined;
             continue;
           }
+          if (error.tapCard) error = new LessonPlanError(error.code, error.path, error.message.slice(error.path.length + 2), error.tapCard);
         }
         const previousError = sectionErrors.get(section);
         if (unsupportedSectionResponse(error, previousError, input.language)) throw error;
@@ -3507,14 +3523,21 @@ export async function generateLessonPlanWithModel(
   // A card the outline gave too few lesson numbers goes the same way at once, before section 1 is written.
   // At most two restarts, so a request can lose a number line and then a mat, never more.
   let outlineRestarts = 0;
+  // Restarts for a picture on a tap card's numbers: after the first, the card goes instead.
+  let sharedRestarts = 0;
   const acceptFirstSection = async (): Promise<LessonPlanGenerationResult | undefined> => {
     try {
       await acceptSection(1, bootstrappedFirstSection);
       return undefined;
     } catch (error) {
-      const capability = error instanceof LessonPlanError ? error.capability : undefined;
       const numbersMissing = error instanceof LessonPlanError && error.code === OUTLINE_NUMBERS_MISSING;
       const sharesTapCard = error instanceof LessonPlanError && error.withdrawAtOnce === true;
+      // A picture on a tap card's numbers goes at once: a number line takes its whole family with it (they draw the
+      // same line from the same numbers). Once an outline has put another picture there already, or the picture
+      // is already left out, the card goes instead, as before: the worst case is the lesson without the card,
+      // never a lost lesson (review of #186).
+      const dropCard = sharesTapCard && (sharedRestarts > 0 || excludedCapabilities.has((error as LessonPlanError).capability!));
+      const capability = dropCard ? (error as LessonPlanError).tapCard : error instanceof LessonPlanError ? error.capability : undefined;
       const spentOnPicture = capability !== undefined && !excludedCapabilities.has(capability)
         && (numbersMissing || sharesTapCard || (sectionAttempts.get(1) ?? 0) >= maxAttempts);
       if (!(isOutlineOwnedFault(error) || spentOnPicture) || outlineRestarts >= 2) throw error;
@@ -3526,7 +3549,12 @@ export async function generateLessonPlanWithModel(
           reason: numbersMissing ? "outline_numbers_missing" : sharesTapCard ? "shares_tap_card_numbers" : "visual_limits_after_retries", detail: error instanceof Error ? error.message : String(error),
         });
       }
-      if (outline) excludeFaulting(outline, error);
+      if (sharesTapCard) {
+        sharedRestarts += 1;
+        if (dropCard) excludedCapabilities.add(capability!);
+        else if (isNumberLineCapability(capability!)) { for (const name of LESSON_PLAN_CAPABILITY_NAMES) if (isNumberLineCapability(name)) excludedCapabilities.add(name); }
+        else excludedCapabilities.add(capability!);
+      } else if (outline) excludeFaulting(outline, error);
       outlineError = error;
       outline = undefined;
       bootstrappedFirstSection = undefined;
