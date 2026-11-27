@@ -438,3 +438,132 @@ test("objective check 1 (PV-10, PV-13): a question's number declared as 0 is ref
   assert.equal(out.capability, "place_value_chart");
   assert.match(out.message, /Write the number itself as its value \(for example 0\.309\), not 0: the chart starts empty by itself/);
 });
+
+test("a chart to build that its own section never builds is drawn showing its number (PT-15, PF-01; owner, 2026-11-27)", () => {
+  const moves = api.RECIPE_HOOKS.place_value_chart.number_moves;
+  const build = { parameters: { given: "name" }, numbers: [1, 2] };
+  const animate = (number, end_value) => ({ action: "animate", number, end_value, duration_intent: "brief" });
+  // Read from the section that draws the chart, from its create on: no step of its number there, or only one to 0
+  // (no change), and the chart is drawn built (last entry 2); one step above 0 and it starts empty, as before.
+  assert.deepEqual(moves.state([60408, 30705], build, []), [60408, 30705, 60408, 2]);
+  assert.deepEqual(moves.state([60408, 30705], build, [animate(1, 0), animate(2, 5)]), [60408, 30705, 60408, 2]);
+  assert.deepEqual(moves.state([60408, 30705], build, [animate(1, 60000)]), [0, 30705, 60408, 1]);
+  // Without the section (a caller that does not know it) the chart to build starts empty; pulling apart is unchanged.
+  assert.deepEqual(moves.state([60408, 30705], build), [0, 30705, 60408, 1]);
+  assert.deepEqual(moves.state([60408, 30705], { parameters: { given: "numeral" }, numbers: [1, 2] }, []), [60408, 30705, 60408, 0]);
+  // A later section on a chart drawn built: the number again changes nothing; a part of it is left out (it is on the
+  // chart already), never refused; a digit the number does not have, or the practice number, is still refused.
+  const drawn = [60408, 30705, 60408, 2];
+  const to = (state, ...values) => moves.moves(state, values.map((value) => ({ position: 0, to: value })));
+  assert.deepEqual(to(drawn, 60408).steps.at(-1).to, drawn);
+  const part = to(drawn, 60000, 60400, 60408);
+  assert.deepEqual([part.steps.map((step) => step.to[0]), part.ignored.map((each) => each.index)], [[60408], [0, 1]]);
+  assert.match(part.ignored[0].reason, /the chart has shown all of 60408 since it was drawn \(the section that drew it put none of it on\), so 60000 is on it already/);
+  assert.match(to(drawn, 60409).refused.reason, /from 60408 it can be only 60408: the number is built/);
+  assert.match(moves.moves(drawn, [{ position: 1, to: 0 }]).refused.reason, /practice number is the learner's/);
+  // A chart built the normal way and then written a part again is still refused (objective check 1, unchanged).
+  assert.match(to([60408, 30705, 60408, 1], 60000).refused.reason, /the number is built/);
+
+  // Compiled: PT-15's chart (8 ones and 2 tenths, never built in its section) is drawn with its disks on: OLL refuses
+  // a build chart written already holding its number, so it is written empty and filled at once, in the write's own
+  // phase. The judge's checks pass and its demonstration counts as finished. The practice still starts empty.
+  const result = withTrial(compileScript([
+    ["PT-15", { number: 8.2, practice: 6.4, given: "place_counts", steps: [] }, "zh-CN", { id: "PT-15", expect: { number: "8.2", direction: "build", given: "place_counts" } }],
+    ["built", { number: 8.2, practice: 6.4, given: "place_counts" }, "zh-CN"],
+  ]));
+  assert.equal(result["PT-15"].error, undefined, result["PT-15"].message);
+  const first = (id) => result[id].lesson.steps[0].beats[0].actions.map((action) => (action.do === "animate" ? `${action.variable.replace(/^section_01_moment_01_item_01_/u, "")}=${action.value}:${action.duration_intent}:${action.when}` : `${action.do}:${action.when}`));
+  // (The sample writes the chart at the default phase, so neither the write nor its fill names one.)
+  assert.deepEqual(first("PT-15"), ["write:undefined", "ones_count=8:brief:undefined", "tenths_count=2:brief:undefined", "focus:after_speech"]);
+  // A chart its section builds is written empty and filled by the demonstration, as before.
+  assert.deepEqual(first("built"), ["write:undefined", "focus:after_speech"]);
+  assert.deepEqual(result["PT-15"].adjustments, []);
+  assert.deepEqual(result["PT-15"].verdict.checks.filter((check) => !check.pass), []);
+  assert.ok(result["PT-15"].verdict.notes.find((note) => note.check === "the demonstration finishes").pass);
+  const task = result["PT-15"].lesson.lesson.tasks.find((each) => each.completion?.fact === "built");
+  assert.ok(Object.entries(task.start.values).filter(([name]) => /_count$/u.test(name)).every(([, value]) => value === 0), "the practice starts empty");
+  // A replay resets the chart's variables to their written start (empty), so it fills again at once: the mover's
+  // state, the number on the chart, and the picture agree.
+  const replay = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    const { placeValuePlan } = await import(${here("./sample-plans.mjs")});
+    const plan = placeValuePlan({ number: 8.2, practice: 6.4, given: "place_counts", steps: [] });
+    // Both of the chart's numbers named: the chart fills once.
+    plan.sections[1].moments.push({ narration: "Look again.", restart_numbers: [1, 2], actions: [] });
+    const beat = api.compileAndValidateLessonPlan(plan, { language: "zh-CN" }).lesson.steps[1].beats.at(-1);
+    console.log(JSON.stringify({ start: beat.start.kind, actions: beat.actions.map((action) => action.do === "animate" ? action.variable.replace(/^section_01_moment_01_item_01_/u, "") + "=" + action.value + ":" + action.when : action.do) }));
+  `);
+  assert.deepEqual(replay, { start: "replay", actions: ["ones_count=8:before_speech", "tenths_count=2:before_speech"] });
+});
+
+test("PF-01's shape: a chart drawn in section 1 and never built there, then filled in section 2 (owner, 2026-11-27)", () => {
+  const result = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    const { placeValuePlan, makeSamplePlanModelCompatible } = await import(${here("./sample-plans.mjs")});
+    const { modelResponseHelpers } = await import(${here("./model-responses.mjs")});
+    const { bootstrapModelResponse, bootstrapSectionFromExact, stagedOutline, toModelSectionDraft } = modelResponseHelpers(api.LESSON_PLAN_CAPABILITY_REGISTRY);
+    const out = {};
+    // Section 2 builds the number at once (PF-01: number 1 -> 1,000), or a part of it and then the number.
+    for (const [id, number, practice, later] of [["whole", 3040, 2050, [3040]], ["part", 3040, 2050, [3000, 3040]]]) {
+      const plan = placeValuePlan({ number, practice, given: "place_counts", steps: [], typed: false });
+      plan.sections[1].moments.push(...later.map((value) => ({ narration: "Now on the chart.", actions: [{ action: "animate", number: 1, end_value: value, duration_intent: "brief", timing: "during_speech" }] })));
+      makeSamplePlanModelCompatible(plan);
+      const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({ section: index + 1, version: plan.version, moments, student_activities }));
+      const outline = stagedOutline(plan, drafts);
+      const prompts = [];
+      const adjustments = [];
+      try {
+        const generated = await api.generateLessonPlanWithModel(async (request) => {
+          prompts.push(request.prompt);
+          if (prompts.length > 6) throw new Error("unexpected extra model request");
+          if (request.label === "lesson-plan-bootstrap") return bootstrapModelResponse(request, outline, bootstrapSectionFromExact(outline, drafts[0]));
+          return JSON.stringify(drafts[request.section - 1]);
+        }, { turn_id: id, learner_request: "How many thousands, hundreds and tens?", language: "en-US" }, { max_attempts_per_part: 1, on_program_adjustment: (each) => adjustments.push(each) });
+        const write = generated.lesson.steps[0].beats.flatMap((beat) => beat.actions).find((action) => action.kind === "place_value_chart");
+        out[id] = { calls: prompts.length, opening: generated.lesson.steps[0].beats[0].actions.filter((action) => action.do !== "focus").map((action) => action.do),
+          later: generated.lesson.steps.at(-1).beats.slice(-later.length).map((beat) => beat.actions.map((action) => action.do)),
+          facts: prompts[1] ? JSON.parse(prompts[1]) : null, left: adjustments.filter((each) => each.reason === "animation_left_out").length };
+      } catch (error) {
+        out[id] = { error: error.code, capability: error.capability, message: error.message };
+      }
+    }
+    console.log(JSON.stringify(out));
+  `);
+  for (const id of ["whole", "part"]) {
+    assert.equal(result[id].error, undefined, `${id}: ${result[id].message}`);
+    // Bootstrap and section 2 only: section 2's fill needs no repair.
+    assert.equal(result[id].calls, 2, id);
+    // Drawn showing 3,040 (3 thousands, 4 tens), since section 1 never built it: written empty, filled at once.
+    assert.deepEqual(result[id].opening, ["write", "animate", "animate"], id);
+    // Section 2 is told the chart shows the whole number, nothing left to place.
+    const told = JSON.stringify(result[id].facts);
+    for (const fact of ['"on_chart_now":3040', '"still_to_place":0']) assert.ok(told.includes(fact), `${id}: ${fact}`);
+  }
+  // Its fill to the number changes nothing: the moment looks at the chart.
+  assert.deepEqual(result.whole.later, [["focus"]]);
+  assert.equal(result.whole.left, 0);
+  // A part of it is left out and recorded (it is on the chart already); the number then changes nothing.
+  assert.deepEqual(result.part.later, [["focus"], ["focus"]]);
+  assert.equal(result.part.left, 1);
+});
+
+test("beside the times-ten card the chart does not take counting in another unit; without it the chart's text is unchanged", () => {
+  const read = (trial) => JSON.parse(execFileSync(process.execPath, ["--input-type=module", "-e", `
+    const api = await import(${here("../lesson-plan.js")});
+    console.log(JSON.stringify({ base: api.LESSON_PLAN_CAPABILITY_REGISTRY.place_value_chart.model_guidance,
+      offered: api.recipeGuidance("place_value_chart", api.LESSON_PLAN_CAPABILITY_NAMES),
+      all: api.LESSON_PLAN_CAPABILITY_NAMES.every((name) => api.recipeGuidance(name, api.LESSON_PLAN_CAPABILITY_NAMES) === api.LESSON_PLAN_CAPABILITY_REGISTRY[name].model_guidance),
+      withdrawn: api.recipeGuidance("place_value_chart", api.LESSON_PLAN_CAPABILITY_NAMES.filter((name) => name !== "place_value_times_ten")) }));
+  `], { env: { ...process.env, LEARNING_COACH_TRIAL_RECIPES: trial }, cwd: fileURLToPath(new URL("..", import.meta.url)), encoding: "utf8" }));
+  const off = read(""), on = read("place_value_times_ten");
+  // Trials off: every recipe's guidance is its own text (request-hashes checks the bytes of every default request).
+  assert.equal(off.all, true);
+  assert.equal(off.offered, off.base);
+  assert.equal(Buffer.byteLength(off.base), 1927);
+  // Offered beside the times-ten card: the chart's "not for" list gains counting the same amount in another unit.
+  assert.notEqual(on.offered, on.base);
+  assert.ok(on.offered.includes("凑整、同一个数换一个单位来数（一千里有几个十；3个十分之一=?个千分之一），也不用于低年级"));
+  assert.equal(on.offered.replace("、同一个数换一个单位来数（一千里有几个十；3个十分之一=?个千分之一）", ""), on.base);
+  // A request whose times-ten card was withdrawn gets the chart's own text again.
+  assert.equal(on.withdrawn, on.base);
+});

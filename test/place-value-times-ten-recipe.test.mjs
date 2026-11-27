@@ -42,15 +42,21 @@ test("place_value_times_ten is a trial, off by default: built, not offered; its 
   `);
   assert.equal(offered.offered.at(-1), "place_value_times_ten");
   assert.ok(offered.names.includes("place_value_times_ten"));
-  assert.deepEqual(offered.inputs, ["amount", "target", "practice_amount", "practice_target", "counted_in"]);
+  // Named by role (35P-04 run 2: PF-11 and PF-01 put the unit asked where the start unit goes).
+  assert.deepEqual(offered.inputs, ["amount", "unit_asked", "practice_amount", "practice_unit_asked", "start_unit"]);
   // Counted in starts at the amount's own place (a times pair: the larger number's, in either order). A
   // put-together question (40 hundredths = ? tenths) writes its own: from the amount alone the program has no start
   // (NaN, so it supplies nothing and the card goes at once; below). Numbers the card does not take give none either.
   assert.deepEqual(offered.starts, [0.1, 100, 100, 1000, 1, null, null]);
   assert.deepEqual(offered.range, [0, 1_000_000]);
   assert.deepEqual([offered.min, offered.many, offered.controls], [5, true, []]);
-  // Short guidance (tracked, not capped): the numbers in order, the demonstration, the practice; no control named.
-  assert.equal(Buffer.byteLength(offered.guidance), 1235);
+  // Short guidance (tracked, not capped): the numbers by role, a breaking and a put-together example, the
+  // demonstration to the unit asked, the practice; no control named.
+  assert.equal(Buffer.byteLength(offered.guidance), 1770);
+  for (const role of ["amount", "unit_asked", "practice_amount", "practice_unit_asked", "start_unit"]) assert.ok(offered.guidance.includes(role), role);
+  // PF-11's question, written as the program wants it: a breaking question with no fifth number.
+  assert.ok(offered.guidance.includes("7个十分之一=?个百分之一 写0.7、0.01、练习两个数；"));
+  assert.ok(offered.guidance.includes("一直到问的单位"));
   assert.ok(!/滑块|slider|拖|按钮/u.test(offered.guidance), "the guidance names no control");
 });
 
@@ -67,14 +73,14 @@ test("counted in moves forward along the problem's path; nothing else moves", ()
   assert.deepEqual(to(start, 0.01, 0.01).steps.map((step) => step.to[4]), [0.01, 0.01], "the same value again changes nothing");
   assert.match(to(start, 0.01, 0.1).refused.reason, /counted in goes forward along 0.1 \(tenths\) -> 0.01 \(hundredths\) -> 0.001 \(thousandths\), never back to 0.1; from 0.01 the next values are 0.001/);
   assert.match(to(start, 0.05).refused.reason, /0.05 is not one of its values; from 0.1 the next values are 0.01 or 0.001/);
-  assert.match(to(start, 0.001, 0.0001).refused.reason, /from 0.001 it has reached the target, 0.001/);
+  assert.match(to(start, 0.001, 0.0001).refused.reason, /from 0.001 it has reached the unit asked, 0.001/);
   // A put-together question counts from the unit it names, up to the target.
   const together = moves.state([0.4, 0.1, 0.7, 0.1, 0.01]);
   assert.deepEqual(together, [0.4, 0.1, 0.7, 0.1, 0.01, 0.01]);
   assert.deepEqual(to(together, 0.1).steps.map((step) => step.to[4]), [0.1]);
   // Once it has reached the target, the refusal says so (review of #187: it once named the start instead).
-  assert.match(to(together, 0.1, 0.01).refused.reason, /never back to 0.01; from 0.1 it has reached the target, 0.1/);
-  assert.match(to(together, 0.1, 1).refused.reason, /1 is not one of its values; from 0.1 it has reached the target, 0.1/);
+  assert.match(to(together, 0.1, 0.01).refused.reason, /never back to 0.01; from 0.1 it has reached the unit asked, 0.1/);
+  assert.match(to(together, 0.1, 1).refused.reason, /1 is not one of its values; from 0.1 it has reached the unit asked, 0.1/);
   const far = moves.state([0.5, 0.1, 0.3, 0.1, 0.001]);
   assert.deepEqual(to(far, 0.01, 0.1).steps.map((step) => step.to[4]), [0.01, 0.1], "two places up, one at a time");
   // A times pair: the larger number's unit, then the smaller number (written either way).
@@ -86,7 +92,7 @@ test("counted in moves forward along the problem's path; nothing else moves", ()
   const fixed = moves.moves(start, [{ position: 0, to: 0.5 }, { position: 4, to: 0.01 }, { position: 3, to: 0.1 }]);
   assert.deepEqual(fixed.steps.map((step) => step.to[4]), [0.01]);
   assert.deepEqual(fixed.ignored.map((each) => each.position), [0, 3]);
-  assert.match(fixed.ignored[0].reason, /stay as written: the demonstration moves only counted in/);
+  assert.match(fixed.ignored[0].reason, /stay as written: the demonstration moves only the start unit, counted in/);
   assert.equal(moves.moves(start, [{ position: 4, to: 0.01 }]).ignored, undefined);
   assert.deepEqual(moves.moves(start, [{ position: 1, to: 0.001 }]).steps.at(-1).to, start, "a number animated to its own value is no change");
 });
@@ -271,9 +277,9 @@ test("refusals name their reason and the card, so only the picture can be lost; 
   const expect = {
     "two-digits": /the question: .*not_one_digit/,
     "too-far": /the question: .*too_far/,
-    "same-unit": /the target \(the second number\) is the unit the question asks for and counted in \(the fifth number\) the unit it names: 40 hundredths = \? tenths is 0.4, 0.1, then the practice, then 0.01/,
-    "no-start": /counted in \(the fifth number\) is the unit the question names/,
-    "practice-same": /the practice is the learner's own: another amount or target than the question's/,
+    "same-unit": /the unit asked \(the second number\) is the unit the question asks for and the start unit \(the fifth number\) the unit it counts the amount in: 40 hundredths = \? tenths is 0.4, 0.1, then the practice, then 0.01/,
+    "no-start": /the start unit \(the fifth number\) is the unit the question counts the amount in, not the unit asked/,
+    "practice-same": /the practice is the learner's own: another amount or unit asked than the question's/,
     "practice-swapped": /the practice is the learner's own/,
     "practice-shape": /the practice is another count two places to the right \(breaking\), like the question's/,
     back: /never back to 0.1; from 0.01 the next values are 0.001/,
@@ -294,9 +300,14 @@ test("counted in written where the amount cannot start is read over, never refus
     // A unit the amount can start in decides the problem: 500 thousandths put together into tenths. (The two never
     // compete: a put-together's target is the amount's own place, where the amount's own count has nowhere to go.)
     ["together", { amount: 0.5, target: 0.1, start: 0.001, practice: [0.3, 0.1] }, "en-US"],
+    // A breaking question's start is the program's: a breaking start other than the amount's own place is read over
+    // (40 hundredths for 0.4 counted to thousandths: drawn as 4 tenths, same count). A fifth number written as the
+    // unit asked is not (below: the numbers cannot say which question was meant).
+    ["smaller-start", { amount: 0.4, target: 0.001, start: 0.01, practice: [0.6, 0.001] }, "en-US"],
   ]));
   const card = (id) => { const content = result[id].lesson.steps[0].beats[0].actions[0].content; return [content.question, content.toward, content.apart, content.counted_in]; };
   for (const id of ["zero", "on-the-path"]) assert.deepEqual(card(id), ["count", "right", 2, 100], id);
+  assert.deepEqual(card("smaller-start"), ["count", "right", 2, 100]);
   assert.deepEqual(card("times"), ["times", "right", 1, 100_000]);
   assert.deepEqual(card("together"), ["count", "left", 2, 1]);
 });
@@ -323,7 +334,7 @@ test("a moment that animates the card's fixed numbers plays the rest and records
     console.log(JSON.stringify(out));
   `);
   assert.deepEqual(result.amount.beat, [600_000]);
-  assert.deepEqual(result.amount.adjustments, ["animation_left_out: $lessonPlan.sections[0].moments[1].actions[0]: the amount, the target and the practice stay as written: the demonstration moves only counted in (the card's fifth lesson number); left out"]);
+  assert.deepEqual(result.amount.adjustments, ["animation_left_out: $lessonPlan.sections[0].moments[1].actions[0]: the amount, the unit asked and the practice stay as written: the demonstration moves only the start unit, counted in (the card's fifth lesson number); left out"]);
   // Only a fixed number: the moment still looks at the card.
   assert.deepEqual([result.practice.beat, result.practice.adjustments.length], [["focus"], 1]);
   // The moves play at the timing of the first animation that plays, not the left-out one's (review of #188).
@@ -360,8 +371,10 @@ test("section facts: the card in its own terms, once it is drawn", () => {
   const established = { capability: "place_value_times_ten", parameters: {}, numbers: [1, 2, 3, 4, 5] };
   const half = facts({ section: 2, mode: "reuse", established, numbers, state: new Map([[5, 0.01]]), language: "en-US" }).facts;
   assert.deepEqual(half, {
-    numbers: [1, 2, 3, 4, 5], question: "count", amount: 0.3, target: 0.001, answer: { count: 300 },
+    numbers: [1, 2, 3, 4, 5], question: "count", amount: 0.3, unit_asked: 0.001, answer: { count: 300 },
     counted_in_path: [0.1, 0.01, 0.001], counted_in_now: 0.01,
+    // Where the demonstration goes: counted in to the unit asked (owner, 2026-11-27; information only).
+    demonstration_to: { counted_in: 0.001 },
     chart_now: [
       { column: "Tenths", disks: 0, rows_of_ten: 0, squares: 0 },
       { column: "Hundredths", disks: 0, rows_of_ten: 3, squares: 0 },
@@ -561,8 +574,15 @@ const outlineRun = (cases) => withTrial(`
 
 test("numbers the card cannot start on take it out as the outline is read, before any section call (PF-05, PF-15, PF-17)", () => {
   const result = outlineRun([
-    // PF-05: the target written as the unit the question names (40 hundredths = ? tenths as 0.4, 0.01, ..., 0.01).
+    // PF-05: the unit asked written as the unit the question names (40 hundredths = ? tenths as 0.4, 0.01, ..., 0.01).
+    // Read over, it would draw the reverse question (4 tenths = ? hundredths), so a fifth number equal to the unit
+    // asked is refused, the refusal stating both readings (review of #192).
     ["PF-05", { amount: 0.4, target: 0.01, start: 0.01, practice: [0.6, 0.01], steps: [0.1] }, 5, "40个百分之一合起来是几个十分之一？为什么？"],
+    // PF-01 (35P-04 run 2): how many tens in 1,000, the fifth number written as the unit asked: the same signature,
+    // refused the same way (the breaking reading needs no fifth number).
+    ["PF-01", { amount: 1000, target: 10, start: 10, practice: [2000, 10], steps: [100, 10] }, 5, "How many tens are in one thousand? My kid insists it's ten."],
+    // Numbers no start can fix: a put-together question with the start unit written as the unit asked.
+    ["same-unit", { amount: 0.4, target: 0.1, start: 0.1, practice: [0.7, 0.1], steps: [0.1] }, 5, "40个百分之一合起来是几个十分之一？为什么？"],
     // PF-15: the card chosen with no outline numbers at all.
     ["PF-15", { amount: 0.4, target: 0.04, practice: [7, 0.7], steps: [0.04] }, 0, "0.4 里的 4 和 0.04 里的 4 差多少倍？哪个是哪个的十分之一？"],
     // PF-17 (a near miss): a whole numeral, 4.37 and 437.
@@ -574,12 +594,15 @@ test("numbers the card cannot start on take it out as the outline is read, befor
     ["shifted", { amount: 0.3, target: 0.001, practice: [5, 0.01], steps: [0.01, 0.001] }, 6, "3个十分之一是几个千分之一？", true],
   ]);
   const removed = (name) => result[name].adjustments.map(({ kind, reason, capability }) => ({ kind, reason, capability }));
-  for (const name of ["PF-05", "PF-17"]) {
+  for (const name of ["same-unit", "PF-17", "PF-05", "PF-01"]) {
     assert.deepEqual(removed(name), [{ kind: "visual_removed", reason: "outline_numbers_refused", capability: "place_value_times_ten" }], name);
     assert.deepEqual(result[name].requests, ["lesson-plan-bootstrap", "lesson-plan-outline"], name);
   }
-  assert.match(result["PF-05"].adjustments[0].detail, /cannot start on the outline's numbers: .*the target \(the second number\) is the unit the question asks for/);
+  assert.match(result["same-unit"].adjustments[0].detail, /cannot start on the outline's numbers: .*the unit asked \(the second number\) is the unit the question asks for/);
   assert.match(result["PF-17"].adjustments[0].detail, /not_one_digit/);
+  // Both readings, in the roles' words.
+  assert.match(result["PF-05"].adjustments[0].detail, /the start unit 0.01 is the unit asked 0.01: a question that breaks 0.4 into hundredths starts at the amount's own place \(0.1\) and needs no fifth number; a question that puts 0.4 of hundredths together asks for a larger unit \(0.1\) and starts at 0.01/);
+  assert.match(result["PF-01"].adjustments[0].detail, /the start unit 10 is the unit asked 10: a question that breaks 1000 into tens starts at the amount's own place \(1000\) and needs no fifth number/);
   assert.deepEqual(removed("PF-15"), [{ kind: "visual_removed", reason: "outline_numbers_missing", capability: "place_value_times_ten" }]);
   assert.deepEqual(result["PF-15"].requests, ["lesson-plan-bootstrap", "lesson-plan-outline"]);
   for (const name of ["kept", "shifted"]) {

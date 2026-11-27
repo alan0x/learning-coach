@@ -1,4 +1,4 @@
-import type { LessonPlan, LessonPlanMathExpression, LessonPlanOutline, LessonPlanSectionDraft, LessonPlanVisualContent } from "../lesson-plan.js";
+import type { LessonPlan, LessonPlanAction, LessonPlanMathExpression, LessonPlanOutline, LessonPlanSectionDraft, LessonPlanVisualContent } from "../lesson-plan.js";
 import { MATH_HOOKS, MATH_PLUGIN_HOOKS } from "./math-hooks.js";
 import { SHARED_HOOKS } from "./shared-hooks.js";
 
@@ -50,10 +50,12 @@ export interface RecipeHooks {
    * `position` is animated to `to`, or the reason the card cannot make that change. A state's first
    * entries are the visual's lesson numbers, in order, as the card reads them when it is drawn: usually
    * their starting values, but a place-value chart to build reads its number as the value on the chart,
-   * which starts at 0 (`content` is the visual's, for a card whose reading depends on it).
+   * which starts at 0 (`content` is the visual's, for a card whose reading depends on it), or at the number when
+   * the section that draws it never builds it (`drawnWith`: that section's actions from the moment the card is
+   * drawn on; every caller that draws the card passes it, so the compiler, the section facts and the judge agree).
    */
   number_moves?: {
-    state(start: readonly number[], content?: LessonPlanVisualContent): number[];
+    state(start: readonly number[], content?: LessonPlanVisualContent, drawnWith?: readonly LessonPlanAction[]): number[];
     // `ignored`: animations the card leaves out rather than refuses (a number it never moves), each with its index
     // in `moves` and why; the compiler records them and plays the rest.
     moves(state: readonly number[], moves: ReadonlyArray<{ position: number; to: number }>):

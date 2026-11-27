@@ -5,6 +5,7 @@ import {
   recipeInitialCamera,
   recipeMinLessonNumbers,
   recipeProgramNumbers,
+  recipeGuidance,
   LESSON_PLAN_CAPABILITY_NAMES,
   LESSON_PLAN_CAPABILITY_NUMBER_LIMITS,
   LESSON_PLAN_CAPABILITY_REGISTRY,
@@ -1752,10 +1753,11 @@ function numberStateAfter(
       const hook = RECIPE_HOOKS[content.capability]?.number_moves;
       if (hook && content.numbers?.length && !cards.some((card) => card.numbers.join() === content.numbers!.join())) {
         // The card's state when it is drawn: its lesson numbers as the card reads them there (a chart to build
-        // starts empty, whatever number it is to show), then what its start adds (a hundreds column).
+        // starts empty, whatever number it is to show, unless the section drawing it never builds it), then what its
+        // start adds (a hundreds column).
         const initial = content.numbers.map((number) => outline.numbers![number - 1].initial);
         // A state shorter than the card's numbers (a mat whose hundreds start at 0) keeps the rest as written.
-        const started = [...hook.state(initial, content)];
+        const started = [...hook.state(initial, content, draft.moments.slice(momentAt).flatMap((each) => each.actions))];
         initial.forEach((value, position) => { if (started[position] === undefined) started[position] = value; });
         cards.push({ numbers: [...content.numbers], hook, started });
         content.numbers.forEach((number, position) => state.set(number, started[position]!));
@@ -3174,6 +3176,8 @@ export async function generateLessonPlanWithModel(
   // Capabilities that turned out unable to show this request; the fallback outline is asked without them,
   // so the worst case is the lesson the request gets without them.
   const excludedCapabilities = new Set<string>();
+  // The recipes the next request offers: a card's guidance can depend on them (`recipeGuidance`).
+  const offeredCapabilities = () => LESSON_PLAN_CAPABILITY_NAMES.filter((capability) => !excludedCapabilities.has(capability));
   // A fault only the outline can fix comes from a number line (values its ticks cannot hold, or no lesson
   // numbers). Every recipe in the family draws the same line from the same numbers, so the outline is
   // asked again without any of them: the worst case is the lesson the request gets without a number line.
@@ -3283,7 +3287,7 @@ export async function generateLessonPlanWithModel(
         visual_recipes: LESSON_PLAN_CAPABILITY_NAMES.map((capability) => [
           [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].required_features],
           [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].number_inputs],
-          LESSON_PLAN_CAPABILITY_REGISTRY[capability].model_guidance,
+          recipeGuidance(capability, LESSON_PLAN_CAPABILITY_NAMES),
         ]),
         first_section_to_write: 1,
         first_section_rule: "first_section must implement outline.sections[0]; outline is authoritative and the program assigns all execution references",
@@ -3441,7 +3445,7 @@ export async function generateLessonPlanWithModel(
           visual_recipes: LESSON_PLAN_CAPABILITY_NAMES.filter((capability) => !excludedCapabilities.has(capability)).map((capability) => [
             [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].required_features],
             [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].number_inputs],
-            LESSON_PLAN_CAPABILITY_REGISTRY[capability].model_guidance,
+            recipeGuidance(capability, offeredCapabilities()),
           ]),
           ...(outlineError ? { previous_validation_error: errorFeedback(outlineError) } : {}),
         }),
@@ -3722,7 +3726,7 @@ export async function generateLessonPlanWithModel(
       mode, relation: visual.relation,
       // How the card works, as the planning request said it: a later section writes for the same card
       // (owner, 2026-11-24: request size is tracked, not capped; each request carries what its cards need).
-      guidance: LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability].model_guidance,
+      guidance: recipeGuidance(visual.capability, offeredCapabilities()),
       ...facts,
       ...(visual.related_visual === undefined ? {} : { related_visual: visual.related_visual }),
     }];

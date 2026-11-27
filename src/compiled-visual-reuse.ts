@@ -25,6 +25,12 @@ export interface CompiledVisual {
     unbound?: boolean;
     /** The visual's lesson numbers, in its number order. */
     numbers: number[];
+    /**
+     * Actions the card plays right after it is written, and again after a replay resets its variables, so it shows
+     * the state the mover starts from (a place-value chart to build that its own section never builds: OLL refuses a
+     * build chart written already holding its number, so it is written empty and filled at once).
+     */
+    opening?: AuthoringAction[];
     /** `room` is how many actions the moment can still hold (OLL allows 24 in a beat). */
     play(steps: ReadonlyArray<{ position: number; from: number[]; to: number[] }>, room: number): AuthoringAction[];
     /** `end` is the card's state when the lesson ends (a task whose value the lesson's start already shows starts there). */

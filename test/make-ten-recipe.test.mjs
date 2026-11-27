@@ -43,9 +43,13 @@ test("make_ten is a trial, off by default: built, not offered; its guidance and 
   assert.deepEqual(offered.starts, [8, 8, 7]);
   assert.deepEqual(offered.ranges, [[0, 10], [0, 0, 4]]);
   assert.deepEqual([offered.min, offered.many, offered.controls], [6, true, []]);
-  // Short guidance (tracked, not capped): the pair, the practice pair, the target 10 (or 9); no control named.
-  assert.equal(Buffer.byteLength(offered.guidance), 847);
+  // Short guidance (tracked, not capped): the pair, the practice pair, the target 10; no control named.
+  assert.equal(Buffer.byteLength(offered.guidance), 1025);
   assert.ok(offered.guidance.includes("只画这张卡片，不再画数轴"), "used alone for its sum (make-ten objective check 1)");
+  // It answers "which number should I split" with the quick way only (owner, 2026-11-27; MT-07 drew the number line),
+  // and the demonstration reaches ten (owner, 2026-11-27: "可以只到9" is gone; a lesson that stops at 9 still plays).
+  assert.ok(offered.guidance.includes("应该拆哪个数") && offered.guidance.includes("慢的拆法只用话说，不画"));
+  assert.ok(offered.guidance.includes("动画到10，一直到大数那一框满十") && !offered.guidance.includes("只到9"));
   assert.ok(!/滑块|slider|拖|按钮/u.test(offered.guidance), "the guidance names no control");
 });
 
@@ -302,6 +306,8 @@ test("section facts: the card in its own terms, once it is drawn", () => {
   assert.deepEqual(nine, {
     numbers: [1, 2, 3, 4, 5, 6], pair: [8, 6], sum: 14, fills: { number: 8, frame: "first" }, gives: 6, to_make_ten: 2, ones_left: 4,
     in_bigger_frame_now: 9, frames_now: [9, 5],
+    // Where the demonstration goes: the bigger frame full (owner, 2026-11-27; information only).
+    demonstration_to: { in_bigger_frame: 10 },
     next: { value: 10, does: "the next value, 10, moves one of the 6 into the 8's frame", says: ["Move one of the 6 across.", "A full frame is ten, and 4 are left: 10 + 4."] },
     practice_pair: [7, 5],
   });
@@ -324,6 +330,12 @@ test("with the trial on, the model's first request describes the card; without i
   assert.ok(on.text.includes("make_ten_to_add"));
   assert.ok(on.text.includes("凑十（两个十格框）"));
   assert.equal(off.text.includes("make_ten"), false);
+  // Beside the card, the number line in steps no longer claims making ten with two one-digit numbers (MT-07); without
+  // the trial its text is exactly its own guidance.
+  const steps = (text) => JSON.parse(JSON.parse(text).prompt).visual_recipes.find((row) => row[0].includes("number_steps"))[2];
+  assert.ok(steps(on.text).includes("不用于两个一位数相加的凑十") && !steps(on.text).includes("如凑十"));
+  assert.equal(steps(off.text), api.LESSON_PLAN_CAPABILITY_REGISTRY.number_line_steps.model_guidance);
+  assert.ok(steps(off.text).includes("如凑十"));
   console.log(`first request with the trial on: +${on.bytes - off.bytes} B (${off.bytes} -> ${on.bytes})`);
 });
 
