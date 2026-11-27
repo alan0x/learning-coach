@@ -143,10 +143,11 @@ export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
     } };
   },
   // The times-ten card in its own terms (OLL 0028), once it is drawn: the question (a count or a times pair), the
-  // amount and the target, the answer, the path "counted in" takes, where the demonstration stands (counted in now,
-  // and each column's disks, rows of ten and squares), each later value of counted in with what it does in the
-  // card's own sentences, and the practice. Everything as the lesson writes it (0.01, never thousandths). Facts,
-  // not instructions: a lesson may rightly stop before the target.
+  // amount and the unit asked (named by role, as the outline's numbers are), the answer, the path "counted in" takes,
+  // where the demonstration stands (counted in now, and each column's disks, rows of ten and squares), each later
+  // value of counted in with what it does in the card's own sentences, where the demonstration goes (counted in to
+  // the unit asked: owner, 2026-11-27; information only, no check enforces it), and the practice. Everything as the
+  // lesson writes it (0.01, never thousandths).
   place_value_times_ten: ({ established, numbers, state, language }) => {
     if (!numbers || !established?.numbers?.length) return {};
     const lessonNumbers = established.numbers;
@@ -167,10 +168,11 @@ export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
       numbers: lessonNumbers,
       question: problem.question,
       amount: timesTenDecimal(problem.amount),
-      target: timesTenDecimal(problem.target),
+      unit_asked: timesTenDecimal(problem.target),
       answer: problem.question === "times" ? { renamed: problem.renamed, times: problem.result } : { count: problem.result },
       counted_in_path: path.map(timesTenDecimal),
       counted_in_now: timesTenDecimal(path[k]!),
+      demonstration_to: { counted_in: timesTenDecimal(path.at(-1)!) },
       chart_now: chart.columns.map((column) => ({ column: name(column.place), disks: column.disks, rows_of_ten: column.rows, squares: column.squares })),
       ...(k < path.length - 1
         ? { next: path.slice(k + 1).map((value, i) => ({ value: timesTenDecimal(value), does: does[k + i]! })) }

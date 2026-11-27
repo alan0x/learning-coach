@@ -1,10 +1,12 @@
 // How the place-value times-ten card's lesson numbers change (OLL decision 0028, need 35P-04): the same amount
-// counted in another unit. The card has five lesson numbers, in order: the amount (0.3 for "3 tenths"), the target
-// (0.001; a times pair's smaller number, 70), a practice of the card's shape (its amount and target) and "counted
-// in", the unit the amount is counted in now. Counted in starts at the unit the question names: the program
-// supplies it from the amount (its own place), and a put-together question writes its own (40 hundredths: 0.01).
-// A value written where the amount cannot start (0, or 0.01 for 3 tenths) is read over: the card opens at the
-// amount's own place (the two never compete: a put-together's target is the amount's own place).
+// counted in another unit. The card has five lesson numbers, in order, named by role as the model sees them: the
+// amount (0.3 for "3 tenths"), the unit asked (0.001; a times pair's smaller number, 70; the card's "target"), a
+// practice of the card's shape (its amount and unit asked) and the start unit, "counted in": the unit the amount is
+// counted in now. Counted in starts at the unit the question names. A breaking question (the amount counted in its own
+// place makes a count toward a smaller unit) and a times pair start at the amount's own place: the program supplies
+// it, and a fifth number the outline writes is read over, never refused (35P-04 run 2, PF-01: 1000, 10, ..., 10 lost
+// the card). Only a put-together question writes its own (40 hundredths: 0.01). The two never compete: a put-together
+// asks for the amount's own place, from which the amount makes no question.
 // The demonstration moves only counted in, along the problem's path toward the target (0.1 -> 0.01 -> 0.001, or
 // 100 -> 70), never back; the card plays each row's move. Values are as the model writes them (0.01); the card holds
 // thousandths. These rules are pure, so the compiler, the model's section facts and the judge agree on every value;
@@ -49,31 +51,32 @@ export function timesTenStartOf(amount: number, target: number): number {
 /** The problem the card's five lesson numbers make, or why the card cannot start on them (a sentence for the model). */
 export function timesTenStartProblem(values: readonly number[]): { problem: PlaceValueTimesTenProblem; practice: PlaceValueTimesTenProblem } | { fault: string } {
   if (values.length !== 5) {
-    return { fault: "the card takes five lesson numbers, in order: the amount (its value: 0.3 for 3 tenths), the target (0.001; a times pair's smaller number, 70), the practice's amount and target (another problem of the same kind), and counted in (the unit the question names)" };
+    return { fault: "the card takes five lesson numbers, in order: the amount (its value: 0.3 for 3 tenths), the unit asked (0.001; a times pair's smaller number, 70), the practice's amount and unit asked (another problem of the same kind), and the start unit (the unit the question counts the amount in)" };
   }
   const [A, T, PA, PT, C] = values.map(placeValueThousandths);
-  if ([A, T, PA, PT].some((value) => value === undefined || value <= 0)) return { fault: "the amount, the target and the practice's two numbers are numbers above 0 with at most three decimal places (thousandths)" };
-  // Counted in as written decides the problem only where it names a unit the amount can start in (a put-together
-  // question's 0.01); one that cannot (0, or 0.01 for 3 tenths) is read over when the amount's own place makes a
-  // problem: the card opens fresh there. Never when it is the target itself: then the target and the unit the
-  // question names are mixed up (objective run 1, PF-05: 40 hundredths = ? tenths written 0.4, 0.01, ..., 0.01), and
-  // reading over would draw another question (0.4 counted in hundredths).
-  const written = timesTenProblemOf(A!, T!, C);
-  const mixed = "fault" in written && C === T;
-  const own = "fault" in written && !mixed ? timesTenProblemOf(A!, T!, undefined) : written;
-  const problem = "fault" in own ? written : own;
+  if ([A, T, PA, PT].some((value) => value === undefined || value <= 0)) return { fault: "the amount, the unit asked and the practice's two numbers are numbers above 0 with at most three decimal places (thousandths)" };
+  // The amount counted in its own place decides first: when that makes a question (a breaking count, or a times
+  // pair), the start unit is the program's and the fifth number as written is read over, whatever it is (0, the unit
+  // asked, another start). Only a put-together question, which the amount's own place cannot make, starts where the
+  // fifth number says. A fifth number written as the unit asked is read over too (PF-01, 35P-04 run 2: how many tens
+  // in 1,000 written 1000, 10, ..., 10). Numbers that swap the unit asked and the start unit of a put-together
+  // (objective run 1, PF-05: 40 hundredths = ? tenths written 0.4, 0.01, ..., 0.01) make a legal breaking question,
+  // 4 tenths = ? hundredths, and are drawn as it: the numbers cannot tell the two apart; the roles' names are what
+  // keeps them apart (owner, 2026-11-27).
+  const own = timesTenProblemOf(A!, T!, undefined);
+  const problem = "fault" in own ? timesTenProblemOf(A!, T!, C) : own;
   if ("fault" in problem) {
     const said = placeValueTimesTenFaultText(problem.fault as Parameters<typeof placeValueTimesTenFaultText>[0], A, T);
-    if (mixed) {
-      return { fault: `${said}; the target (the second number) is the unit the question asks for and counted in (the fifth number) the unit it names: 40 hundredths = ? tenths is 0.4, 0.1, then the practice, then 0.01` };
+    if (C === T) {
+      return { fault: `${said}; the unit asked (the second number) is the unit the question asks for and the start unit (the fifth number) the unit it counts the amount in: 40 hundredths = ? tenths is 0.4, 0.1, then the practice, then 0.01` };
     }
     return { fault: problem.fault === "same_unit" || problem.fault === "start_not_unit"
-      ? `${said}; counted in (the fifth number) is the unit the question names, not the target: 3 tenths starts at 0.1, 40 hundredths at 0.01`
+      ? `${said}; the start unit (the fifth number) is the unit the question counts the amount in, not the unit asked: 40 hundredths starts at 0.01, and 3 tenths at 0.1, which the program supplies`
       : `the question: ${said}` };
   }
   const practice = placeValueTimesTenPracticeProblem(problem, PA!, PT!);
   if ("fault" in practice) {
-    if (practice.fault === "same_as_example") return { fault: "the practice is the learner's own: another amount or target than the question's, so the learner does not copy the demonstration" };
+    if (practice.fault === "same_as_example") return { fault: "the practice is the learner's own: another amount or unit asked than the question's, so the learner does not copy the demonstration" };
     const how = problem.question === "times"
       ? "another times pair, the same digit in two neighbouring places (4,000 and 400)"
       : `another count ${problem.g === 2 ? "two places" : "one place"} ${problem.dir < 0 ? "to the right (breaking)" : "to the left (putting together)"}, like the question's`;
@@ -154,7 +157,7 @@ export function placeValueTimesTenMove(state: readonly number[], position: numbe
   if (position < 0 || position > TIMES_TEN_NUMBER.countedIn) return "the card has five lesson numbers";
   if (to === state[position]) return [...state];
   if (position !== TIMES_TEN_NUMBER.countedIn) {
-    return "the amount, the target and the practice stay as written: the demonstration moves only counted in (the card's fifth lesson number), the unit the amount is counted in now, and the card plays each row";
+    return "the amount, the unit asked and the practice stay as written: the demonstration moves only the start unit, counted in (the card's fifth lesson number), the unit the amount is counted in now, and the card plays each row";
   }
   const found = timesTenProblemNow(state);
   if ("fault" in found) return found.fault;
@@ -163,7 +166,7 @@ export function placeValueTimesTenMove(state: readonly number[], position: numbe
   const path = placeValueTimesTenPath(problem);
   const index = path.indexOf(placeValueThousandths(to) ?? Number.NaN);
   const next = timesTenNext(problem, from);
-  const said = next.length ? `from ${from} the next values are ${next.join(" or ")}` : `from ${from} it has reached the target, ${decimal(problem.target)}`;
+  const said = next.length ? `from ${from} the next values are ${next.join(" or ")}` : `from ${from} it has reached the unit asked, ${decimal(problem.target)}`;
   if (index < 0) return `counted in is the unit the amount is counted in now: ${timesTenPathText(problem)}; ${to} is not one of its values; ${said}`;
   if (index + 1e-9 < placeValueTimesTenPosition(problem, placeValueThousandths(from) ?? 0)) return `counted in goes forward along ${timesTenPathText(problem)}, never back to ${to}; ${said}`;
   const moved = [...state];
@@ -178,10 +181,10 @@ export function placeValueTimesTenMoves(state: readonly number[], moves: Readonl
   const ignored: Array<{ index: number; position: number; reason: string }> = [];
   let current = [...state];
   for (const [index, move] of moves.entries()) {
-    // The amount, the target and the practice never move: an animation of one is left out (and recorded by the
+    // The amount, the unit asked and the practice never move: an animation of one is left out (and recorded by the
     // compiler), not refused, so a section's repairs are not spent on it (objective run 1, PF-02 and PF-10).
     if (move.position >= 0 && move.position < TIMES_TEN_NUMBER.countedIn && move.to !== current[move.position]) {
-      ignored.push({ index, position: move.position, reason: "the amount, the target and the practice stay as written: the demonstration moves only counted in (the card's fifth lesson number)" });
+      ignored.push({ index, position: move.position, reason: "the amount, the unit asked and the practice stay as written: the demonstration moves only the start unit, counted in (the card's fifth lesson number)" });
       continue;
     }
     const result = placeValueTimesTenMove(current, move.position, move.to);
