@@ -45,8 +45,8 @@ test("place_value_times_ten is a trial, off by default: built, not offered; its 
   assert.deepEqual(offered.inputs, ["amount", "target", "practice_amount", "practice_target", "counted_in"]);
   // Counted in starts at the amount's own place (a times pair: the larger number's, in either order). A
   // put-together question (40 hundredths = ? tenths) writes its own: from the amount alone the program has no start
-  // (0), and the card says why. A number the card does not take gives 0 too.
-  assert.deepEqual(offered.starts, [0.1, 100, 100, 1000, 1, 0, 0]);
+  // (NaN, so it supplies nothing and the card goes at once; below). Numbers the card does not take give none either.
+  assert.deepEqual(offered.starts, [0.1, 100, 100, 1000, 1, null, null]);
   assert.deepEqual(offered.range, [0, 1_000_000]);
   assert.deepEqual([offered.min, offered.many, offered.controls], [5, true, []]);
   // Short guidance (tracked, not capped): the numbers in order, the demonstration, the practice; no control named.
@@ -413,6 +413,32 @@ test("a stubbed generation run: the outline's four numbers, the program's counte
     // Section 2 is told where the demonstration stands.
     for (const fact of ['"reached_target":true', '"counted_in_now":0.001', '"practice":[5,0.01]']) assert.ok(result.later.includes(fact), `${outlineNumbers}: ${fact}`);
   }
+});
+
+test("a put-together question whose outline leaves out counted in loses the card at once, never a section's attempts", () => {
+  const result = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    const { timesTenPlan, makeSamplePlanModelCompatible } = await import(${here("./sample-plans.mjs")});
+    const { modelResponseHelpers } = await import(${here("./model-responses.mjs")});
+    const { bootstrapModelResponse, bootstrapSectionFromExact, stagedOutline, toModelSectionDraft } = modelResponseHelpers(api.LESSON_PLAN_CAPABILITY_REGISTRY);
+    const plan = makeSamplePlanModelCompatible(timesTenPlan({ amount: 0.4, target: 0.1, start: 0.01, practice: [0.7, 0.1], steps: [0.1] }));
+    const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({ section: index + 1, version: plan.version, moments, student_activities }));
+    const outline = stagedOutline(plan, drafts);
+    outline.numbers = outline.numbers.slice(0, 4);
+    const requests = [], adjustments = [];
+    await api.generateLessonPlanWithModel(async (request) => {
+      requests.push(request.label);
+      if (request.label === "lesson-plan-bootstrap") return bootstrapModelResponse(request, outline, bootstrapSectionFromExact(outline, drafts[0]));
+      throw new Error("stop");
+    }, { turn_id: "times-ten", learner_request: "40个百分之一合起来是几个十分之一？为什么？", language: "zh-CN" }, {
+      max_attempts_per_part: 3, on_program_adjustment: (adjustment) => adjustments.push(adjustment),
+    }).catch(() => {});
+    console.log(JSON.stringify({ requests, adjustments: adjustments.map(({ kind, reason, capability }) => ({ kind, reason, capability })) }));
+  `);
+  // The card goes as the outline is read (it starts on five numbers, the outline declares four), so no section is
+  // asked for a number it cannot add; the program then asks for the outline again, as for any lost picture.
+  assert.deepEqual(result.adjustments, [{ kind: "visual_removed", reason: "outline_numbers_missing", capability: "place_value_times_ten" }]);
+  assert.deepEqual(result.requests.filter((label) => label === "lesson-plan-section"), []);
 });
 
 test("the fixed sample (used for request hashes with the trial on) compiles through the full OLL validation", () => {

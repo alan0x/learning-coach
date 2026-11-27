@@ -35,13 +35,15 @@ export function timesTenProblemOf(amount: number, target: number, countedIn: num
 
 /**
  * The start of "counted in" the program supplies when the outline does not declare it: the unit of the amount's own
- * place (0.3 -> 0.1; 700 -> 100), as the model writes it. A put-together question names a smaller unit itself.
+ * place (0.3 -> 0.1; 700 -> 100), as the model writes it. A put-together question names a smaller unit itself; when
+ * its outline leaves it out (or the numbers make no problem), there is no start to supply: NaN, so the program
+ * supplies nothing and the card is dropped at once (`min_lesson_numbers`), before any section is asked for it.
  */
 export function timesTenStartOf(amount: number, target: number): number {
   const A = placeValueThousandths(amount), T = placeValueThousandths(target);
-  if (A === undefined || T === undefined) return 0;
+  if (A === undefined || T === undefined) return Number.NaN;
   const plain = placeValueTimesTenProblem(A, T);
-  return "fault" in plain ? 0 : decimal(plain.start);
+  return "fault" in plain ? Number.NaN : decimal(plain.start);
 }
 
 /** The problem the card's five lesson numbers make, or why the card cannot start on them (a sentence for the model). */

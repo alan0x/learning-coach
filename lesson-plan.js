@@ -17694,9 +17694,9 @@ function timesTenProblemOf(amount, target, countedIn) {
 }
 function timesTenStartOf(amount, target) {
   const A = placeValueThousandths(amount), T = placeValueThousandths(target);
-  if (A === void 0 || T === void 0) return 0;
+  if (A === void 0 || T === void 0) return Number.NaN;
   const plain2 = placeValueTimesTenProblem(A, T);
-  return "fault" in plain2 ? 0 : decimal(plain2.start);
+  return "fault" in plain2 ? Number.NaN : decimal(plain2.start);
 }
 function timesTenStartProblem(values) {
   if (values.length !== 5) {
