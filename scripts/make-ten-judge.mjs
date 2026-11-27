@@ -19,9 +19,11 @@
 //   the frame (a lesson may stop partway: no hard rule); the learner has a task on the card; a row follows,
 //   anchored to the card; the task's words name no control.
 // - Second cards (Coach #199): the first card holds the question and the practice; each later make-ten card is a
-//   demonstration on its own example. Checks: its example is neither the question's pair nor a practice pair (either
-//   order); it opens fresh; its demonstration plays forward and fills its frame to 10; no task is anchored on it. The
-//   verdict lists the second cards and their examples (`second_cards`).
+//   demonstration on its own example. Checks: one second card at most; its example is neither the question's pair
+//   nor a practice pair (either order), and stays its example at every state (a revision, a replay, a task's start);
+//   it speaks the lesson's language at every state; it opens fresh; its demonstration plays forward and fills its
+//   frame to 10 by a move forward (an animation or a revision, not a replay); no task is anchored on it. The verdict
+//   lists the second cards and their examples (`second_cards`).
 //
 // The lesson plays through OLL itself (normalized and reduced, as the player plays it), and a pair and its row are
 // judged by the card's own rules (OLL's makeTenFault and makeTenRow). The card is read from the lesson as written,
@@ -84,7 +86,8 @@ export function makeTenIn(lesson) {
     error = `${caught.code ?? "error"}: ${String(caught.message).slice(0, 160)}`;
   }
   if (!writes.length) return { cards: 0, instead, tasks, ...(error ? { error } : {}) };
-  const write = writes[0];
+  // The card played first (a beat plays its actions phase by phase) is the question card.
+  const write = cardsIn(lesson, KIND).cards[0]?.write ?? writes[0];
   const declared = Object.fromEntries((lesson.lesson?.variables ?? []).map((variable) => [variable.as, variable.initial]));
   const start = cardAt(write.content, declared);
   // How far the demonstration fills the bigger frame: the furthest value the lesson animates its count to.
@@ -113,7 +116,8 @@ export function judgeMakeTen(item, lesson) {
     check("a make-ten card is drawn", false, card.instead.length ? `no make-ten card; drawn instead: ${card.instead.join(", ")}` : "no make-ten card");
     return done();
   }
-  note("one make-ten card, and a second at most", card.cards <= 2, `${card.cards} make-ten cards`);
+  // A second card is judged by its own checks (at most one, below).
+  note("one make-ten card", card.cards <= 2, `${card.cards} make-ten cards`);
 
   const { start } = card;
   const want = { a: whole(item.expect.numbers?.[0]), b: whole(item.expect.numbers?.[1]) };
@@ -185,7 +189,7 @@ export function judgeMakeTen(item, lesson) {
   const practices = card.tasks.filter((task) => task.completion?.kind === "card_fact" && task.completion.node === card.as && task.start?.values)
     .map((task) => cardAt(card.content, { ...card.declared, ...task.start.values }));
   seconds = judgeSecondCards({
-    cards: cardsIn(lesson, KIND).cards, tasks: card.tasks, question: want, practices, read: cardAt, check,
+    cards: cardsIn(lesson, KIND).cards, tasks: card.tasks, question: want, practices, read: cardAt, check, language: zh ? "zh-CN" : "en-US",
     kind: { example: pairText, same: samePair, fresh: freshFault, position: (state) => state.filled, end: () => PLACES },
   });
   return done();

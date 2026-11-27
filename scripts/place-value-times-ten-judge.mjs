@@ -26,9 +26,11 @@
 // rule of the card OLL keeps is checked by OLL. The card is read from the lesson as written, its bound fields at the
 // variables' values, by 0028's rules (the accepted sketch's), so each fault is also named. Narration is not judged.
 // Second cards (Coach #199): the first card holds the question and the practice; each later times-ten card is a
-// demonstration on its own example. Checks: its example is neither the question nor a practice; it opens fresh; its
-// demonstration moves "counted in" forward along its path to the target; no task is anchored on it. The verdict lists
-// the second cards and their examples (`second_cards`).
+// demonstration on its own example. Checks: one second card at most; its example is neither the question nor a
+// practice, and stays its example at every state (a revision, a replay, a task's start); it speaks the lesson's
+// language at every state; it opens fresh; its demonstration moves "counted in" forward along its path to the target
+// by a move forward (an animation or a revision, not a replay); no task is anchored on it. The verdict lists the
+// second cards and their examples (`second_cards`).
 
 import { normalizeAuthoringLesson, reduceCanonicalEvents } from "octos-lesson-language";
 import { cardsIn, judgeSecondCards, secondCardsText } from "./judge-cards.mjs";
@@ -160,7 +162,8 @@ export function timesTenIn(lesson) {
     error = `${caught.code ?? "error"}: ${String(caught.message).slice(0, 160)}`;
   }
   if (!writes.length) return { cards: 0, instead, tasks, ...(error ? { error } : {}) };
-  const write = writes[0];
+  // The card played first (a beat plays its actions phase by phase) is the question card.
+  const write = cardsIn(lesson, KIND).cards[0]?.write ?? writes[0];
   const declared = Object.fromEntries((lesson.lesson?.variables ?? []).map((variable) => [variable.as, variable.initial]));
   const start = cardAt(write.content, declared);
   // How far the demonstration goes: the values the lesson animates "counted in" to.
@@ -189,7 +192,8 @@ export function judgePlaceValueTimesTen(item, lesson) {
     check("a times-ten card is drawn", false, card.instead.length ? `no times-ten card; drawn instead: ${card.instead.join(", ")}` : "no times-ten card");
     return done();
   }
-  note("one times-ten card, and a second at most", card.cards <= 2, `${card.cards} times-ten cards`);
+  // A second card is judged by its own checks (at most one, below).
+  note("one times-ten card", card.cards <= 2, `${card.cards} times-ten cards`);
 
   const { start, shape } = card;
   const expect = item.expect;
@@ -271,7 +275,7 @@ export function judgePlaceValueTimesTen(item, lesson) {
   const practices = card.tasks.filter((task) => task.completion?.kind === "card_fact" && task.completion.node === card.as && task.start?.values)
     .map((task) => cardAt(card.content, { ...card.declared, ...task.start.values }));
   seconds = judgeSecondCards({
-    cards: cardsIn(lesson, KIND).cards, tasks: card.tasks, question: want, practices, read, check,
+    cards: cardsIn(lesson, KIND).cards, tasks: card.tasks, question: want, practices, read, check, language: zh ? "zh-CN" : "en-US",
     kind: {
       example: problemText,
       same: (state, pair) => state.amount === pair.amount && state.target === pair.target,

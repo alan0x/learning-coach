@@ -28,9 +28,11 @@
 // pair, not searched.
 //
 // Second cards (Coach #199): the first card holds the question and the practice; each later trade card is a
-// demonstration on its own example. Checks: its example is neither the question's pair nor a practice pair (adding:
-// either order); it opens fresh; its demonstration plays forward and finishes every column; no task is anchored on
-// it. The verdict lists the second cards and their examples (`second_cards`).
+// demonstration on its own example. Checks: one second card at most; its example is neither the question's pair nor a
+// practice pair (adding: either order), and stays its example at every state (a revision, a replay, a task's start);
+// it speaks the lesson's language at every state; it opens fresh; its demonstration plays forward and finishes every
+// column by a move forward (an animation or a revision, not a replay); no task is anchored on it. The verdict lists
+// the second cards and their examples (`second_cards`).
 //
 // Narration is not judged.
 
@@ -135,7 +137,8 @@ export function placeValueTradeIn(lesson) {
     error = `${caught.code ?? "error"}: ${String(caught.message).slice(0, 160)}`;
   }
   if (!writes.length) return { cards: 0, charts, tasks, ...(error ? { error } : {}) };
-  const write = writes[0];
+  // The card played first (a beat plays its actions phase by phase) is the question card.
+  const write = cardsIn(lesson, KIND).cards[0]?.write ?? writes[0];
   const declared = Object.fromEntries((lesson.lesson?.variables ?? []).map((variable) => [variable.as, variable.initial]));
   const start = cardAt(write.content, declared);
   // How far the demonstration goes: the furthest value the lesson animates "columns finished" to.
@@ -169,7 +172,8 @@ export function judgePlaceValueTrade(item, lesson) {
     else check("a place-value trade card is drawn", false, "no trade card");
     return done();
   }
-  note("one place-value trade card, and a second at most", card.cards <= 2, `${card.cards} trade cards`);
+  // A second card is judged by its own checks (at most one, below).
+  note("one place-value trade card", card.cards <= 2, `${card.cards} trade cards`);
   note("no place-value chart beside the trade card", card.charts === 0, `${card.charts} place-value chart(s) as well`);
 
   const { start } = card;
@@ -251,7 +255,7 @@ export function judgePlaceValueTrade(item, lesson) {
     .map((task) => cardAt(card.content, { ...card.declared, ...task.start.values }));
   const samePair = (x, y) => (x.a === y.a && x.b === y.b) || (x.operation !== "subtract" && x.a === y.b && x.b === y.a);
   seconds = judgeSecondCards({
-    cards: cardsIn(lesson, KIND).cards, tasks: card.tasks, question: { ...want, operation: start.operation }, practices, read: cardAt, check,
+    cards: cardsIn(lesson, KIND).cards, tasks: card.tasks, question: { ...want, operation: start.operation }, practices, read: cardAt, check, language: zh ? "zh-CN" : "en-US",
     kind: {
       example: shownPair, same: samePair,
       fresh: (state) => (state.finished === 0 && state.statuses.every((status) => status === 0) ? undefined : JSON.stringify({ finished: state.finished, statuses: state.statuses })),
